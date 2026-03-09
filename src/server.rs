@@ -10,6 +10,13 @@ use crate::protocol::{ClientMsg, ServerMsg};
 
 const HTML_TEMPLATE: &str = include_str!("frontend.html");
 
+fn html_escape(s: &str) -> String {
+    s.replace('&', "&amp;")
+        .replace('<', "&lt;")
+        .replace('>', "&gt;")
+        .replace('"', "&quot;")
+}
+
 /// Spawn the HTTP server thread. Returns the join handle.
 pub fn spawn_http(
     shutdown: Arc<AtomicBool>,
@@ -19,7 +26,7 @@ pub fn spawn_http(
     favicon: Option<Vec<u8>>,
 ) -> thread::JoinHandle<()> {
     let bind = bind_addr.to_string();
-    let html = HTML_TEMPLATE.replace("__WGUI_TITLE__", title);
+    let html = HTML_TEMPLATE.replace("__WGUI_TITLE__", &html_escape(title));
     thread::Builder::new()
         .name("wgui-http".into())
         .spawn(move || run_http(shutdown, port, &bind, html, favicon))
@@ -47,7 +54,7 @@ fn run_http(shutdown: Arc<AtomicBool>, port: u16, bind_addr: &str, html: String,
     log::info!("wgui: serving UI at http://{bind_addr}:{port}");
 
     loop {
-        if shutdown.load(Ordering::Relaxed) {
+        if shutdown.load(Ordering::Acquire) {
             break;
         }
 
@@ -264,4 +271,74 @@ pub fn find_port_pair(start: u16, bind_addr: &str) -> (u16, u16) {
         }
     }
     panic!("wgui: could not find available port pair starting from {start}");
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::element::{ElementDecl, ElementKind, ElementMeta, Value};
+    use std::sync::Arc;
+
+    fn make_decl(id: &str, value: Value) -> ElementDecl {
+        ElementDecl {
+            id: id.to_string(),
+            kind: ElementKind::Label,
+            label: id.to_string(),
+            value,
+            meta: ElementMeta::default(),
+            window: Arc::from("test"),
+        }
+    }
+
+    #[test]
+    fn mirror_add() {
+        let mut mirror = vec![];
+        let msgs = vec![ServerMsg::Add {
+            element: make_decl("a", Value::Bool(true)),
+        }];
+        apply_messages_to_mirror(&mut mirror, &msgs);
+        assert_eq!(mirror.len(), 1);
+        assert_eq!(mirror[0].id, "a");
+    }
+
+    #[test]
+    fn mirror_update() {
+        let mut mirror = vec![make_decl("a", Value::Bool(true))];
+        let msgs = vec![ServerMsg::Update {
+            id: "a".to_string(),
+            value: Value::Bool(false),
+            meta: None,
+        }];
+        apply_messages_to_mirror(&mut mirror, &msgs);
+        assert_eq!(mirror[0].value, Value::Bool(false));
+    }
+
+    #[test]
+    fn mirror_remove() {
+        let mut mirror = vec![make_decl("a", Value::Bool(true))];
+        let msgs = vec![ServerMsg::Remove {
+            id: "a".to_string(),
+        }];
+        apply_messages_to_mirror(&mut mirror, &msgs);
+        assert!(mirror.is_empty());
+    }
+
+    #[test]
+    fn mirror_snapshot() {
+        let mut mirror = vec![make_decl("a", Value::Bool(true))];
+        let msgs = vec![ServerMsg::Snapshot {
+            elements: vec![make_decl("b", Value::Bool(false))],
+        }];
+        apply_messages_to_mirror(&mut mirror, &msgs);
+        assert_eq!(mirror.len(), 1);
+        assert_eq!(mirror[0].id, "b");
+    }
+
+    #[test]
+    fn html_escape_special_chars() {
+        assert_eq!(html_escape("<script>"), "&lt;script&gt;");
+        assert_eq!(html_escape("a&b"), "a&amp;b");
+        assert_eq!(html_escape("\"hi\""), "&quot;hi&quot;");
+        assert_eq!(html_escape("plain"), "plain");
+    }
 }

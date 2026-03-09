@@ -2,7 +2,7 @@
 //! Visual theme heavily inspired by https://www.youtube.com/@PezzzasWork
 //! # Example
 //! ```no_run
-//! let mut ctx = wgui::Context::new();
+//! let mut ctx = w_gui::Context::new();
 //! let mut color = [1.0f32, 0.0, 0.5];
 //! let mut speed = 5.0f32;
 //!

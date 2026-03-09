@@ -1,17 +1,19 @@
 [package]
 name = "w-gui"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 description = "A lightweight immediate-mode debug GUI served over localhost"
 repository = "https://github.com/AntonWagnerCau/wgui"
 homepage = "https://github.com/AntonWagnerCau/wgui"
 readme = "README.md"
 license = "Apache-2.0"
+keywords = ["ui", "gui"]
+categories = ["gui"]
 
 [dependencies]
 tiny_http = "0.12"
 tungstenite = "0.26"
-serde = { version = "1", features = ["derive"] }
+serde = { version = "1", features = ["derive", "rc"] }
 serde_json = "1"
 log = "0.4"
 

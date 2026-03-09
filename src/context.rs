@@ -1,7 +1,7 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::Arc;
 use std::sync::mpsc;
+use std::sync::Arc;
 use std::thread::JoinHandle;
 
 use crate::element::{ElementDecl, ElementId, Value};
@@ -75,7 +75,8 @@ impl Context {
         let (edit_tx, edit_rx) = mpsc::channel::<(ElementId, Value)>();
         let shutdown = Arc::new(AtomicBool::new(false));
 
-        let http_handle = server::spawn_http(shutdown.clone(), http_port, bind_addr, &opts.title, opts.favicon);
+        let http_handle =
+            server::spawn_http(shutdown.clone(), http_port, bind_addr, &opts.title, opts.favicon);
         let ws_handle = server::spawn_ws(ws_rx, edit_tx, ws_port, bind_addr);
 
         println!("wgui: UI available at http://{bind_addr}:{http_port}");
@@ -130,43 +131,8 @@ impl Context {
 
     /// Finish the current frame: reconcile with previous frame, send diffs over WS.
     pub fn end_frame(&mut self) {
-        let mut outgoing = Vec::new();
+        let outgoing = reconcile(&self.prev_frame, &self.current_frame);
 
-        // Detect added and updated elements
-        for decl in &self.current_frame {
-            let prev = self.prev_frame.iter().find(|p| p.id == decl.id);
-            match prev {
-                None => {
-                    // New element
-                    outgoing.push(ServerMsg::Add {
-                        element: decl.clone(),
-                    });
-                }
-                Some(prev_decl) => {
-                    // Check if value changed from Rust side
-                    let value_changed = prev_decl.value != decl.value || prev_decl.kind != decl.kind;
-                    let meta_changed = prev_decl.meta != decl.meta;
-                    if value_changed || meta_changed {
-                        outgoing.push(ServerMsg::Update {
-                            id: decl.id.clone(),
-                            value: decl.value.clone(),
-                            meta: if meta_changed { Some(decl.meta.clone()) } else { None },
-                        });
-                    }
-                }
-            }
-        }
-
-        // Detect removed elements
-        for prev_decl in &self.prev_frame {
-            if !self.current_frame.iter().any(|d| d.id == prev_decl.id) {
-                outgoing.push(ServerMsg::Remove {
-                    id: prev_decl.id.clone(),
-                });
-            }
-        }
-
-        // Send outgoing messages to WS thread
         if !outgoing.is_empty() {
             match self.ws_tx.try_send(outgoing) {
                 Ok(()) => {}
@@ -184,8 +150,130 @@ impl Context {
     }
 }
 
+impl Default for Context {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Drop for Context {
     fn drop(&mut self) {
-        self.shutdown.store(true, Ordering::Relaxed);
+        self.shutdown.store(true, Ordering::Release);
+    }
+}
+
+/// Compare previous and current frames, producing the minimal set of
+/// Add / Update / Remove messages needed to bring a client up to date.
+fn reconcile(prev: &[ElementDecl], current: &[ElementDecl]) -> Vec<ServerMsg> {
+    let mut outgoing = Vec::new();
+
+    // Build index of previous frame for O(1) lookup
+    let prev_index: HashMap<&str, usize> = prev
+        .iter()
+        .enumerate()
+        .map(|(i, d)| (d.id.as_str(), i))
+        .collect();
+
+    // Detect added and updated elements
+    for decl in current {
+        match prev_index.get(decl.id.as_str()) {
+            None => {
+                outgoing.push(ServerMsg::Add {
+                    element: decl.clone(),
+                });
+            }
+            Some(&idx) => {
+                let prev_decl = &prev[idx];
+                let value_changed = prev_decl.value != decl.value || prev_decl.kind != decl.kind;
+                let meta_changed = prev_decl.meta != decl.meta;
+                if value_changed || meta_changed {
+                    outgoing.push(ServerMsg::Update {
+                        id: decl.id.clone(),
+                        value: decl.value.clone(),
+                        meta: if meta_changed {
+                            Some(decl.meta.clone())
+                        } else {
+                            None
+                        },
+                    });
+                }
+            }
+        }
+    }
+
+    // Detect removed elements
+    let current_ids: HashSet<&str> = current.iter().map(|d| d.id.as_str()).collect();
+    for prev_decl in prev {
+        if !current_ids.contains(prev_decl.id.as_str()) {
+            outgoing.push(ServerMsg::Remove {
+                id: prev_decl.id.clone(),
+            });
+        }
+    }
+
+    outgoing
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::element::{ElementKind, ElementMeta, Value};
+    use std::sync::Arc;
+
+    fn make_decl(id: &str, value: Value) -> ElementDecl {
+        ElementDecl {
+            id: id.to_string(),
+            kind: ElementKind::Label,
+            label: id.to_string(),
+            value,
+            meta: ElementMeta::default(),
+            window: Arc::from("test"),
+        }
+    }
+
+    #[test]
+    fn reconcile_detects_additions() {
+        let msgs = reconcile(&[], &[make_decl("a", Value::Bool(true))]);
+        assert_eq!(msgs.len(), 1);
+        assert!(matches!(&msgs[0], ServerMsg::Add { element } if element.id == "a"));
+    }
+
+    #[test]
+    fn reconcile_detects_removals() {
+        let msgs = reconcile(&[make_decl("a", Value::Bool(true))], &[]);
+        assert_eq!(msgs.len(), 1);
+        assert!(matches!(&msgs[0], ServerMsg::Remove { id } if id == "a"));
+    }
+
+    #[test]
+    fn reconcile_detects_updates() {
+        let prev = vec![make_decl("a", Value::Bool(true))];
+        let current = vec![make_decl("a", Value::Bool(false))];
+        let msgs = reconcile(&prev, &current);
+        assert_eq!(msgs.len(), 1);
+        assert!(matches!(&msgs[0], ServerMsg::Update { id, .. } if id == "a"));
+    }
+
+    #[test]
+    fn reconcile_unchanged() {
+        let prev = vec![make_decl("a", Value::Bool(true))];
+        let current = vec![make_decl("a", Value::Bool(true))];
+        assert!(reconcile(&prev, &current).is_empty());
+    }
+
+    #[test]
+    fn reconcile_mixed() {
+        let prev = vec![
+            make_decl("keep", Value::Bool(true)),
+            make_decl("update", Value::Float(1.0)),
+            make_decl("remove", Value::Bool(false)),
+        ];
+        let current = vec![
+            make_decl("keep", Value::Bool(true)),
+            make_decl("update", Value::Float(2.0)),
+            make_decl("add", Value::Bool(true)),
+        ];
+        let msgs = reconcile(&prev, &current);
+        assert_eq!(msgs.len(), 3); // update + remove + add
     }
 }

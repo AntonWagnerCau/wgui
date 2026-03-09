@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use serde::{Deserialize, Serialize};
 
 pub type ElementId = String;
@@ -22,7 +24,10 @@ pub enum Value {
     /// Progress value (0.0 to 1.0)
     Progress(f64),
     /// Stat card value with optional subvalue
-    StatValue { value: String, subvalue: Option<String> },
+    StatValue {
+        value: String,
+        subvalue: Option<String>,
+    },
     /// Status indicator state
     StatusValue {
         active: bool,
@@ -96,7 +101,7 @@ pub enum ElementKind {
     Plot,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq)]
 pub struct ElementMeta {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub min: Option<f64>,
@@ -118,28 +123,14 @@ pub struct ElementMeta {
     pub children: Option<Vec<String>>,
 }
 
-impl Default for ElementMeta {
-    fn default() -> Self {
-        Self {
-            min: None,
-            max: None,
-            step: None,
-            accent: None,
-            subtitle: None,
-            cols: None,
-            children: None,
-        }
-    }
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ElementDecl {
     pub id: ElementId,
     pub kind: ElementKind,
     pub label: String,
     pub value: Value,
     pub meta: ElementMeta,
-    pub window: String,
+    pub window: Arc<str>,
 }
 
 /// Accent colors available for UI elements
