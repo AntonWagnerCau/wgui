@@ -289,6 +289,7 @@ fn build_plot(
 pub struct Window<'a> {
     name: Arc<str>,
     ctx: &'a mut Context,
+    next_idx: usize,
 }
 
 impl<'a> Window<'a> {
@@ -296,11 +297,14 @@ impl<'a> Window<'a> {
         Self {
             name: Arc::from(name.as_str()),
             ctx,
+            next_idx: 0,
         }
     }
 
-    fn make_id(&self, label: &str) -> String {
-        format!("{}::{}_{}", self.name, label, self.ctx.current_frame_len())
+    fn make_id(&mut self, _label: &str) -> String {
+        let id = format!("{}::_{}", self.name, self.next_idx);
+        self.next_idx += 1;
+        id
     }
 
     /// A floating-point slider with a range.
@@ -602,8 +606,10 @@ impl<'a, 'ctx> Grid<'a, 'ctx> {
         });
     }
 
-    fn make_id(&self, label: &str) -> String {
-        format!("{}::{}_{}", self.id, label, self.window.ctx.current_frame_len())
+    fn make_id(&mut self, _label: &str) -> String {
+        let id = format!("{}::_{}", self.id, self.window.next_idx);
+        self.window.next_idx += 1;
+        id
     }
 
     // ── Interactive widgets ──────────────────────────────────────────
