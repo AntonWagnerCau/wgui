@@ -300,7 +300,7 @@ impl<'a> Window<'a> {
     }
 
     fn make_id(&self, label: &str) -> String {
-        format!("{}::{}", self.name, label)
+        format!("{}::{}_{}", self.name, label, self.ctx.current_frame_len())
     }
 
     /// A floating-point slider with a range.
@@ -603,7 +603,7 @@ impl<'a, 'ctx> Grid<'a, 'ctx> {
     }
 
     fn make_id(&self, label: &str) -> String {
-        format!("{}::{}", self.id, label)
+        format!("{}::{}_{}", self.id, label, self.window.ctx.current_frame_len())
     }
 
     // ── Interactive widgets ──────────────────────────────────────────
