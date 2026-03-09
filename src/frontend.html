@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>wgui</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0f0f17;
+    --surface: #1a1a2e;
+    --surface-hover: #232340;
+    --border: #2a2a44;
+    --text: #d4d4e8;
+    --text-dim: #8888a8;
+    --accent: #7c5cbf;
+    --accent-hover: #9370db;
+    --accent-glow: rgba(124, 92, 191, 0.25);
+    --danger: #e05555;
+    --radius: 6px;
+    --font: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    --mono: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+  }
+
+  body {
+    font-family: var(--font);
+    font-size: 13px;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  #app {
+    display: flex;
+    flex-direction: column;
+    padding: 12px;
+    gap: 12px;
+    max-width: 600px;
+    margin: 0 auto;
+  }
+
+  /* Connection status bar */
+  #status-bar {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    z-index: 100;
+    transition: background 0.3s;
+  }
+  #status-bar.connected { background: #44bb66; }
+  #status-bar.disconnected { background: var(--danger); }
+  #status-bar.connecting { background: #ddaa33; }
+
+  /* Window panel */
+  .window-panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  .window-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    background: rgba(255,255,255,0.02);
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .window-header:hover {
+    background: rgba(255,255,255,0.04);
+  }
+
+  .window-title {
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--accent);
+  }
+
+  .window-toggle {
+    font-size: 10px;
+    color: var(--text-dim);
+    transition: transform 0.2s;
+  }
+
+  .window-panel.collapsed .window-toggle {
+    transform: rotate(-90deg);
+  }
+
+  .window-panel.collapsed .window-body {
+    display: none;
+  }
+
+  .window-body {
+    display: flex;
+    flex-direction: column;
+    padding: 6px 0;
+  }
+
+  /* Widget row */
+  .widget-row {
+    display: flex;
+    align-items: center;
+    padding: 6px 14px;
+    gap: 12px;
+    min-height: 34px;
+    transition: background 0.1s;
+  }
+
+  .widget-row:hover {
+    background: rgba(255,255,255,0.02);
+  }
+
+  .widget-label {
+    flex: 0 0 120px;
+    font-size: 12px;
+    color: var(--text-dim);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .widget-control {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+  }
+
+  /* Slider */
+  .slider-container {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  input[type="range"] {
+    flex: 1;
+    -webkit-appearance: none;
+    appearance: none;
+    height: 4px;
+    border-radius: 2px;
+    background: var(--border);
+    outline: none;
+  }
+
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--accent);
+    cursor: pointer;
+    border: 2px solid var(--surface);
+    box-shadow: 0 0 6px var(--accent-glow);
+    transition: background 0.15s;
+  }
+
+  input[type="range"]::-webkit-slider-thumb:hover {
+    background: var(--accent-hover);
+  }
+
+  .slider-value {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text);
+    min-width: 50px;
+    text-align: right;
+    background: rgba(0,0,0,0.3);
+    padding: 3px 6px;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+  }
+
+  /* Checkbox */
+  .checkbox-wrapper {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+  }
+
+  .checkbox-box {
+    width: 18px;
+    height: 18px;
+    border: 2px solid var(--border);
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+    background: transparent;
+  }
+
+  .checkbox-box.checked {
+    background: var(--accent);
+    border-color: var(--accent);
+  }
+
+  .checkbox-box::after {
+    content: '';
+    display: block;
+    width: 5px;
+    height: 9px;
+    border: solid white;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg) translate(-1px, -1px);
+    opacity: 0;
+    transition: opacity 0.15s;
+  }
+
+  .checkbox-box.checked::after {
+    opacity: 1;
+  }
+
+  /* Color picker */
+  .color-picker-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+  }
+
+  input[type="color"] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 36px;
+    height: 28px;
+    border: 2px solid var(--border);
+    border-radius: 4px;
+    cursor: pointer;
+    background: transparent;
+    padding: 0;
+  }
+
+  input[type="color"]::-webkit-color-swatch-wrapper {
+    padding: 0;
+  }
+
+  input[type="color"]::-webkit-color-swatch {
+    border: none;
+    border-radius: 2px;
+  }
+
+  .color-hex {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-dim);
+  }
+
+  /* Text input */
+  .text-input {
+    flex: 1;
+    background: rgba(0,0,0,0.3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    font-family: var(--font);
+    font-size: 12px;
+    padding: 5px 8px;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+
+  .text-input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px var(--accent-glow);
+  }
+
+  /* Dropdown / Select */
+  select.dropdown {
+    flex: 1;
+    background: rgba(0,0,0,0.3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    font-family: var(--font);
+    font-size: 12px;
+    padding: 5px 8px;
+    outline: none;
+    cursor: pointer;
+    transition: border-color 0.15s;
+  }
+
+  select.dropdown:focus {
+    border-color: var(--accent);
+  }
+
+  select.dropdown option {
+    background: var(--surface);
+    color: var(--text);
+  }
+
+  /* Button */
+  .wgui-button {
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: var(--radius);
+    padding: 6px 16px;
+    font-family: var(--font);
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.15s, box-shadow 0.15s;
+  }
+
+  .wgui-button:hover {
+    background: var(--accent-hover);
+    box-shadow: 0 2px 8px var(--accent-glow);
+  }
+
+  .wgui-button:active {
+    transform: scale(0.97);
+  }
+
+  /* Label (read-only) */
+  .label-text {
+    font-size: 12px;
+    color: var(--text);
+  }
+
+  /* Separator */
+  .separator {
+    height: 1px;
+    background: var(--border);
+    margin: 4px 14px;
+  }
+
+  /* Empty state */
+  .empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 20px;
+    color: var(--text-dim);
+    font-size: 14px;
+    gap: 8px;
+  }
+
+  .empty-state .logo {
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--accent);
+    letter-spacing: 2px;
+    margin-bottom: 8px;
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--text-dim); }
+</style>
+</head>
+<body>
+<div id="status-bar" class="connecting"></div>
+<div id="app">
+  <div class="empty-state">
+    <div class="logo">wgui</div>
+    <div>Connecting...</div>
+  </div>
+</div>
+
+<script>
+(function() {
+  'use strict';
+
+  // ── State ──────────────────────────────────────────
+  let elements = [];   // flat list of ElementDecl
+  let ws = null;
+  let reconnectDelay = 500;
+
+  // Derive WS port from HTTP port (+1)
+  const wsPort = parseInt(location.port) + 1;
+  const wsUrl = `ws://${location.hostname}:${wsPort}`;
+
+  // ── WebSocket ──────────────────────────────────────
+  function connect() {
+    setStatus('connecting');
+    ws = new WebSocket(wsUrl);
+
+    ws.onopen = () => {
+      setStatus('connected');
+      reconnectDelay = 500;
+    };
+
+    ws.onclose = () => {
+      setStatus('disconnected');
+      ws = null;
+      setTimeout(connect, reconnectDelay);
+      reconnectDelay = Math.min(reconnectDelay * 1.5, 5000);
+    };
+
+    ws.onerror = () => {};
+
+    ws.onmessage = (e) => {
+      const msg = JSON.parse(e.data);
+      handleMessage(msg);
+    };
+  }
+
+  function send(msg) {
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify(msg));
+    }
+  }
+
+  function setStatus(s) {
+    const bar = document.getElementById('status-bar');
+    bar.className = s;
+  }
+
+  // ── Message Handling ───────────────────────────────
+  function handleMessage(msg) {
+    switch (msg.type) {
+      case 'snapshot':
+        elements = msg.elements;
+        render();
+        break;
+      case 'add':
+        // Remove any existing element with same id, then add
+        elements = elements.filter(el => el.id !== msg.element.id);
+        elements.push(msg.element);
+        render();
+        break;
+      case 'update':
+        for (let el of elements) {
+          if (el.id === msg.id) {
+            el.value = msg.value;
+            updateElementDOM(el);
+            break;
+          }
+        }
+        break;
+      case 'remove':
+        elements = elements.filter(el => el.id !== msg.id);
+        render();
+        break;
+    }
+  }
+
+  // ── Rendering ──────────────────────────────────────
+  function render() {
+    const app = document.getElementById('app');
+
+    if (elements.length === 0) {
+      app.innerHTML = `
+        <div class="empty-state">
+          <div class="logo">wgui</div>
+          <div>No elements declared</div>
+        </div>`;
+      return;
+    }
+
+    // Group by window
+    const windows = new Map();
+    for (const el of elements) {
+      const win = el.window || 'Default';
+      if (!windows.has(win)) windows.set(win, []);
+      windows.get(win).push(el);
+    }
+
+    let html = '';
+    for (const [name, elems] of windows) {
+      html += `<div class="window-panel" data-window="${esc(name)}">`;
+      html += `<div class="window-header" onclick="wgui.toggleWindow(this)">`;
+      html += `<span class="window-title">${esc(name)}</span>`;
+      html += `<span class="window-toggle">&#9660;</span>`;
+      html += `</div>`;
+      html += `<div class="window-body">`;
+      for (const el of elems) {
+        html += renderElement(el);
+      }
+      html += `</div></div>`;
+    }
+
+    app.innerHTML = html;
+  }
+
+  function renderElement(el) {
+    const r = renderers[el.kind.type];
+    if (r) return r(el);
+    return `<div class="widget-row"><span class="widget-label">${esc(el.label)}</span><span class="widget-control">Unknown: ${esc(el.kind.type)}</span></div>`;
+  }
+
+  // ── Update a single element without full re-render ─
+  function updateElementDOM(el) {
+    const row = document.querySelector(`[data-id="${CSS.escape(el.id)}"]`);
+    if (!row) { render(); return; }
+
+    switch (el.kind.type) {
+      case 'Slider': {
+        const input = row.querySelector('input[type="range"]');
+        const display = row.querySelector('.slider-value');
+        const val = el.value.type === 'Float' ? el.value.data : el.value.data;
+        if (input && document.activeElement !== input) input.value = val;
+        if (display) display.textContent = formatNum(val, el.meta.step);
+        break;
+      }
+      case 'Checkbox': {
+        const box = row.querySelector('.checkbox-box');
+        if (box) {
+          if (el.value.data) box.classList.add('checked');
+          else box.classList.remove('checked');
+        }
+        break;
+      }
+      case 'ColorPicker3':
+      case 'ColorPicker4': {
+        const input = row.querySelector('input[type="color"]');
+        const hexLabel = row.querySelector('.color-hex');
+        const hex = rgbToHex(el.value.data);
+        if (input && document.activeElement !== input) input.value = hex;
+        if (hexLabel) hexLabel.textContent = hex;
+        break;
+      }
+      case 'TextInput': {
+        const input = row.querySelector('.text-input');
+        if (input && document.activeElement !== input) input.value = el.value.data;
+        break;
+      }
+      case 'Dropdown': {
+        const select = row.querySelector('select');
+        if (select && document.activeElement !== select) select.selectedIndex = el.value.data.selected;
+        break;
+      }
+      default:
+        render();
+    }
+  }
+
+  // ── Component Renderers ────────────────────────────
+  const renderers = {
+    Slider: (el) => {
+      const val = el.value.data;
+      const min = el.meta.min ?? 0;
+      const max = el.meta.max ?? 1;
+      const step = el.meta.step ?? 0.01;
+      return `<div class="widget-row" data-id="${esc(el.id)}">
+        <span class="widget-label">${esc(el.label)}</span>
+        <div class="widget-control slider-container">
+          <input type="range" min="${min}" max="${max}" step="${step}" value="${val}"
+            oninput="wgui.onSlider('${escJs(el.id)}', this.value, this)">
+          <span class="slider-value">${formatNum(val, step)}</span>
+        </div>
+      </div>`;
+    },
+
+    Checkbox: (el) => {
+      const checked = el.value.data ? 'checked' : '';
+      return `<div class="widget-row" data-id="${esc(el.id)}">
+        <span class="widget-label">${esc(el.label)}</span>
+        <div class="widget-control">
+          <div class="checkbox-wrapper" onclick="wgui.onCheckbox('${escJs(el.id)}', this)">
+            <div class="checkbox-box ${checked}"></div>
+          </div>
+        </div>
+      </div>`;
+    },
+
+    ColorPicker3: (el) => {
+      const hex = rgbToHex(el.value.data);
+      return `<div class="widget-row" data-id="${esc(el.id)}">
+        <span class="widget-label">${esc(el.label)}</span>
+        <div class="widget-control color-picker-wrapper">
+          <input type="color" value="${hex}"
+            oninput="wgui.onColor3('${escJs(el.id)}', this.value)">
+          <span class="color-hex">${hex}</span>
+        </div>
+      </div>`;
+    },
+
+    ColorPicker4: (el) => {
+      const hex = rgbToHex(el.value.data);
+      const alpha = el.value.data[3] ?? 1.0;
+      return `<div class="widget-row" data-id="${esc(el.id)}">
+        <span class="widget-label">${esc(el.label)}</span>
+        <div class="widget-control color-picker-wrapper">
+          <input type="color" value="${hex}"
+            oninput="wgui.onColor4('${escJs(el.id)}', this.value, '${escJs(el.id)}')">
+          <input type="range" min="0" max="1" step="0.01" value="${alpha}" style="max-width:80px"
+            oninput="wgui.onColor4Alpha('${escJs(el.id)}', this.value)">
+          <span class="color-hex">${hex} a:${alpha.toFixed(2)}</span>
+        </div>
+      </div>`;
+    },
+
+    TextInput: (el) => {
+      return `<div class="widget-row" data-id="${esc(el.id)}">
+        <span class="widget-label">${esc(el.label)}</span>
+        <div class="widget-control">
+          <input type="text" class="text-input" value="${esc(el.value.data)}"
+            oninput="wgui.onText('${escJs(el.id)}', this.value)">
+        </div>
+      </div>`;
+    },
+
+    Dropdown: (el) => {
+      const opts = el.value.data.options.map((o, i) =>
+        `<option value="${i}" ${i === el.value.data.selected ? 'selected' : ''}>${esc(o)}</option>`
+      ).join('');
+      return `<div class="widget-row" data-id="${esc(el.id)}">
+        <span class="widget-label">${esc(el.label)}</span>
+        <div class="widget-control">
+          <select class="dropdown" onchange="wgui.onDropdown('${escJs(el.id)}', this.value, this)">
+            ${opts}
+          </select>
+        </div>
+      </div>`;
+    },
+
+    Button: (el) => {
+      return `<div class="widget-row" data-id="${esc(el.id)}">
+        <span class="widget-label"></span>
+        <div class="widget-control">
+          <button class="wgui-button" onclick="wgui.onButton('${escJs(el.id)}')">${esc(el.label)}</button>
+        </div>
+      </div>`;
+    },
+
+    Label: (el) => {
+      return `<div class="widget-row" data-id="${esc(el.id)}">
+        <span class="widget-label">${esc(el.label)}</span>
+        <div class="widget-control">
+          <span class="label-text">${esc(el.value.data)}</span>
+        </div>
+      </div>`;
+    },
+
+    Separator: (_el) => {
+      return `<div class="separator"></div>`;
+    }
+  };
+
+  // ── Event Handlers ─────────────────────────────────
+  window.wgui = {
+    toggleWindow(headerEl) {
+      headerEl.parentElement.classList.toggle('collapsed');
+    },
+
+    onSlider(id, rawVal, inputEl) {
+      const el = elements.find(e => e.id === id);
+      if (!el) return;
+      const isInt = el.value.type === 'Int';
+      const val = isInt ? parseInt(rawVal) : parseFloat(rawVal);
+      el.value.data = val;
+      const display = inputEl.parentElement.querySelector('.slider-value');
+      if (display) display.textContent = formatNum(val, el.meta.step);
+      send({ type: 'set', id, value: isInt ? { type: 'Int', data: val } : { type: 'Float', data: val } });
+    },
+
+    onCheckbox(id, wrapperEl) {
+      const el = elements.find(e => e.id === id);
+      if (!el) return;
+      el.value.data = !el.value.data;
+      const box = wrapperEl.querySelector('.checkbox-box');
+      box.classList.toggle('checked');
+      send({ type: 'set', id, value: { type: 'Bool', data: el.value.data } });
+    },
+
+    onColor3(id, hex) {
+      const rgb = hexToRgb(hex);
+      const el = elements.find(e => e.id === id);
+      if (el) el.value.data = rgb;
+      const row = document.querySelector(`[data-id="${CSS.escape(id)}"]`);
+      if (row) row.querySelector('.color-hex').textContent = hex;
+      send({ type: 'set', id, value: { type: 'Color3', data: rgb } });
+    },
+
+    onColor4(id, hex) {
+      const rgb = hexToRgb(hex);
+      const el = elements.find(e => e.id === id);
+      if (!el) return;
+      const a = el.value.data[3] ?? 1.0;
+      el.value.data = [...rgb, a];
+      const row = document.querySelector(`[data-id="${CSS.escape(id)}"]`);
+      if (row) row.querySelector('.color-hex').textContent = `${hex} a:${a.toFixed(2)}`;
+      send({ type: 'set', id, value: { type: 'Color4', data: el.value.data } });
+    },
+
+    onColor4Alpha(id, alphaStr) {
+      const el = elements.find(e => e.id === id);
+      if (!el) return;
+      el.value.data[3] = parseFloat(alphaStr);
+      const hex = rgbToHex(el.value.data);
+      const row = document.querySelector(`[data-id="${CSS.escape(id)}"]`);
+      if (row) row.querySelector('.color-hex').textContent = `${hex} a:${el.value.data[3].toFixed(2)}`;
+      send({ type: 'set', id, value: { type: 'Color4', data: el.value.data } });
+    },
+
+    onText(id, val) {
+      const el = elements.find(e => e.id === id);
+      if (el) el.value.data = val;
+      send({ type: 'set', id, value: { type: 'String', data: val } });
+    },
+
+    onDropdown(id, selectedStr, selectEl) {
+      const selected = parseInt(selectedStr);
+      const el = elements.find(e => e.id === id);
+      if (!el) return;
+      el.value.data.selected = selected;
+      send({ type: 'set', id, value: { type: 'Enum', data: { selected, options: el.value.data.options } } });
+    },
+
+    onButton(id) {
+      send({ type: 'set', id, value: { type: 'Button', data: true } });
+    }
+  };
+
+  // ── Helpers ────────────────────────────────────────
+  function esc(s) {
+    if (s == null) return '';
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function escJs(s) {
+    return String(s).replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+  }
+
+  function formatNum(v, step) {
+    if (step && step >= 1) return String(Math.round(v));
+    return Number(v).toFixed(3);
+  }
+
+  function rgbToHex(arr) {
+    const r = Math.round((arr[0] ?? 0) * 255);
+    const g = Math.round((arr[1] ?? 0) * 255);
+    const b = Math.round((arr[2] ?? 0) * 255);
+    return '#' + [r, g, b].map(c => c.toString(16).padStart(2, '0')).join('');
+  }
+
+  function hexToRgb(hex) {
+    const r = parseInt(hex.slice(1, 3), 16) / 255;
+    const g = parseInt(hex.slice(3, 5), 16) / 255;
+    const b = parseInt(hex.slice(5, 7), 16) / 255;
+    return [r, g, b];
+  }
+
+  // ── Init ───────────────────────────────────────────
+  connect();
+})();
+</script>
+</body>
+</html>
