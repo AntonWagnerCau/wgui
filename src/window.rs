@@ -860,4 +860,31 @@ impl<'a, 'ctx> Grid<'a, 'ctx> {
             y_label,
         ));
     }
+
+    /// A visual separator line.
+    pub fn separator(&mut self) {
+        let id = format!("{}::__sep_{}", self.id, self.window.ctx.current_frame_len());
+        self.record_child(id.clone());
+        self.window.ctx.declare(ElementDecl {
+            id,
+            kind: ElementKind::Separator,
+            label: String::new(),
+            value: Value::Bool(false),
+            meta: ElementMeta::default(),
+            window: self.window.name.clone(),
+        });
+    }
+
+    /// Create a nested grid layout container.
+    pub fn grid<F>(&mut self, cols: usize, f: F)
+    where
+        F: FnOnce(&mut Grid<'_, 'ctx>),
+    {
+        let grid_id = format!("{}::__grid_{}", self.id, self.window.ctx.current_frame_len());
+        let mut child_grid = Grid::new(&grid_id, self.window, cols);
+        f(&mut child_grid);
+        let child_id = child_grid.id.clone();
+        child_grid.finish();
+        self.children.push(child_id);
+    }
 }
