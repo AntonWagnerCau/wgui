@@ -8,19 +8,44 @@
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
   :root {
-    --bg: #0f0f17;
-    --surface: #1a1a2e;
-    --surface-hover: #232340;
-    --border: #2a2a44;
-    --text: #d4d4e8;
-    --text-dim: #8888a8;
-    --accent: #7c5cbf;
-    --accent-hover: #9370db;
-    --accent-glow: rgba(124, 92, 191, 0.25);
-    --danger: #e05555;
-    --radius: 6px;
+    /* Dark theme base colors */
+    --bg: #1e1e1e;
+    --bg-dark: #0f0f0f;
+    --surface: #2a2a2a;
+    --surface-hover: #333333;
+    --surface-elevated: #3a3a3a;
+    --border: #404040;
+    --border-light: #505050;
+    --text: #e0e0e0;
+    --text-dim: #888888;
+    --text-muted: #666666;
+    
+    /* Accent colors */
+    --coral: #e06c5c;
+    --coral-glow: rgba(224, 108, 92, 0.3);
+    --teal: #00bfa5;
+    --teal-glow: rgba(0, 191, 165, 0.3);
+    --blue: #2196f3;
+    --blue-glow: rgba(33, 150, 243, 0.3);
+    --green: #4caf50;
+    --green-glow: rgba(76, 175, 80, 0.3);
+    --purple: #9c27b0;
+    --purple-glow: rgba(156, 39, 176, 0.3);
+    --orange: #ff9800;
+    --orange-glow: rgba(255, 152, 0, 0.3);
+    --yellow: #ffeb3b;
+    --yellow-glow: rgba(255, 235, 59, 0.3);
+    --red: #f44336;
+    --red-glow: rgba(244, 67, 54, 0.3);
+    
+    /* Default accent */
+    --accent: var(--coral);
+    --accent-glow: var(--coral-glow);
+    
+    --radius: 8px;
+    --radius-lg: 12px;
     --font: 'Segoe UI', system-ui, -apple-system, sans-serif;
-    --mono: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+    --mono: 'Cascadia Code', 'Fira Code', 'Consolas', 'Courier New', monospace;
   }
 
   body {
@@ -35,9 +60,9 @@
   #app {
     display: flex;
     flex-direction: column;
-    padding: 12px;
-    gap: 12px;
-    max-width: 600px;
+    padding: 16px;
+    gap: 16px;
+    max-width: 800px;
     margin: 0 auto;
   }
 
@@ -49,68 +74,281 @@
     z-index: 100;
     transition: background 0.3s;
   }
-  #status-bar.connected { background: #44bb66; }
-  #status-bar.disconnected { background: var(--danger); }
-  #status-bar.connecting { background: #ddaa33; }
+  #status-bar.connected { background: var(--green); }
+  #status-bar.disconnected { background: var(--red); }
+  #status-bar.connecting { background: var(--yellow); }
 
-  /* Window panel */
-  .window-panel {
+  /* ============================================
+     CARD COMPONENT - Main container style
+     ============================================ */
+  .card {
     background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 8px;
+    border: 2px solid var(--border);
+    border-radius: var(--radius-lg);
     overflow: hidden;
+    transition: border-color 0.2s, box-shadow 0.2s;
   }
 
-  .window-header {
+  .card.coral { border-color: var(--coral); --accent: var(--coral); --accent-glow: var(--coral-glow); }
+  .card.teal { border-color: var(--teal); --accent: var(--teal); --accent-glow: var(--teal-glow); }
+  .card.blue { border-color: var(--blue); --accent: var(--blue); --accent-glow: var(--blue-glow); }
+  .card.green { border-color: var(--green); --accent: var(--green); --accent-glow: var(--green-glow); }
+  .card.purple { border-color: var(--purple); --accent: var(--purple); --accent-glow: var(--purple-glow); }
+  .card.orange { border-color: var(--orange); --accent: var(--orange); --accent-glow: var(--orange-glow); }
+  .card.yellow { border-color: var(--yellow); --accent: var(--yellow); --accent-glow: var(--yellow-glow); }
+  .card.red { border-color: var(--red); --accent: var(--red); --accent-glow: var(--red-glow); }
+
+  .card-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 10px 14px;
+    padding: 12px 16px;
     background: rgba(255,255,255,0.02);
     border-bottom: 1px solid var(--border);
     cursor: pointer;
     user-select: none;
   }
 
-  .window-header:hover {
+  .card-header:hover {
     background: rgba(255,255,255,0.04);
   }
 
-  .window-title {
-    font-size: 12px;
+  .card-title {
+    font-size: 13px;
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.8px;
     color: var(--accent);
   }
 
-  .window-toggle {
+  .card-toggle {
     font-size: 10px;
     color: var(--text-dim);
     transition: transform 0.2s;
   }
 
-  .window-panel.collapsed .window-toggle {
+  .card.collapsed .card-toggle {
     transform: rotate(-90deg);
   }
 
-  .window-panel.collapsed .window-body {
+  .card.collapsed .card-body {
     display: none;
   }
 
-  .window-body {
+  .card-body {
     display: flex;
     flex-direction: column;
-    padding: 6px 0;
+    padding: 8px 0;
   }
 
+  /* ============================================
+     STAT CARD - For metrics display
+     ============================================ */
+  .stat-card {
+    background: var(--surface);
+    border: 2px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 140px;
+  }
+
+  .stat-card.coral { border-color: var(--coral); }
+  .stat-card.teal { border-color: var(--teal); }
+  .stat-card.blue { border-color: var(--blue); }
+  .stat-card.green { border-color: var(--green); }
+  .stat-card.purple { border-color: var(--purple); }
+  .stat-card.orange { border-color: var(--orange); }
+  .stat-card.yellow { border-color: var(--yellow); }
+  .stat-card.red { border-color: var(--red); }
+
+  .stat-value {
+    font-family: var(--mono);
+    font-size: 28px;
+    font-weight: 600;
+    color: var(--text);
+    line-height: 1;
+  }
+
+  .stat-label {
+    font-size: 11px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .stat-subvalue {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+
+  /* ============================================
+     PROGRESS BAR - Rounded with percentage
+     ============================================ */
+  .progress-container {
+    background: var(--surface);
+    border: 2px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .progress-container.coral { border-color: var(--coral); --accent: var(--coral); }
+  .progress-container.teal { border-color: var(--teal); --accent: var(--teal); }
+  .progress-container.blue { border-color: var(--blue); --accent: var(--blue); }
+  .progress-container.green { border-color: var(--green); --accent: var(--green); }
+  .progress-container.purple { border-color: var(--purple); --accent: var(--purple); }
+  .progress-container.orange { border-color: var(--orange); --accent: var(--orange); }
+  .progress-container.yellow { border-color: var(--yellow); --accent: var(--yellow); }
+
+  .progress-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+  }
+
+  .progress-title {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text);
+  }
+
+  .progress-percent {
+    font-family: var(--mono);
+    font-size: 24px;
+    font-weight: 600;
+    color: var(--accent);
+  }
+
+  .progress-percent sup {
+    font-size: 14px;
+    font-weight: 400;
+    margin-left: 2px;
+  }
+
+  .progress-track {
+    height: 8px;
+    background: var(--bg);
+    border-radius: 4px;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .progress-fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 4px;
+    transition: width 0.3s ease;
+    box-shadow: 0 0 10px var(--accent-glow);
+  }
+
+  .progress-subtitle {
+    font-size: 11px;
+    color: var(--text-dim);
+  }
+
+  /* ============================================
+     STATUS INDICATOR - Colored dot with label
+     ============================================ */
+  .status-indicator {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: var(--text-dim);
+  }
+
+  .status-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--text-muted);
+    box-shadow: 0 0 6px currentColor;
+    transition: background 0.2s;
+  }
+
+  .status-dot.green { background: var(--green); color: var(--green-glow); }
+  .status-dot.red { background: var(--red); color: var(--red-glow); }
+  .status-dot.yellow { background: var(--yellow); color: var(--yellow-glow); }
+  .status-dot.blue { background: var(--blue); color: var(--blue-glow); }
+  .status-dot.coral { background: var(--coral); color: var(--coral-glow); }
+  .status-dot.teal { background: var(--teal); color: var(--teal-glow); }
+
+  /* ============================================
+     MINI CHART - Sparkline style
+     ============================================ */
+  .mini-chart {
+    background: var(--surface);
+    border: 2px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 12px;
+    height: 120px;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .mini-chart.coral { border-color: var(--coral); --accent: var(--coral); }
+  .mini-chart.teal { border-color: var(--teal); --accent: var(--teal); }
+  .mini-chart.blue { border-color: var(--blue); --accent: var(--blue); }
+  .mini-chart.green { border-color: var(--green); --accent: var(--green); }
+
+  .mini-chart-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+
+  .mini-chart-title {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text);
+  }
+
+  .mini-chart-value {
+    font-family: var(--mono);
+    font-size: 14px;
+    color: var(--accent);
+  }
+
+  .mini-chart-canvas {
+    flex: 1;
+    width: 100%;
+    min-height: 0;
+  }
+
+  /* ============================================
+     GRID LAYOUT
+     ============================================ */
+  .grid {
+    display: grid;
+    gap: 12px;
+  }
+
+  .grid-2 { grid-template-columns: repeat(2, 1fr); }
+  .grid-3 { grid-template-columns: repeat(3, 1fr); }
+  .grid-4 { grid-template-columns: repeat(4, 1fr); }
+
+  @media (max-width: 600px) {
+    .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
+  }
+
+  /* ============================================
+     LEGACY WIDGET STYLES (updated)
+     ============================================ */
+  
   /* Widget row */
   .widget-row {
     display: flex;
     align-items: center;
-    padding: 6px 14px;
+    padding: 8px 16px;
     gap: 12px;
-    min-height: 34px;
+    min-height: 40px;
     transition: background 0.1s;
   }
 
@@ -140,44 +378,45 @@
     flex: 1;
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 10px;
   }
 
   input[type="range"] {
     flex: 1;
     -webkit-appearance: none;
     appearance: none;
-    height: 4px;
-    border-radius: 2px;
-    background: var(--border);
+    height: 6px;
+    border-radius: 3px;
+    background: var(--bg);
     outline: none;
   }
 
   input[type="range"]::-webkit-slider-thumb {
     -webkit-appearance: none;
-    width: 14px;
-    height: 14px;
+    width: 16px;
+    height: 16px;
     border-radius: 50%;
     background: var(--accent);
     cursor: pointer;
     border: 2px solid var(--surface);
-    box-shadow: 0 0 6px var(--accent-glow);
-    transition: background 0.15s;
+    box-shadow: 0 0 8px var(--accent-glow);
+    transition: background 0.15s, transform 0.15s;
   }
 
   input[type="range"]::-webkit-slider-thumb:hover {
-    background: var(--accent-hover);
+    background: var(--accent);
+    transform: scale(1.1);
   }
 
   .slider-value {
     font-family: var(--mono);
-    font-size: 11px;
+    font-size: 12px;
     color: var(--text);
-    min-width: 50px;
+    min-width: 60px;
     text-align: right;
-    background: rgba(0,0,0,0.3);
-    padding: 3px 6px;
-    border-radius: 4px;
+    background: var(--bg);
+    padding: 4px 8px;
+    border-radius: var(--radius);
     border: 1px solid var(--border);
   }
 
@@ -186,6 +425,7 @@
     display: flex;
     align-items: center;
     cursor: pointer;
+    gap: 8px;
   }
 
   .checkbox-box {
@@ -203,6 +443,7 @@
   .checkbox-box.checked {
     background: var(--accent);
     border-color: var(--accent);
+    box-shadow: 0 0 8px var(--accent-glow);
   }
 
   .checkbox-box::after {
@@ -221,21 +462,26 @@
     opacity: 1;
   }
 
+  .checkbox-label {
+    font-size: 12px;
+    color: var(--text);
+  }
+
   /* Color picker */
   .color-picker-wrapper {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 10px;
     flex: 1;
   }
 
   input[type="color"] {
     -webkit-appearance: none;
     appearance: none;
-    width: 36px;
+    width: 40px;
     height: 28px;
     border: 2px solid var(--border);
-    border-radius: 4px;
+    border-radius: var(--radius);
     cursor: pointer;
     background: transparent;
     padding: 0;
@@ -247,27 +493,27 @@
 
   input[type="color"]::-webkit-color-swatch {
     border: none;
-    border-radius: 2px;
+    border-radius: 4px;
   }
 
   .color-hex {
     font-family: var(--mono);
-    font-size: 11px;
+    font-size: 12px;
     color: var(--text-dim);
   }
 
   /* Text input */
   .text-input {
     flex: 1;
-    background: rgba(0,0,0,0.3);
+    background: var(--bg);
     border: 1px solid var(--border);
     border-radius: var(--radius);
     color: var(--text);
     font-family: var(--font);
     font-size: 12px;
-    padding: 5px 8px;
+    padding: 6px 10px;
     outline: none;
-    transition: border-color 0.15s;
+    transition: border-color 0.15s, box-shadow 0.15s;
   }
 
   .text-input:focus {
@@ -278,13 +524,13 @@
   /* Dropdown / Select */
   select.dropdown {
     flex: 1;
-    background: rgba(0,0,0,0.3);
+    background: var(--bg);
     border: 1px solid var(--border);
     border-radius: var(--radius);
     color: var(--text);
     font-family: var(--font);
     font-size: 12px;
-    padding: 5px 8px;
+    padding: 6px 10px;
     outline: none;
     cursor: pointer;
     transition: border-color 0.15s;
@@ -305,17 +551,19 @@
     color: white;
     border: none;
     border-radius: var(--radius);
-    padding: 6px 16px;
+    padding: 8px 18px;
     font-family: var(--font);
     font-size: 12px;
     font-weight: 500;
     cursor: pointer;
-    transition: background 0.15s, box-shadow 0.15s;
+    transition: all 0.15s;
+    box-shadow: 0 2px 8px var(--accent-glow);
   }
 
   .wgui-button:hover {
-    background: var(--accent-hover);
-    box-shadow: 0 2px 8px var(--accent-glow);
+    filter: brightness(1.1);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px var(--accent-glow);
   }
 
   .wgui-button:active {
@@ -332,7 +580,17 @@
   .separator {
     height: 1px;
     background: var(--border);
-    margin: 4px 14px;
+    margin: 6px 16px;
+  }
+
+  /* Section header */
+  .section-header {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-muted);
+    padding: 8px 16px 4px;
   }
 
   /* Empty state */
@@ -356,9 +614,9 @@
   }
 
   /* Scrollbar */
-  ::-webkit-scrollbar { width: 6px; }
-  ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  ::-webkit-scrollbar { width: 8px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
   ::-webkit-scrollbar-thumb:hover { background: var(--text-dim); }
 </style>
 </head>
@@ -376,11 +634,11 @@
   'use strict';
 
   // ── State ──────────────────────────────────────────
-  let elements = [];   // flat list of ElementDecl
+  let elements = [];
   let ws = null;
   let reconnectDelay = 500;
+  let chartInstances = new Map();
 
-  // Derive WS port from HTTP port (+1)
   const wsPort = parseInt(location.port) + 1;
   const wsUrl = `ws://${location.hostname}:${wsPort}`;
 
@@ -428,7 +686,6 @@
         render();
         break;
       case 'add':
-        // Remove any existing element with same id, then add
         elements = elements.filter(el => el.id !== msg.element.id);
         elements.push(msg.element);
         render();
@@ -472,12 +729,14 @@
 
     let html = '';
     for (const [name, elems] of windows) {
-      html += `<div class="window-panel" data-window="${esc(name)}">`;
-      html += `<div class="window-header" onclick="wgui.toggleWindow(this)">`;
-      html += `<span class="window-title">${esc(name)}</span>`;
-      html += `<span class="window-toggle">&#9660;</span>`;
+      // Determine accent color from first element if specified
+      const firstAccent = elems[0]?.meta?.accent || 'coral';
+      html += `<div class="card ${firstAccent}" data-window="${esc(name)}">`;
+      html += `<div class="card-header" onclick="wgui.toggleCard(this)">`;
+      html += `<span class="card-title">${esc(name)}</span>`;
+      html += `<span class="card-toggle">&#9660;</span>`;
       html += `</div>`;
-      html += `<div class="window-body">`;
+      html += `<div class="card-body">`;
       for (const el of elems) {
         html += renderElement(el);
       }
@@ -485,6 +744,13 @@
     }
 
     app.innerHTML = html;
+    
+    // Initialize charts after DOM is ready
+    for (const el of elements) {
+      if (el.kind.type === 'MiniChart') {
+        initMiniChart(el);
+      }
+    }
   }
 
   function renderElement(el) {
@@ -534,6 +800,26 @@
         if (select && document.activeElement !== select) select.selectedIndex = el.value.data.selected;
         break;
       }
+      case 'ProgressBar': {
+        const fill = row.querySelector('.progress-fill');
+        const percent = row.querySelector('.progress-percent');
+        const val = el.value.type === 'Float' ? el.value.data : el.value.data;
+        const pct = Math.round(val * 100);
+        if (fill) fill.style.width = pct + '%';
+        if (percent) percent.innerHTML = pct + '<sup>%</sup>';
+        break;
+      }
+      case 'Stat': {
+        const valueEl = row.querySelector('.stat-value');
+        const subEl = row.querySelector('.stat-subvalue');
+        if (valueEl) valueEl.textContent = el.value.data.value;
+        if (subEl && el.value.data.subvalue) subEl.textContent = el.value.data.subvalue;
+        break;
+      }
+      case 'MiniChart': {
+        updateMiniChart(el);
+        break;
+      }
       default:
         render();
     }
@@ -563,6 +849,7 @@
         <div class="widget-control">
           <div class="checkbox-wrapper" onclick="wgui.onCheckbox('${escJs(el.id)}', this)">
             <div class="checkbox-box ${checked}"></div>
+            <span class="checkbox-label">${el.value.data ? 'On' : 'Off'}</span>
           </div>
         </div>
       </div>`;
@@ -639,12 +926,176 @@
 
     Separator: (_el) => {
       return `<div class="separator"></div>`;
+    },
+
+    Section: (el) => {
+      return `<div class="section-header">${esc(el.label)}</div>`;
+    },
+
+    ProgressBar: (el) => {
+      const val = el.value.type === 'Float' ? el.value.data : el.value.data / 100;
+      const pct = Math.round(val * 100);
+      const accent = el.meta.accent || 'coral';
+      const subtitle = el.meta.subtitle || '';
+      return `<div class="widget-row" data-id="${esc(el.id)}">
+        <div class="progress-container ${accent}" style="flex: 1;">
+          <div class="progress-header">
+            <span class="progress-title">${esc(el.label)}</span>
+            <span class="progress-percent">${pct}<sup>%</sup></span>
+          </div>
+          <div class="progress-track">
+            <div class="progress-fill" style="width: ${pct}%"></div>
+          </div>
+          ${subtitle ? `<div class="progress-subtitle">${esc(subtitle)}</div>` : ''}
+        </div>
+      </div>`;
+    },
+
+    Stat: (el) => {
+      const accent = el.meta.accent || 'coral';
+      const data = el.value.data;
+      return `<div class="widget-row" data-id="${esc(el.id)}">
+        <div class="stat-card ${accent}" style="flex: 1;">
+          <div class="stat-label">${esc(el.label)}</div>
+          <div class="stat-value">${esc(data.value)}</div>
+          ${data.subvalue ? `<div class="stat-subvalue">${esc(data.subvalue)}</div>` : ''}
+        </div>
+      </div>`;
+    },
+
+    Status: (el) => {
+      const data = el.value.data;
+      const color = data.active ? (data.activeColor || 'green') : (data.inactiveColor || 'red');
+      const text = data.active ? (data.activeText || 'Active') : (data.inactiveText || 'Inactive');
+      return `<div class="widget-row" data-id="${esc(el.id)}">
+        <span class="widget-label">${esc(el.label)}</span>
+        <div class="widget-control">
+          <div class="status-indicator">
+            <div class="status-dot ${color}"></div>
+            <span>${esc(text)}</span>
+          </div>
+        </div>
+      </div>`;
+    },
+
+    MiniChart: (el) => {
+      const accent = el.meta.accent || 'coral';
+      const data = el.value.data;
+      const currentValue = Array.isArray(data.values) && data.values.length > 0 
+        ? data.values[data.values.length - 1] 
+        : (data.current || 0);
+      const unit = data.unit || '';
+      return `<div class="widget-row" data-id="${esc(el.id)}">
+        <div class="mini-chart ${accent}" style="flex: 1;">
+          <div class="mini-chart-header">
+            <span class="mini-chart-title">${esc(el.label)}</span>
+            <span class="mini-chart-value">${currentValue}${esc(unit)}</span>
+          </div>
+          <canvas class="mini-chart-canvas" id="chart-${esc(el.id)}"></canvas>
+        </div>
+      </div>`;
+    },
+
+    Grid: (el) => {
+      const data = el.value.data;
+      const cols = data.cols || 2;
+      const children = data.children || [];
+      let html = `<div class="grid grid-${cols}">`;
+      for (const childId of children) {
+        const child = elements.find(e => e.id === childId);
+        if (child) {
+          html += renderElement(child);
+        }
+      }
+      html += '</div>';
+      return html;
     }
   };
 
+  // ── Mini Chart Canvas Drawing ──────────────────────
+  function initMiniChart(el) {
+    const canvas = document.getElementById(`chart-${el.id}`);
+    if (!canvas) return;
+    
+    const ctx = canvas.getContext('2d');
+    const rect = canvas.getBoundingClientRect();
+    canvas.width = rect.width * window.devicePixelRatio;
+    canvas.height = rect.height * window.devicePixelRatio;
+    ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+    
+    chartInstances.set(el.id, { canvas, ctx, el });
+    drawMiniChart(el, canvas, ctx);
+  }
+
+  function updateMiniChart(el) {
+    const instance = chartInstances.get(el.id);
+    if (instance) {
+      drawMiniChart(el, instance.canvas, instance.ctx);
+    }
+  }
+
+  function drawMiniChart(el, canvas, ctx) {
+    const data = el.value.data;
+    const values = data.values || [];
+    if (values.length < 2) return;
+
+    const width = canvas.width / window.devicePixelRatio;
+    const height = canvas.height / window.devicePixelRatio;
+    const accent = getComputedStyle(canvas.closest('.mini-chart')).getPropertyValue('--accent').trim() || '#e06c5c';
+
+    ctx.clearRect(0, 0, width, height);
+
+    const min = Math.min(...values);
+    const max = Math.max(...values);
+    const range = max - min || 1;
+    const padding = 4;
+
+    // Draw grid lines
+    ctx.strokeStyle = 'rgba(128, 128, 128, 0.1)';
+    ctx.lineWidth = 1;
+    for (let i = 0; i <= 3; i++) {
+      const y = padding + (height - 2 * padding) * (i / 3);
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(width, y);
+      ctx.stroke();
+    }
+
+    // Draw area under the line
+    const gradient = ctx.createLinearGradient(0, 0, 0, height);
+    gradient.addColorStop(0, accent + '40');
+    gradient.addColorStop(1, accent + '00');
+    
+    ctx.beginPath();
+    ctx.moveTo(0, height - padding - ((values[0] - min) / range) * (height - 2 * padding));
+    for (let i = 1; i < values.length; i++) {
+      const x = (i / (values.length - 1)) * width;
+      const y = height - padding - ((values[i] - min) / range) * (height - 2 * padding);
+      ctx.lineTo(x, y);
+    }
+    ctx.lineTo(width, height);
+    ctx.lineTo(0, height);
+    ctx.closePath();
+    ctx.fillStyle = gradient;
+    ctx.fill();
+
+    // Draw the line
+    ctx.beginPath();
+    ctx.strokeStyle = accent;
+    ctx.lineWidth = 2;
+    ctx.lineJoin = 'round';
+    for (let i = 0; i < values.length; i++) {
+      const x = (i / (values.length - 1)) * width;
+      const y = height - padding - ((values[i] - min) / range) * (height - 2 * padding);
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+  }
+
   // ── Event Handlers ─────────────────────────────────
   window.wgui = {
-    toggleWindow(headerEl) {
+    toggleCard(headerEl) {
       headerEl.parentElement.classList.toggle('collapsed');
     },
 
@@ -665,6 +1116,8 @@
       el.value.data = !el.value.data;
       const box = wrapperEl.querySelector('.checkbox-box');
       box.classList.toggle('checked');
+      const label = wrapperEl.querySelector('.checkbox-label');
+      if (label) label.textContent = el.value.data ? 'On' : 'Off';
       send({ type: 'set', id, value: { type: 'Bool', data: el.value.data } });
     },
 
@@ -745,6 +1198,15 @@
     const b = parseInt(hex.slice(5, 7), 16) / 255;
     return [r, g, b];
   }
+
+  // Handle window resize for charts
+  window.addEventListener('resize', () => {
+    for (const el of elements) {
+      if (el.kind.type === 'MiniChart') {
+        initMiniChart(el);
+      }
+    }
+  });
 
   // ── Init ───────────────────────────────────────────
   connect();

@@ -1,7 +1,7 @@
 use std::ops::RangeInclusive;
 
 use crate::context::Context;
-use crate::element::{ElementDecl, ElementKind, ElementMeta, Value};
+use crate::element::{AccentColor, ElementDecl, ElementKind, ElementMeta, Value};
 
 /// A named window containing UI elements. Created via `Context::window()`.
 pub struct Window<'a> {
@@ -35,6 +35,7 @@ impl<'a> Window<'a> {
                 min: Some(*range.start() as f64),
                 max: Some(*range.end() as f64),
                 step: Some(0.01),
+                ..Default::default()
             },
             window: self.name.clone(),
         });
@@ -57,6 +58,7 @@ impl<'a> Window<'a> {
                 min: Some(*range.start() as f64),
                 max: Some(*range.end() as f64),
                 step: Some(1.0),
+                ..Default::default()
             },
             window: self.name.clone(),
         });
@@ -193,15 +195,182 @@ impl<'a> Window<'a> {
 
     /// A visual separator line.
     pub fn separator(&mut self) {
-        // Use a unique-ish id based on current element count
         let id = format!("{}::__sep_{}", self.name, self.ctx.current_frame_len());
 
         self.ctx.declare(ElementDecl {
             id,
             kind: ElementKind::Separator,
             label: String::new(),
-            value: Value::Bool(false), // unused
+            value: Value::Bool(false),
             meta: ElementMeta::default(),
+            window: self.name.clone(),
+        });
+    }
+
+    /// A section header for grouping widgets.
+    pub fn section(&mut self, title: &str) {
+        let id = format!("{}::__sec_{}", self.name, self.ctx.current_frame_len());
+
+        self.ctx.declare(ElementDecl {
+            id,
+            kind: ElementKind::Section,
+            label: title.to_string(),
+            value: Value::String(title.to_string()),
+            meta: ElementMeta::default(),
+            window: self.name.clone(),
+        });
+    }
+
+    /// A progress bar (0.0 to 1.0 or 0 to 100).
+    /// 
+    /// # Example
+    /// ```
+    /// let mut progress = 0.75;
+    /// win.progress_bar("Loading", progress, AccentColor::Blue);
+    /// ```
+    pub fn progress_bar(&mut self, label: &str, value: f64, accent: AccentColor) {
+        let id = self.make_id(label);
+        let clamped = value.clamp(0.0, 1.0);
+
+        self.ctx.declare(ElementDecl {
+            id,
+            kind: ElementKind::ProgressBar,
+            label: label.to_string(),
+            value: Value::Progress(clamped),
+            meta: ElementMeta {
+                accent: Some(accent.as_str().to_string()),
+                ..Default::default()
+            },
+            window: self.name.clone(),
+        });
+    }
+
+    /// A progress bar with subtitle text.
+    pub fn progress_bar_with_subtitle(
+        &mut self,
+        label: &str,
+        value: f64,
+        accent: AccentColor,
+        subtitle: &str,
+    ) {
+        let id = self.make_id(label);
+        let clamped = value.clamp(0.0, 1.0);
+
+        self.ctx.declare(ElementDecl {
+            id,
+            kind: ElementKind::ProgressBar,
+            label: label.to_string(),
+            value: Value::Progress(clamped),
+            meta: ElementMeta {
+                accent: Some(accent.as_str().to_string()),
+                subtitle: Some(subtitle.to_string()),
+                ..Default::default()
+            },
+            window: self.name.clone(),
+        });
+    }
+
+    /// A stat card displaying a value with optional subvalue.
+    ///
+    /// # Example
+    /// ```
+    /// win.stat("FPS", "60", Some("avg 58"), AccentColor::Green);
+    /// ```
+    pub fn stat(&mut self, label: &str, value: &str, subvalue: Option<&str>, accent: AccentColor) {
+        let id = self.make_id(label);
+
+        self.ctx.declare(ElementDecl {
+            id,
+            kind: ElementKind::Stat,
+            label: label.to_string(),
+            value: Value::StatValue {
+                value: value.to_string(),
+                subvalue: subvalue.map(|s| s.to_string()),
+            },
+            meta: ElementMeta {
+                accent: Some(accent.as_str().to_string()),
+                ..Default::default()
+            },
+            window: self.name.clone(),
+        });
+    }
+
+    /// A status indicator with colored dot.
+    ///
+    /// # Example
+    /// ```
+    /// win.status("AI State", true, Some("Enabled"), Some("Disabled"), AccentColor::Green, AccentColor::Red);
+    /// ```
+    pub fn status(
+        &mut self,
+        label: &str,
+        active: bool,
+        active_text: Option<&str>,
+        inactive_text: Option<&str>,
+        active_color: AccentColor,
+        inactive_color: AccentColor,
+    ) {
+        let id = self.make_id(label);
+
+        self.ctx.declare(ElementDecl {
+            id,
+            kind: ElementKind::Status,
+            label: label.to_string(),
+            value: Value::StatusValue {
+                active,
+                active_text: active_text.map(|s| s.to_string()),
+                inactive_text: inactive_text.map(|s| s.to_string()),
+                active_color: Some(active_color.as_str().to_string()),
+                inactive_color: Some(inactive_color.as_str().to_string()),
+            },
+            meta: ElementMeta::default(),
+            window: self.name.clone(),
+        });
+    }
+
+    /// A mini sparkline chart.
+    ///
+    /// # Example
+    /// ```
+    /// let values = vec![10.0, 15.0, 12.0, 18.0, 20.0];
+    /// win.mini_chart("Velocity", &values, Some("m/s"), AccentColor::Coral);
+    /// ```
+    pub fn mini_chart(&mut self, label: &str, values: &[f32], unit: Option<&str>, accent: AccentColor) {
+        let id = self.make_id(label);
+        let current = values.last().copied();
+
+        self.ctx.declare(ElementDecl {
+            id,
+            kind: ElementKind::MiniChart,
+            label: label.to_string(),
+            value: Value::ChartValue {
+                values: values.to_vec(),
+                current,
+                unit: unit.map(|s| s.to_string()),
+            },
+            meta: ElementMeta {
+                accent: Some(accent.as_str().to_string()),
+                ..Default::default()
+            },
+            window: self.name.clone(),
+        });
+    }
+
+    /// Set the accent color for this window (affects all cards in the window).
+    /// Call this first before other widgets in the window.
+    pub fn set_accent(&mut self, accent: AccentColor) {
+        // This is a marker element that sets the window's accent color
+        // The frontend uses the accent of the first element
+        let id = format!("{}::__accent_{}", self.name, accent.as_str());
+        self.ctx.declare(ElementDecl {
+            id,
+            kind: ElementKind::Label,
+            label: String::new(),
+            value: Value::String(String::new()),
+            meta: ElementMeta {
+                accent: Some(accent.as_str().to_string()),
+                ..Default::default()
+            },
             window: self.name.clone(),
         });
     }

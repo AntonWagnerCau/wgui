@@ -24,4 +24,5 @@ mod state;
 mod window;
 
 pub use context::Context;
+pub use element::AccentColor;
 pub use window::Window;
