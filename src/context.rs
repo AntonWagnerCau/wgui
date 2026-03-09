@@ -9,6 +9,30 @@ use crate::protocol::ServerMsg;
 use crate::server;
 use crate::window::Window;
 
+/// Options for creating a wgui [`Context`].
+pub struct ContextOptions {
+    /// Starting port for the HTTP server (WS gets port + 1).
+    pub start_port: u16,
+    /// Page title shown in the browser tab.
+    pub title: String,
+    /// Optional PNG favicon bytes. When `None`, no favicon is served.
+    pub favicon: Option<Vec<u8>>,
+    /// When `true`, bind to `0.0.0.0` (accessible on the network).
+    /// When `false`, bind to `127.0.0.1` (localhost only).
+    pub public: bool,
+}
+
+impl Default for ContextOptions {
+    fn default() -> Self {
+        Self {
+            start_port: 9080,
+            title: "wgui".to_string(),
+            favicon: None,
+            public: false,
+        }
+    }
+}
+
 pub struct Context {
     // Sends batched ServerMsg diffs to the WS thread each frame
     ws_tx: mpsc::SyncSender<Vec<ServerMsg>>,
@@ -28,25 +52,33 @@ pub struct Context {
 }
 
 impl Context {
-    /// Create a new wgui context. Starts HTTP + WS servers on localhost.
-    /// Prints the URL to stdout and logs via `log` crate.
+    /// Create a new wgui context with default options (localhost, port 9080, title "wgui").
     pub fn new() -> Self {
-        Self::with_port(9080)
+        Self::with_options(ContextOptions::default())
     }
 
     /// Create a new wgui context starting port search from `start_port`.
     pub fn with_port(start_port: u16) -> Self {
-        let (http_port, ws_port) = server::find_port_pair(start_port);
+        Self::with_options(ContextOptions {
+            start_port,
+            ..Default::default()
+        })
+    }
+
+    /// Create a new wgui context with the given options.
+    pub fn with_options(opts: ContextOptions) -> Self {
+        let bind_addr = if opts.public { "0.0.0.0" } else { "127.0.0.1" };
+        let (http_port, ws_port) = server::find_port_pair(opts.start_port, bind_addr);
 
         // Create channels for inter-thread communication
         let (ws_tx, ws_rx) = mpsc::sync_channel::<Vec<ServerMsg>>(2);
         let (edit_tx, edit_rx) = mpsc::channel::<(ElementId, Value)>();
         let shutdown = Arc::new(AtomicBool::new(false));
 
-        let http_handle = server::spawn_http(shutdown.clone(), http_port);
-        let ws_handle = server::spawn_ws(ws_rx, edit_tx, ws_port);
+        let http_handle = server::spawn_http(shutdown.clone(), http_port, bind_addr, &opts.title, opts.favicon);
+        let ws_handle = server::spawn_ws(ws_rx, edit_tx, ws_port, bind_addr);
 
-        println!("wgui: UI available at http://127.0.0.1:{http_port}");
+        println!("wgui: UI available at http://{bind_addr}:{http_port}");
 
         Self {
             ws_tx,

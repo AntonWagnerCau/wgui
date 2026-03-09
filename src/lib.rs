@@ -22,6 +22,6 @@ mod protocol;
 mod server;
 mod window;
 
-pub use context::Context;
+pub use context::{Context, ContextOptions};
 pub use element::AccentColor;
 pub use window::{Grid, Window};

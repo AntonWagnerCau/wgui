@@ -8,13 +8,21 @@ use std::time::Duration;
 use crate::element::ElementDecl;
 use crate::protocol::{ClientMsg, ServerMsg};
 
-const HTML: &str = include_str!("frontend.html");
+const HTML_TEMPLATE: &str = include_str!("frontend.html");
 
 /// Spawn the HTTP server thread. Returns the join handle.
-pub fn spawn_http(shutdown: Arc<AtomicBool>, port: u16) -> thread::JoinHandle<()> {
+pub fn spawn_http(
+    shutdown: Arc<AtomicBool>,
+    port: u16,
+    bind_addr: &str,
+    title: &str,
+    favicon: Option<Vec<u8>>,
+) -> thread::JoinHandle<()> {
+    let bind = bind_addr.to_string();
+    let html = HTML_TEMPLATE.replace("__WGUI_TITLE__", title);
     thread::Builder::new()
         .name("wgui-http".into())
-        .spawn(move || run_http(shutdown, port))
+        .spawn(move || run_http(shutdown, port, &bind, html, favicon))
         .expect("failed to spawn wgui HTTP thread")
 }
 
@@ -23,18 +31,20 @@ pub fn spawn_ws(
     ws_rx: mpsc::Receiver<Vec<ServerMsg>>,
     edit_tx: mpsc::Sender<(String, crate::element::Value)>,
     port: u16,
+    bind_addr: &str,
 ) -> thread::JoinHandle<()> {
+    let bind = bind_addr.to_string();
     thread::Builder::new()
         .name("wgui-ws".into())
-        .spawn(move || run_ws(ws_rx, edit_tx, port))
+        .spawn(move || run_ws(ws_rx, edit_tx, port, &bind))
         .expect("failed to spawn wgui WS thread")
 }
 
-fn run_http(shutdown: Arc<AtomicBool>, port: u16) {
-    let server = tiny_http::Server::http(format!("127.0.0.1:{port}"))
+fn run_http(shutdown: Arc<AtomicBool>, port: u16, bind_addr: &str, html: String, favicon: Option<Vec<u8>>) {
+    let server = tiny_http::Server::http(format!("{bind_addr}:{port}"))
         .unwrap_or_else(|e| panic!("wgui: failed to bind HTTP on port {port}: {e}"));
 
-    log::info!("wgui: serving UI at http://127.0.0.1:{port}");
+    log::info!("wgui: serving UI at http://{bind_addr}:{port}");
 
     loop {
         if shutdown.load(Ordering::Relaxed) {
@@ -44,17 +54,39 @@ fn run_http(shutdown: Arc<AtomicBool>, port: u16) {
         // Use a timeout so we can check shutdown periodically
         match server.recv_timeout(Duration::from_millis(200)) {
             Ok(Some(request)) => {
-                let response = match request.url() {
-                    "/" | "/index.html" => tiny_http::Response::from_string(HTML)
-                        .with_header(
-                            "Content-Type: text/html; charset=utf-8"
-                                .parse::<tiny_http::Header>()
-                                .unwrap(),
-                        ),
-                    _ => tiny_http::Response::from_string("404 Not Found")
-                        .with_status_code(404),
-                };
-                let _ = request.respond(response);
+                match request.url() {
+                    "/" | "/index.html" => {
+                        let response = tiny_http::Response::from_string(&html)
+                            .with_header(
+                                "Content-Type: text/html; charset=utf-8"
+                                    .parse::<tiny_http::Header>()
+                                    .unwrap(),
+                            );
+                        let _ = request.respond(response);
+                    }
+                    "/favicon.png" => {
+                        if let Some(ref icon) = favicon {
+                            let response = tiny_http::Response::from_data(icon.clone())
+                                .with_header(
+                                    "Content-Type: image/png"
+                                        .parse::<tiny_http::Header>()
+                                        .unwrap(),
+                                );
+                            let _ = request.respond(response);
+                        } else {
+                            let _ = request.respond(
+                                tiny_http::Response::from_string("404 Not Found")
+                                    .with_status_code(404),
+                            );
+                        }
+                    }
+                    _ => {
+                        let _ = request.respond(
+                            tiny_http::Response::from_string("404 Not Found")
+                                .with_status_code(404),
+                        );
+                    }
+                }
             }
             Ok(None) => {} // timeout, loop again
             Err(e) => {
@@ -69,15 +101,16 @@ fn run_ws(
     ws_rx: mpsc::Receiver<Vec<ServerMsg>>,
     edit_tx: mpsc::Sender<(String, crate::element::Value)>,
     port: u16,
+    bind_addr: &str,
 ) {
-    let listener = TcpListener::bind(format!("127.0.0.1:{port}"))
+    let listener = TcpListener::bind(format!("{bind_addr}:{port}"))
         .unwrap_or_else(|e| panic!("wgui: failed to bind WS on port {port}: {e}"));
 
     listener
         .set_nonblocking(true)
         .expect("failed to set WS listener non-blocking");
 
-    log::info!("wgui: WebSocket listening on ws://127.0.0.1:{port}");
+    log::info!("wgui: WebSocket listening on ws://{bind_addr}:{port}");
 
     // Local mirror of UI state, updated from incoming ServerMsg
     let mut mirror: Vec<ElementDecl> = Vec::new();
@@ -222,10 +255,10 @@ fn apply_messages_to_mirror(mirror: &mut Vec<ElementDecl>, msgs: &[ServerMsg]) {
 
 /// Find an available port pair (http, ws) starting from `start`.
 /// HTTP gets the even port, WS gets the odd port.
-pub fn find_port_pair(start: u16) -> (u16, u16) {
+pub fn find_port_pair(start: u16, bind_addr: &str) -> (u16, u16) {
     for base in (start..start + 100).step_by(2) {
-        let http_ok = TcpListener::bind(format!("127.0.0.1:{base}")).is_ok();
-        let ws_ok = TcpListener::bind(format!("127.0.0.1:{}", base + 1)).is_ok();
+        let http_ok = TcpListener::bind(format!("{bind_addr}:{base}")).is_ok();
+        let ws_ok = TcpListener::bind(format!("{bind_addr}:{}", base + 1)).is_ok();
         if http_ok && ws_ok {
             return (base, base + 1);
         }
