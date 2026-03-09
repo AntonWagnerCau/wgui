@@ -8,7 +8,7 @@
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
   :root {
-    /* Dark theme base colors */
+    /* Dark theme base colors heavily inspired by https://www.youtube.com/@PezzzasWork*/
     --bg: #1e1e1e;
     --bg-dark: #0f0f0f;
     --surface: #2a2a2a;
@@ -58,12 +58,19 @@
   }
 
   #app {
-    display: flex;
-    flex-direction: column;
-    padding: 16px;
-    gap: 16px;
-    max-width: 800px;
+    column-count: 2;
+    column-gap: 12px;
+    padding: 12px;
+    max-width: 1800px;
     margin: 0 auto;
+  }
+
+  @media (min-width: 1200px) { #app { column-count: 3; } }
+  @media (max-width: 700px)  { #app { column-count: 1; } }
+
+  #app > .card {
+    break-inside: avoid;
+    margin-bottom: 12px;
   }
 
   /* Connection status bar */
@@ -152,7 +159,8 @@
     display: flex;
     flex-direction: column;
     gap: 8px;
-    min-width: 140px;
+    min-width: 0;
+    overflow: hidden;
   }
 
   .stat-card.coral { border-color: var(--coral); }
@@ -170,6 +178,9 @@
     font-weight: 600;
     color: var(--text);
     line-height: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .stat-label {
@@ -177,12 +188,18 @@
     color: var(--text-dim);
     text-transform: uppercase;
     letter-spacing: 0.5px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .stat-subvalue {
     font-family: var(--mono);
     font-size: 12px;
     color: var(--text-muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   /* ============================================
@@ -302,40 +319,32 @@
     justify-content: space-between;
     align-items: center;
     margin-bottom: 8px;
+    gap: 4px;
+    overflow: hidden;
   }
 
   .mini-chart-title {
     font-size: 12px;
     font-weight: 500;
     color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
   }
 
   .mini-chart-value {
     font-family: var(--mono);
     font-size: 14px;
     color: var(--accent);
+    white-space: nowrap;
+    flex-shrink: 0;
   }
 
   .mini-chart-canvas {
     flex: 1;
     width: 100%;
     min-height: 0;
-  }
-
-  /* ============================================
-     GRID LAYOUT
-     ============================================ */
-  .grid {
-    display: grid;
-    gap: 12px;
-  }
-
-  .grid-2 { grid-template-columns: repeat(2, 1fr); }
-  .grid-3 { grid-template-columns: repeat(3, 1fr); }
-  .grid-4 { grid-template-columns: repeat(4, 1fr); }
-
-  @media (max-width: 600px) {
-    .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
   }
 
   /* ============================================
@@ -357,12 +366,13 @@
   }
 
   .widget-label {
-    flex: 0 0 120px;
+    flex: 0 1 100px;
     font-size: 12px;
     color: var(--text-dim);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    min-width: 60px;
   }
 
   .widget-control {
@@ -467,7 +477,7 @@
     color: var(--text);
   }
 
-  /* Color picker */
+  /* Color picker - themed to match */
   .color-picker-wrapper {
     display: flex;
     align-items: center;
@@ -475,16 +485,38 @@
     flex: 1;
   }
 
+  .color-picker-container {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 4px 8px;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+
+  .color-picker-container:hover {
+    border-color: var(--border-light);
+  }
+
+  .color-picker-container:focus-within {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px var(--accent-glow);
+  }
+
   input[type="color"] {
     -webkit-appearance: none;
     appearance: none;
-    width: 40px;
-    height: 28px;
+    width: 32px;
+    height: 24px;
     border: 2px solid var(--border);
     border-radius: var(--radius);
     cursor: pointer;
     background: transparent;
     padding: 0;
+    overflow: hidden;
   }
 
   input[type="color"]::-webkit-color-swatch-wrapper {
@@ -493,13 +525,125 @@
 
   input[type="color"]::-webkit-color-swatch {
     border: none;
-    border-radius: 4px;
+    border-radius: 3px;
   }
 
   .color-hex {
     font-family: var(--mono);
     font-size: 12px;
+    color: var(--text);
+    min-width: 70px;
+  }
+
+  /* Plot container */
+  .plot-container {
+    background: var(--surface);
+    border: 2px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    height: 280px;
+  }
+
+  .plot-container.coral { border-color: var(--coral); }
+  .plot-container.teal { border-color: var(--teal); }
+  .plot-container.blue { border-color: var(--blue); }
+  .plot-container.green { border-color: var(--green); }
+  .plot-container.purple { border-color: var(--purple); }
+  .plot-container.orange { border-color: var(--orange); }
+  .plot-container.yellow { border-color: var(--yellow); }
+  .plot-container.red { border-color: var(--red); }
+
+  .plot-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .plot-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .plot-legend {
+    display: flex;
+    gap: 16px;
+  }
+
+  .plot-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
     color: var(--text-dim);
+  }
+
+  .plot-legend-color {
+    width: 12px;
+    height: 3px;
+    border-radius: 2px;
+  }
+
+  .plot-canvas {
+    flex: 1;
+    width: 100%;
+    min-height: 0;
+  }
+
+  .plot-axis-labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: 10px;
+    color: var(--text-muted);
+  }
+
+  /* Grid-specific stat card compact mode */
+  .grid .stat-card {
+    padding: 12px;
+    min-width: 0;
+  }
+
+  .grid .stat-value {
+    font-size: 22px;
+  }
+
+  .grid .stat-label {
+    font-size: 10px;
+  }
+
+  /* Grid layout improvements */
+  .grid {
+    display: grid;
+    gap: 12px;
+    box-sizing: border-box;
+  }
+
+  .grid-2 { grid-template-columns: repeat(2, 1fr); }
+  .grid-3 { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); }
+  .grid-4 { grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); }
+
+  @media (max-width: 600px) {
+    .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
+  }
+
+  /* Grid row in card body */
+  .card-body > .grid {
+    margin: 8px 16px;
+  }
+
+  .card-body > .grid:first-child {
+    margin-top: 0;
+  }
+
+  /* Strip widget-row padding/layout inside grids */
+  .grid > .widget-row {
+    padding: 0;
+    display: block;
   }
 
   /* Text input */
@@ -603,6 +747,7 @@
     color: var(--text-dim);
     font-size: 14px;
     gap: 8px;
+    column-span: all;
   }
 
   .empty-state .logo {
@@ -637,6 +782,7 @@
   let elements = [];
   let ws = null;
   let reconnectDelay = 500;
+  const recentlyInteracted = new Map(); // id -> timestamp
   let chartInstances = new Map();
 
   const wsPort = parseInt(location.port) + 1;
@@ -690,15 +836,20 @@
         elements.push(msg.element);
         render();
         break;
-      case 'update':
+      case 'update': {
+        let found = false;
         for (let el of elements) {
           if (el.id === msg.id) {
             el.value = msg.value;
+            if (msg.meta) el.meta = msg.meta;
+            found = true;
             updateElementDOM(el);
             break;
           }
         }
+        if (!found) console.warn('wgui: update for unknown id', msg.id);
         break;
+      }
       case 'remove':
         elements = elements.filter(el => el.id !== msg.id);
         render();
@@ -719,9 +870,20 @@
       return;
     }
 
-    // Group by window
+    // Collect IDs of elements that are children of a Grid (so we don't render them twice)
+    const gridChildIds = new Set();
+    for (const el of elements) {
+      if (el.kind.type === 'Grid' && el.value.data && el.value.data.children) {
+        for (const childId of el.value.data.children) {
+          gridChildIds.add(childId);
+        }
+      }
+    }
+
+    // Group by window, skipping grid children (they're rendered inside their Grid)
     const windows = new Map();
     for (const el of elements) {
+      if (gridChildIds.has(el.id)) continue;
       const win = el.window || 'Default';
       if (!windows.has(win)) windows.set(win, []);
       windows.get(win).push(el);
@@ -749,6 +911,8 @@
     for (const el of elements) {
       if (el.kind.type === 'MiniChart') {
         initMiniChart(el);
+      } else if (el.kind.type === 'Plot') {
+        initPlot(el);
       }
     }
   }
@@ -762,15 +926,17 @@
   // ── Update a single element without full re-render ─
   function updateElementDOM(el) {
     const row = document.querySelector(`[data-id="${CSS.escape(el.id)}"]`);
-    if (!row) { render(); return; }
+    if (!row) { console.warn('wgui: no DOM for', el.id, '→ full render'); render(); return; }
 
     switch (el.kind.type) {
       case 'Slider': {
         const input = row.querySelector('input[type="range"]');
         const display = row.querySelector('.slider-value');
         const val = el.value.type === 'Float' ? el.value.data : el.value.data;
-        if (input && document.activeElement !== input) input.value = val;
-        if (display) display.textContent = formatNum(val, el.meta.step);
+        const recent = recentlyInteracted.get(el.id);
+        const isActive = document.activeElement === input || (recent && Date.now() - recent < 500);
+        if (input && !isActive) input.value = val;
+        if (display && !isActive) display.textContent = formatNum(val, el.meta.step);
         break;
       }
       case 'Checkbox': {
@@ -781,13 +947,25 @@
         }
         break;
       }
-      case 'ColorPicker3':
-      case 'ColorPicker4': {
+      case 'ColorPicker3': {
         const input = row.querySelector('input[type="color"]');
         const hexLabel = row.querySelector('.color-hex');
         const hex = rgbToHex(el.value.data);
         if (input && document.activeElement !== input) input.value = hex;
         if (hexLabel) hexLabel.textContent = hex;
+        break;
+      }
+      case 'ColorPicker4': {
+        const input = row.querySelector('input[type="color"]');
+        const hexLabel = row.querySelector('.color-hex');
+        const hex = rgbToHex(el.value.data);
+        const alpha = el.value.data[3] ?? 1.0;
+        if (input && document.activeElement !== input) input.value = hex;
+        if (hexLabel) hexLabel.textContent = hex;
+        const alphaSlider = row.querySelector('input[type="range"]');
+        if (alphaSlider && document.activeElement !== alphaSlider) alphaSlider.value = alpha;
+        const alphaText = row.querySelector('.alpha-text');
+        if (alphaText) alphaText.textContent = `α${alpha.toFixed(2)}`;
         break;
       }
       case 'TextInput': {
@@ -803,10 +981,12 @@
       case 'ProgressBar': {
         const fill = row.querySelector('.progress-fill');
         const percent = row.querySelector('.progress-percent');
-        const val = el.value.type === 'Float' ? el.value.data : el.value.data;
+        const subtitle = row.querySelector('.progress-subtitle');
+        const val = el.value.data;
         const pct = Math.round(val * 100);
         if (fill) fill.style.width = pct + '%';
         if (percent) percent.innerHTML = pct + '<sup>%</sup>';
+        if (subtitle && el.meta.subtitle) subtitle.textContent = el.meta.subtitle;
         break;
       }
       case 'Stat': {
@@ -816,8 +996,31 @@
         if (subEl && el.value.data.subvalue) subEl.textContent = el.value.data.subvalue;
         break;
       }
+      case 'Status': {
+        const data = el.value.data;
+        const color = data.active ? (data.activeColor || data.active_color || 'green') : (data.inactiveColor || data.inactive_color || 'red');
+        const text = data.active ? (data.activeText || data.active_text || 'Active') : (data.inactiveText || data.inactive_text || 'Inactive');
+        const dot = row.querySelector('.status-dot');
+        const span = row.querySelector('.status-indicator span');
+        if (dot) { dot.className = 'status-dot ' + color; }
+        if (span) span.textContent = text;
+        break;
+      }
       case 'MiniChart': {
         updateMiniChart(el);
+        break;
+      }
+      case 'Plot': {
+        updatePlot(el);
+        break;
+      }
+      case 'Grid': {
+        // Update each child element within the grid
+        const children = el.value.data.children || [];
+        for (const childId of children) {
+          const child = elements.find(e => e.id === childId);
+          if (child) updateElementDOM(child);
+        }
         break;
       }
       default:
@@ -860,9 +1063,11 @@
       return `<div class="widget-row" data-id="${esc(el.id)}">
         <span class="widget-label">${esc(el.label)}</span>
         <div class="widget-control color-picker-wrapper">
-          <input type="color" value="${hex}"
-            oninput="wgui.onColor3('${escJs(el.id)}', this.value)">
-          <span class="color-hex">${hex}</span>
+          <div class="color-picker-container">
+            <input type="color" value="${hex}"
+              oninput="wgui.onColor3('${escJs(el.id)}', this.value)">
+            <span class="color-hex">${hex}</span>
+          </div>
         </div>
       </div>`;
     },
@@ -873,11 +1078,14 @@
       return `<div class="widget-row" data-id="${esc(el.id)}">
         <span class="widget-label">${esc(el.label)}</span>
         <div class="widget-control color-picker-wrapper">
-          <input type="color" value="${hex}"
-            oninput="wgui.onColor4('${escJs(el.id)}', this.value, '${escJs(el.id)}')">
+          <div class="color-picker-container">
+            <input type="color" value="${hex}"
+              oninput="wgui.onColor4('${escJs(el.id)}', this.value, '${escJs(el.id)}')">
+            <span class="color-hex">${hex}</span>
+          </div>
           <input type="range" min="0" max="1" step="0.01" value="${alpha}" style="max-width:80px"
             oninput="wgui.onColor4Alpha('${escJs(el.id)}', this.value)">
-          <span class="color-hex">${hex} a:${alpha.toFixed(2)}</span>
+          <span class="alpha-text" style="font-family:var(--mono);font-size:11px;color:var(--text-dim);min-width:40px;">α${alpha.toFixed(2)}</span>
         </div>
       </div>`;
     },
@@ -933,7 +1141,7 @@
     },
 
     ProgressBar: (el) => {
-      const val = el.value.type === 'Float' ? el.value.data : el.value.data / 100;
+      const val = el.value.data;
       const pct = Math.round(val * 100);
       const accent = el.meta.accent || 'coral';
       const subtitle = el.meta.subtitle || '';
@@ -997,7 +1205,7 @@
     },
 
     Grid: (el) => {
-      const data = el.value.data;
+      const data = el.value.data || {};
       const cols = data.cols || 2;
       const children = data.children || [];
       let html = `<div class="grid grid-${cols}">`;
@@ -1009,6 +1217,38 @@
       }
       html += '</div>';
       return html;
+    },
+
+    Plot: (el) => {
+      const data = el.value.data || {};
+      const series = data.series || [];
+      const xLabel = data.x_label || '';
+      const yLabel = data.y_label || '';
+      
+      // Use first series color as accent
+      const accent = series.length > 0 ? series[0].color : 'coral';
+      
+      // Build legend
+      let legendHtml = '';
+      if (series.length > 1) {
+        legendHtml = '<div class="plot-legend">' + 
+          series.map(s => `<div class="plot-legend-item"><div class="plot-legend-color" style="background:var(--${s.color})"></div>${esc(s.name)}</div>`).join('') +
+          '</div>';
+      }
+      
+      return `<div class="widget-row" data-id="${esc(el.id)}">
+        <div class="plot-container ${accent}" style="flex: 1;">
+          <div class="plot-header">
+            <span class="plot-title">${esc(el.label)}</span>
+            ${legendHtml}
+          </div>
+          <canvas class="plot-canvas" id="plot-${esc(el.id)}"></canvas>
+          <div class="plot-axis-labels">
+            <span>${esc(xLabel)}</span>
+            <span>${esc(yLabel)}</span>
+          </div>
+        </div>
+      </div>`;
     }
   };
 
@@ -1031,6 +1271,18 @@
     const instance = chartInstances.get(el.id);
     if (instance) {
       drawMiniChart(el, instance.canvas, instance.ctx);
+    }
+    // Update the displayed value text
+    const row = document.querySelector(`[data-id="${CSS.escape(el.id)}"]`);
+    if (row) {
+      const valSpan = row.querySelector('.mini-chart-value');
+      if (valSpan) {
+        const data = el.value.data;
+        const values = data.values || [];
+        const current = values.length > 0 ? values[values.length - 1] : (data.current || 0);
+        const unit = data.unit || '';
+        valSpan.textContent = `${current}${unit}`;
+      }
     }
   }
 
@@ -1102,6 +1354,7 @@
     onSlider(id, rawVal, inputEl) {
       const el = elements.find(e => e.id === id);
       if (!el) return;
+      recentlyInteracted.set(id, Date.now());
       const isInt = el.value.type === 'Int';
       const val = isInt ? parseInt(rawVal) : parseFloat(rawVal);
       el.value.data = val;
@@ -1137,7 +1390,7 @@
       const a = el.value.data[3] ?? 1.0;
       el.value.data = [...rgb, a];
       const row = document.querySelector(`[data-id="${CSS.escape(id)}"]`);
-      if (row) row.querySelector('.color-hex').textContent = `${hex} a:${a.toFixed(2)}`;
+      if (row) row.querySelector('.color-hex').textContent = hex;
       send({ type: 'set', id, value: { type: 'Color4', data: el.value.data } });
     },
 
@@ -1145,9 +1398,11 @@
       const el = elements.find(e => e.id === id);
       if (!el) return;
       el.value.data[3] = parseFloat(alphaStr);
-      const hex = rgbToHex(el.value.data);
       const row = document.querySelector(`[data-id="${CSS.escape(id)}"]`);
-      if (row) row.querySelector('.color-hex').textContent = `${hex} a:${el.value.data[3].toFixed(2)}`;
+      if (row) {
+        const alphaText = row.querySelector('.alpha-text');
+        if (alphaText) alphaText.textContent = `α${el.value.data[3].toFixed(2)}`;
+      }
       send({ type: 'set', id, value: { type: 'Color4', data: el.value.data } });
     },
 
@@ -1199,11 +1454,125 @@
     return [r, g, b];
   }
 
+  // ── Plot Canvas Drawing ────────────────────────────
+  function initPlot(el) {
+    const canvas = document.getElementById(`plot-${el.id}`);
+    if (!canvas) return;
+    
+    const ctx = canvas.getContext('2d');
+    const rect = canvas.getBoundingClientRect();
+    canvas.width = rect.width * window.devicePixelRatio;
+    canvas.height = rect.height * window.devicePixelRatio;
+    ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+    
+    chartInstances.set(el.id, { canvas, ctx, el, type: 'plot' });
+    drawPlot(el, canvas, ctx);
+  }
+
+  function updatePlot(el) {
+    const instance = chartInstances.get(el.id);
+    if (instance && instance.type === 'plot') {
+      drawPlot(el, instance.canvas, instance.ctx);
+    }
+  }
+
+  function drawPlot(el, canvas, ctx) {
+    const data = el.value.data || {};
+    const series = data.series || [];
+    if (series.length === 0) return;
+    
+    // Collect all values to determine scale
+    let allValues = [];
+    for (const s of series) {
+      if (s.values && s.values.length > 0) {
+        allValues = allValues.concat(s.values);
+      }
+    }
+    if (allValues.length < 2) return;
+
+    const width = canvas.width / window.devicePixelRatio;
+    const height = canvas.height / window.devicePixelRatio;
+    
+    const min = Math.min(...allValues);
+    const max = Math.max(...allValues);
+    const range = max - min || 1;
+    const padding = { top: 10, right: 10, bottom: 10, left: 10 };
+    
+    const plotWidth = width - padding.left - padding.right;
+    const plotHeight = height - padding.top - padding.bottom;
+
+    ctx.clearRect(0, 0, width, height);
+    
+    // Draw grid lines
+    ctx.strokeStyle = 'rgba(128, 128, 128, 0.15)';
+    ctx.lineWidth = 1;
+    for (let i = 0; i <= 4; i++) {
+      const y = padding.top + (plotHeight) * (i / 4);
+      ctx.beginPath();
+      ctx.moveTo(padding.left, y);
+      ctx.lineTo(width - padding.right, y);
+      ctx.stroke();
+    }
+
+    // Draw each series
+    for (const s of series) {
+      const values = s.values || [];
+      if (values.length < 2) continue;
+      
+      const color = getComputedStyle(canvas.closest('.plot-container')).getPropertyValue(`--${s.color}`).trim() || '#e06c5c';
+      
+      // Draw line
+      ctx.beginPath();
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 2;
+      ctx.lineJoin = 'round';
+      
+      for (let i = 0; i < values.length; i++) {
+        const x = padding.left + (i / (values.length - 1)) * plotWidth;
+        const y = padding.top + plotHeight - ((values[i] - min) / range) * plotHeight;
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+      
+      // Draw area under line for first series only
+      if (series.indexOf(s) === 0) {
+        const gradient = ctx.createLinearGradient(0, padding.top, 0, height - padding.bottom);
+        gradient.addColorStop(0, color + '30');
+        gradient.addColorStop(1, color + '05');
+        
+        ctx.beginPath();
+        ctx.moveTo(padding.left, padding.top + plotHeight);
+        for (let i = 0; i < values.length; i++) {
+          const x = padding.left + (i / (values.length - 1)) * plotWidth;
+          const y = padding.top + plotHeight - ((values[i] - min) / range) * plotHeight;
+          ctx.lineTo(x, y);
+        }
+        ctx.lineTo(width - padding.right, padding.top + plotHeight);
+        ctx.closePath();
+        ctx.fillStyle = gradient;
+        ctx.fill();
+      }
+      
+      // Draw dots at data points
+      ctx.fillStyle = color;
+      for (let i = 0; i < values.length; i += Math.ceil(values.length / 20)) {
+        const x = padding.left + (i / (values.length - 1)) * plotWidth;
+        const y = padding.top + plotHeight - ((values[i] - min) / range) * plotHeight;
+        ctx.beginPath();
+        ctx.arc(x, y, 3, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+  }
+
   // Handle window resize for charts
   window.addEventListener('resize', () => {
     for (const el of elements) {
       if (el.kind.type === 'MiniChart') {
         initMiniChart(el);
+      } else if (el.kind.type === 'Plot') {
+        initPlot(el);
       }
     }
   });

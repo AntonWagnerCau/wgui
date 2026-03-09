@@ -43,6 +43,29 @@ pub enum Value {
         #[serde(skip_serializing_if = "Option::is_none")]
         unit: Option<String>,
     },
+    /// Grid container data
+    GridValue {
+        cols: usize,
+        children: Vec<String>,
+    },
+    /// Plot data for larger charts
+    PlotValue {
+        series: Vec<PlotSeries>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        x_label: Option<String>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        y_label: Option<String>,
+    },
+    /// Null value for container elements
+    Null,
+}
+
+/// A data series for plotting
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct PlotSeries {
+    pub name: String,
+    pub values: Vec<f32>,
+    pub color: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -69,6 +92,8 @@ pub enum ElementKind {
     MiniChart,
     /// Grid layout container
     Grid,
+    /// Larger plot/chart for data visualization
+    Plot,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]

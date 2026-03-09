@@ -91,13 +91,13 @@ impl Context {
                 }
                 Some(prev_decl) => {
                     // Check if value changed from Rust side
-                    if prev_decl.value != decl.value
-                        || prev_decl.meta != decl.meta
-                        || prev_decl.kind != decl.kind
-                    {
+                    let value_changed = prev_decl.value != decl.value || prev_decl.kind != decl.kind;
+                    let meta_changed = prev_decl.meta != decl.meta;
+                    if value_changed || meta_changed {
                         outgoing.push(ServerMsg::Update {
                             id: decl.id.clone(),
                             value: decl.value.clone(),
+                            meta: if meta_changed { Some(decl.meta.clone()) } else { None },
                         });
                     }
                 }

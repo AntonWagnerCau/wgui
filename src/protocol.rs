@@ -12,7 +12,12 @@ pub enum ServerMsg {
 
     /// A single element's value changed from the Rust side.
     #[serde(rename = "update")]
-    Update { id: ElementId, value: Value },
+    Update {
+        id: ElementId,
+        value: Value,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        meta: Option<crate::element::ElementMeta>,
+    },
 
     /// An element was added.
     #[serde(rename = "add")]

@@ -1,5 +1,6 @@
 use std::thread;
 use std::time::Duration;
+use wgui::AccentColor;
 
 fn main() {
     // Init logging so you can see wgui server messages
@@ -55,6 +56,28 @@ fn main() {
                 click_count += 1;
             }
             win.label(&format!("Reset pressed {} time(s)", click_count));
+        }
+
+        // -- "Stats" window - demonstrates grid layout --
+        {
+            let mut win = ctx.window("Stats");
+            win.set_accent(AccentColor::Coral);
+            
+            // Stats arranged in a grid instead of stacked
+            win.grid(2, |grid| {
+                grid.stat("FPS", "60", Some("avg 58"), AccentColor::Green);
+                grid.stat("Frame Time", "16.7", Some("ms"), AccentColor::Blue);
+                grid.stat("Draw Calls", "1,024", None, AccentColor::Coral);
+                grid.stat("Triangles", "45K", None, AccentColor::Purple);
+            });
+            
+            win.separator();
+            
+            // Status indicators in a grid
+            win.grid(2, |grid| {
+                grid.status("Online", true, Some("Yes"), Some("No"), AccentColor::Green, AccentColor::Red);
+                grid.status("Recording", false, Some("On"), Some("Off"), AccentColor::Yellow, AccentColor::Red);
+            });
         }
 
         ctx.end_frame();

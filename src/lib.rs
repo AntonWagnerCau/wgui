@@ -1,5 +1,5 @@
 //! wgui — a lightweight immediate-mode debug GUI served over localhost.
-//!
+//! Visual theme heavily inspired by https://www.youtube.com/@PezzzasWork
 //! # Example
 //! ```no_run
 //! let mut ctx = wgui::Context::new();
@@ -25,4 +25,4 @@ mod window;
 
 pub use context::Context;
 pub use element::AccentColor;
-pub use window::Window;
+pub use window::{Grid, Window};
