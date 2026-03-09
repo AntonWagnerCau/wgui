@@ -20,7 +20,6 @@ mod context;
 mod element;
 mod protocol;
 mod server;
-mod state;
 mod window;
 
 pub use context::Context;

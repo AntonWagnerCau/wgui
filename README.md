@@ -1,10 +1,10 @@
-# wgui
+# w-gui
 
 A lightweight immediate-mode debug GUI served over localhost.
 
 ## Overview
 
-wgui provides an in-process GUI framework for real-time parameter updates and visualization. Access the interface through a web browser on localhost.
+w-gui provides an in-process GUI framework for real-time parameter updates and visualization. Access the interface through a web browser on localhost.
 The visual design is heavily inspired by https://www.youtube.com/@PezzzasWork
 
 ## Features

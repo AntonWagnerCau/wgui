@@ -1,38 +1,43 @@
 use std::net::{TcpListener, TcpStream};
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
+use std::sync::mpsc;
 use std::thread;
 use std::time::Duration;
 
-
+use crate::element::ElementDecl;
 use crate::protocol::{ClientMsg, ServerMsg};
-use crate::state::Shared;
 
 const HTML: &str = include_str!("frontend.html");
 
 /// Spawn the HTTP server thread. Returns the join handle.
-pub fn spawn_http(shared: Shared, port: u16) -> thread::JoinHandle<()> {
+pub fn spawn_http(shutdown: Arc<AtomicBool>, port: u16) -> thread::JoinHandle<()> {
     thread::Builder::new()
         .name("wgui-http".into())
-        .spawn(move || run_http(shared, port))
+        .spawn(move || run_http(shutdown, port))
         .expect("failed to spawn wgui HTTP thread")
 }
 
 /// Spawn the WebSocket server thread. Returns the join handle.
-pub fn spawn_ws(shared: Shared, port: u16) -> thread::JoinHandle<()> {
+pub fn spawn_ws(
+    ws_rx: mpsc::Receiver<Vec<ServerMsg>>,
+    edit_tx: mpsc::Sender<(String, crate::element::Value)>,
+    port: u16,
+) -> thread::JoinHandle<()> {
     thread::Builder::new()
         .name("wgui-ws".into())
-        .spawn(move || run_ws(shared, port))
+        .spawn(move || run_ws(ws_rx, edit_tx, port))
         .expect("failed to spawn wgui WS thread")
 }
 
-fn run_http(shared: Shared, port: u16) {
+fn run_http(shutdown: Arc<AtomicBool>, port: u16) {
     let server = tiny_http::Server::http(format!("127.0.0.1:{port}"))
         .unwrap_or_else(|e| panic!("wgui: failed to bind HTTP on port {port}: {e}"));
 
     log::info!("wgui: serving UI at http://127.0.0.1:{port}");
 
     loop {
-        // Check shutdown
-        if shared.lock().unwrap().shutdown {
+        if shutdown.load(Ordering::Relaxed) {
             break;
         }
 
@@ -60,7 +65,11 @@ fn run_http(shared: Shared, port: u16) {
     }
 }
 
-fn run_ws(shared: Shared, port: u16) {
+fn run_ws(
+    ws_rx: mpsc::Receiver<Vec<ServerMsg>>,
+    edit_tx: mpsc::Sender<(String, crate::element::Value)>,
+    port: u16,
+) {
     let listener = TcpListener::bind(format!("127.0.0.1:{port}"))
         .unwrap_or_else(|e| panic!("wgui: failed to bind WS on port {port}: {e}"));
 
@@ -70,18 +79,21 @@ fn run_ws(shared: Shared, port: u16) {
 
     log::info!("wgui: WebSocket listening on ws://127.0.0.1:{port}");
 
-    loop {
-        if shared.lock().unwrap().shutdown {
-            break;
-        }
+    // Local mirror of UI state, updated from incoming ServerMsg
+    let mut mirror: Vec<ElementDecl> = Vec::new();
 
+    loop {
         match listener.accept() {
             Ok((stream, _addr)) => {
                 log::info!("wgui: new WebSocket client connected");
-                handle_ws_client(&shared, stream);
+                handle_ws_client(&ws_rx, &edit_tx, stream, &mut mirror);
                 log::info!("wgui: WebSocket client disconnected");
             }
             Err(ref e) if e.kind() == std::io::ErrorKind::WouldBlock => {
+                // Try to drain pending messages from game loop while waiting for connections
+                while let Ok(msgs) = ws_rx.try_recv() {
+                    apply_messages_to_mirror(&mut mirror, &msgs);
+                }
                 thread::sleep(Duration::from_millis(50));
             }
             Err(e) => {
@@ -92,7 +104,12 @@ fn run_ws(shared: Shared, port: u16) {
     }
 }
 
-fn handle_ws_client(shared: &Shared, stream: TcpStream) {
+fn handle_ws_client(
+    ws_rx: &mpsc::Receiver<Vec<ServerMsg>>,
+    edit_tx: &mpsc::Sender<(String, crate::element::Value)>,
+    stream: TcpStream,
+    mirror: &mut Vec<ElementDecl>,
+) {
     stream
         .set_nonblocking(false)
         .expect("failed to set stream blocking");
@@ -108,58 +125,51 @@ fn handle_ws_client(shared: &Shared, stream: TcpStream) {
         }
     };
 
-    // Signal that we need a snapshot
-    {
-        let mut state = shared.lock().unwrap();
-        state.needs_snapshot = true;
+    // Send full snapshot on connect
+    let snapshot = ServerMsg::Snapshot {
+        elements: mirror.clone(),
+    };
+    if let Ok(json) = serde_json::to_string(&snapshot) {
+        if ws.send(tungstenite::Message::Text(json.into())).is_err() {
+            return;
+        }
     }
 
     loop {
-        // Check shutdown
-        if shared.lock().unwrap().shutdown {
-            let _ = ws.close(None);
-            break;
-        }
-
-        // Send outgoing messages
-        {
-            let mut state = shared.lock().unwrap();
-
-            if state.needs_snapshot {
-                let snapshot = ServerMsg::Snapshot {
-                    elements: state.current_elements.clone(),
-                };
-                if let Ok(json) = serde_json::to_string(&snapshot) {
-                    if ws
-                        .send(tungstenite::Message::Text(json.into()))
-                        .is_err()
-                    {
-                        return;
+        // Drain pending messages from game loop and apply to mirror
+        loop {
+            match ws_rx.try_recv() {
+                Ok(msgs) => {
+                    apply_messages_to_mirror(mirror, &msgs);
+                    // Send all messages to client
+                    for msg in &msgs {
+                        if let Ok(json) = serde_json::to_string(&msg) {
+                            if ws
+                                .send(tungstenite::Message::Text(json.into()))
+                                .is_err()
+                            {
+                                return;
+                            }
+                        }
                     }
                 }
-                state.needs_snapshot = false;
-            }
-
-            for msg in state.outgoing_msgs.drain(..) {
-                if let Ok(json) = serde_json::to_string(&msg) {
-                    if ws
-                        .send(tungstenite::Message::Text(json.into()))
-                        .is_err()
-                    {
-                        return;
-                    }
+                Err(mpsc::TryRecvError::Empty) => break,
+                Err(mpsc::TryRecvError::Disconnected) => {
+                    // Game loop dropped the sender, shut down
+                    let _ = ws.close(None);
+                    return;
                 }
             }
         }
 
-        // Read incoming messages (non-blocking with timeout)
+        // Read incoming messages from client (non-blocking with timeout)
         match ws.read() {
             Ok(tungstenite::Message::Text(text)) => {
                 if let Ok(client_msg) = serde_json::from_str::<ClientMsg>(&text) {
                     match client_msg {
                         ClientMsg::Set { id, value } => {
-                            let mut state = shared.lock().unwrap();
-                            state.incoming_edits.insert(id, value);
+                            // Forward to game loop
+                            let _ = edit_tx.send((id, value));
                         }
                     }
                 }
@@ -180,6 +190,31 @@ fn handle_ws_client(shared: &Shared, stream: TcpStream) {
             Err(e) => {
                 log::warn!("wgui: WS read error: {e}");
                 break;
+            }
+        }
+    }
+}
+
+/// Apply a batch of ServerMsg to the local mirror.
+fn apply_messages_to_mirror(mirror: &mut Vec<ElementDecl>, msgs: &[ServerMsg]) {
+    for msg in msgs {
+        match msg {
+            ServerMsg::Snapshot { elements } => {
+                *mirror = elements.clone();
+            }
+            ServerMsg::Add { element } => {
+                mirror.push(element.clone());
+            }
+            ServerMsg::Update { id, value, meta } => {
+                if let Some(elem) = mirror.iter_mut().find(|e| &e.id == id) {
+                    elem.value = value.clone();
+                    if let Some(m) = meta {
+                        elem.meta = m.clone();
+                    }
+                }
+            }
+            ServerMsg::Remove { id } => {
+                mirror.retain(|e| &e.id != id);
             }
         }
     }

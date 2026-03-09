@@ -1,12 +1,12 @@
 use std::thread;
 use std::time::Duration;
-use wgui::AccentColor;
+use w_gui::AccentColor;
 
 fn main() {
-    // Init logging so you can see wgui server messages
+    // Init logging so you can see w_gui server messages
     env_logger::init();
 
-    let mut ctx = wgui::Context::new();
+    let mut ctx = w_gui::Context::new();
 
     // -- state --
     let mut color = [0.2f32, 0.5, 0.8];

@@ -1,11 +1,11 @@
 use std::thread;
 use std::time::{Duration, Instant};
-use wgui::AccentColor;
+use w_gui::AccentColor;
 
 fn main() {
     env_logger::init();
 
-    let mut ctx = wgui::Context::new();
+    let mut ctx = w_gui::Context::new();
 
     // Simulation state
     let mut generation: u32;

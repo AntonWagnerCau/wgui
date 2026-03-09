@@ -1,13 +1,24 @@
+use std::collections::HashMap;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
+use std::sync::mpsc;
 use std::thread::JoinHandle;
 
-use crate::element::{ElementDecl, Value};
+use crate::element::{ElementDecl, ElementId, Value};
 use crate::protocol::ServerMsg;
 use crate::server;
-use crate::state::{self, Shared};
 use crate::window::Window;
 
 pub struct Context {
-    shared: Shared,
+    // Sends batched ServerMsg diffs to the WS thread each frame
+    ws_tx: mpsc::SyncSender<Vec<ServerMsg>>,
+    // Receives browser edits from WS thread
+    edit_rx: mpsc::Receiver<(ElementId, Value)>,
+    // Local cache of pending edits, drained from edit_rx on demand
+    incoming_edits: HashMap<ElementId, Value>,
+    // Signals HTTP thread to shut down
+    shutdown: Arc<AtomicBool>,
+
     prev_frame: Vec<ElementDecl>,
     current_frame: Vec<ElementDecl>,
     http_port: u16,
@@ -26,15 +37,22 @@ impl Context {
     /// Create a new wgui context starting port search from `start_port`.
     pub fn with_port(start_port: u16) -> Self {
         let (http_port, ws_port) = server::find_port_pair(start_port);
-        let shared = state::new_shared();
 
-        let http_handle = server::spawn_http(shared.clone(), http_port);
-        let ws_handle = server::spawn_ws(shared.clone(), ws_port);
+        // Create channels for inter-thread communication
+        let (ws_tx, ws_rx) = mpsc::sync_channel::<Vec<ServerMsg>>(2);
+        let (edit_tx, edit_rx) = mpsc::channel::<(ElementId, Value)>();
+        let shutdown = Arc::new(AtomicBool::new(false));
+
+        let http_handle = server::spawn_http(shutdown.clone(), http_port);
+        let ws_handle = server::spawn_ws(ws_rx, edit_tx, ws_port);
 
         println!("wgui: UI available at http://127.0.0.1:{http_port}");
 
         Self {
-            shared,
+            ws_tx,
+            edit_rx,
+            incoming_edits: HashMap::new(),
+            shutdown,
             prev_frame: Vec::new(),
             current_frame: Vec::new(),
             http_port,
@@ -61,8 +79,11 @@ impl Context {
 
     /// Consume a pending browser edit for the given element id, if any.
     pub(crate) fn consume_edit(&mut self, id: &str) -> Option<Value> {
-        let mut state = self.shared.lock().unwrap();
-        state.incoming_edits.remove(id)
+        // Drain all pending edits from the channel into the local cache
+        while let Ok((elem_id, value)) = self.edit_rx.try_recv() {
+            self.incoming_edits.insert(elem_id, value);
+        }
+        self.incoming_edits.remove(id)
     }
 
     /// Record an element declaration for the current frame.
@@ -113,11 +134,17 @@ impl Context {
             }
         }
 
-        // Push to shared state
-        {
-            let mut state = self.shared.lock().unwrap();
-            state.outgoing_msgs.extend(outgoing);
-            state.current_elements = self.current_frame.clone();
+        // Send outgoing messages to WS thread
+        if !outgoing.is_empty() {
+            match self.ws_tx.try_send(outgoing) {
+                Ok(()) => {}
+                Err(mpsc::TrySendError::Full(_)) => {
+                    log::warn!("wgui: WS channel backpressure, skipping frame update");
+                }
+                Err(mpsc::TrySendError::Disconnected(_)) => {
+                    log::warn!("wgui: WS thread disconnected");
+                }
+            }
         }
 
         // Swap frames
@@ -127,7 +154,6 @@ impl Context {
 
 impl Drop for Context {
     fn drop(&mut self) {
-        let mut state = self.shared.lock().unwrap();
-        state.shutdown = true;
+        self.shutdown.store(true, Ordering::Relaxed);
     }
 }
