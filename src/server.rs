@@ -1,9 +1,7 @@
-use std::io::Read as _;
 use std::net::{TcpListener, TcpStream};
 use std::thread;
 use std::time::Duration;
 
-use tungstenite::WebSocket;
 
 use crate::protocol::{ClientMsg, ServerMsg};
 use crate::state::Shared;

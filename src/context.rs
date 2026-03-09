@@ -1,6 +1,6 @@
 use std::thread::JoinHandle;
 
-use crate::element::{ElementDecl, ElementId, Value};
+use crate::element::{ElementDecl, Value};
 use crate::protocol::ServerMsg;
 use crate::server;
 use crate::state::{self, Shared};
