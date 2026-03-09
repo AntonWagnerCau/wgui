@@ -1,7 +1,7 @@
 use std::collections::{HashMap, HashSet};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use std::thread::JoinHandle;
 
 use crate::element::{ElementDecl, ElementId, Value};
@@ -36,8 +36,8 @@ impl Default for ContextOptions {
 pub struct Context {
     // Sends batched ServerMsg diffs to the WS thread each frame
     ws_tx: mpsc::SyncSender<Vec<ServerMsg>>,
-    // Receives browser edits from WS thread
-    edit_rx: mpsc::Receiver<(ElementId, Value)>,
+    // Receives browser edits from WS thread (wrapped in Mutex for Sync)
+    edit_rx: Mutex<mpsc::Receiver<(ElementId, Value)>>,
     // Local cache of pending edits, drained from edit_rx on demand
     incoming_edits: HashMap<ElementId, Value>,
     // Signals HTTP thread to shut down
@@ -83,7 +83,7 @@ impl Context {
 
         Self {
             ws_tx,
-            edit_rx,
+            edit_rx: Mutex::new(edit_rx),
             incoming_edits: HashMap::new(),
             shutdown,
             prev_frame: Vec::new(),
@@ -113,9 +113,11 @@ impl Context {
     /// Consume a pending browser edit for the given element id, if any.
     pub(crate) fn consume_edit(&mut self, id: &str) -> Option<Value> {
         // Drain all pending edits from the channel into the local cache
-        while let Ok((elem_id, value)) = self.edit_rx.try_recv() {
+        let rx = self.edit_rx.lock().unwrap();
+        while let Ok((elem_id, value)) = rx.try_recv() {
             self.incoming_edits.insert(elem_id, value);
         }
+        drop(rx);
         self.incoming_edits.remove(id)
     }
 
@@ -213,6 +215,11 @@ fn reconcile(prev: &[ElementDecl], current: &[ElementDecl]) -> Vec<ServerMsg> {
 
     outgoing
 }
+
+const _: () = {
+    fn _assert_send_sync<T: Send + Sync>() {}
+    fn _check() { _assert_send_sync::<Context>(); }
+};
 
 #[cfg(test)]
 mod tests {
