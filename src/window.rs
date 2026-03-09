@@ -4,6 +4,24 @@ use std::sync::Arc;
 use crate::context::Context;
 use crate::element::{AccentColor, ElementDecl, ElementKind, ElementMeta, PlotSeries, Value};
 
+/// Response from a widget interaction.
+pub struct Response {
+    clicked: bool,
+    changed: bool,
+}
+
+impl Response {
+    /// Returns `true` whenever the widget was interacted with since the last update.
+    pub fn clicked(&self) -> bool {
+        self.clicked
+    }
+
+    /// Returns `true` only if the widget's value actually changed since the last update.
+    pub fn changed(&self) -> bool {
+        self.changed
+    }
+}
+
 // ── Element declaration builders ─────────────────────────────────────
 // Shared by Window and Grid to avoid duplicating ElementDecl construction.
 
@@ -286,82 +304,119 @@ impl<'a> Window<'a> {
     }
 
     /// A floating-point slider with a range.
-    pub fn slider(&mut self, label: &str, value: &mut f32, range: RangeInclusive<f32>) {
+    pub fn slider(&mut self, label: &str, value: &mut f32, range: RangeInclusive<f32>) -> Response {
         let id = self.make_id(label);
-        if let Some(Value::Float(v)) = self.ctx.consume_edit(&id) {
-            *value = v as f32;
-        }
+        let (clicked, changed) = if let Some(Value::Float(v)) = self.ctx.consume_edit(&id) {
+            let new = v as f32;
+            let changed = *value != new;
+            *value = new;
+            (true, changed)
+        } else {
+            (false, false)
+        };
         self.ctx
             .declare(build_slider(id, self.name.clone(), label, *value, &range));
+        Response { clicked, changed }
     }
 
     /// An integer slider with a range.
-    pub fn slider_int(&mut self, label: &str, value: &mut i32, range: RangeInclusive<i32>) {
+    pub fn slider_int(&mut self, label: &str, value: &mut i32, range: RangeInclusive<i32>) -> Response {
         let id = self.make_id(label);
-        if let Some(Value::Int(v)) = self.ctx.consume_edit(&id) {
-            *value = v as i32;
-        }
+        let (clicked, changed) = if let Some(Value::Int(v)) = self.ctx.consume_edit(&id) {
+            let new = v as i32;
+            let changed = *value != new;
+            *value = new;
+            (true, changed)
+        } else {
+            (false, false)
+        };
         self.ctx
             .declare(build_slider_int(id, self.name.clone(), label, *value, &range));
+        Response { clicked, changed }
     }
 
     /// A checkbox (boolean toggle).
-    pub fn checkbox(&mut self, label: &str, value: &mut bool) {
+    pub fn checkbox(&mut self, label: &str, value: &mut bool) -> Response {
         let id = self.make_id(label);
-        if let Some(Value::Bool(v)) = self.ctx.consume_edit(&id) {
+        let (clicked, changed) = if let Some(Value::Bool(v)) = self.ctx.consume_edit(&id) {
+            let changed = *value != v;
             *value = v;
-        }
+            (true, changed)
+        } else {
+            (false, false)
+        };
         self.ctx
             .declare(build_checkbox(id, self.name.clone(), label, *value));
+        Response { clicked, changed }
     }
 
     /// An RGB color picker (3-component).
-    pub fn color_picker(&mut self, label: &str, value: &mut [f32; 3]) {
+    pub fn color_picker(&mut self, label: &str, value: &mut [f32; 3]) -> Response {
         let id = self.make_id(label);
-        if let Some(Value::Color3(c)) = self.ctx.consume_edit(&id) {
+        let (clicked, changed) = if let Some(Value::Color3(c)) = self.ctx.consume_edit(&id) {
+            let changed = *value != c;
             *value = c;
-        }
+            (true, changed)
+        } else {
+            (false, false)
+        };
         self.ctx
             .declare(build_color3(id, self.name.clone(), label, *value));
+        Response { clicked, changed }
     }
 
     /// An RGBA color picker (4-component).
-    pub fn color_picker4(&mut self, label: &str, value: &mut [f32; 4]) {
+    pub fn color_picker4(&mut self, label: &str, value: &mut [f32; 4]) -> Response {
         let id = self.make_id(label);
-        if let Some(Value::Color4(c)) = self.ctx.consume_edit(&id) {
+        let (clicked, changed) = if let Some(Value::Color4(c)) = self.ctx.consume_edit(&id) {
+            let changed = *value != c;
             *value = c;
-        }
+            (true, changed)
+        } else {
+            (false, false)
+        };
         self.ctx
             .declare(build_color4(id, self.name.clone(), label, *value));
+        Response { clicked, changed }
     }
 
     /// A text input field.
-    pub fn text_input(&mut self, label: &str, value: &mut String) {
+    pub fn text_input(&mut self, label: &str, value: &mut String) -> Response {
         let id = self.make_id(label);
-        if let Some(Value::String(s)) = self.ctx.consume_edit(&id) {
+        let (clicked, changed) = if let Some(Value::String(s)) = self.ctx.consume_edit(&id) {
+            let changed = *value != s;
             *value = s;
-        }
+            (true, changed)
+        } else {
+            (false, false)
+        };
         self.ctx
             .declare(build_text_input(id, self.name.clone(), label, value));
+        Response { clicked, changed }
     }
 
     /// A dropdown selector.
-    pub fn dropdown(&mut self, label: &str, selected: &mut usize, options: &[&str]) {
+    pub fn dropdown(&mut self, label: &str, selected: &mut usize, options: &[&str]) -> Response {
         let id = self.make_id(label);
-        if let Some(Value::Enum { selected: s, .. }) = self.ctx.consume_edit(&id) {
+        let (clicked, changed) = if let Some(Value::Enum { selected: s, .. }) = self.ctx.consume_edit(&id) {
+            let changed = *selected != s;
             *selected = s;
-        }
+            (true, changed)
+        } else {
+            (false, false)
+        };
         self.ctx
             .declare(build_dropdown(id, self.name.clone(), label, *selected, options));
+        Response { clicked, changed }
     }
 
-    /// A button. Returns `true` for one frame when clicked.
-    pub fn button(&mut self, label: &str) -> bool {
+    /// A button. Returns a `Response` — use `.clicked()` to check if it was pressed.
+    pub fn button(&mut self, label: &str) -> Response {
         let id = self.make_id(label);
         let clicked = matches!(self.ctx.consume_edit(&id), Some(Value::Button(true)));
         self.ctx
             .declare(build_button(id, self.name.clone(), label));
-        clicked
+        Response { clicked, changed: clicked }
     }
 
     /// A read-only text label.
@@ -554,23 +609,34 @@ impl<'a, 'ctx> Grid<'a, 'ctx> {
     // ── Interactive widgets ──────────────────────────────────────────
 
     /// A floating-point slider.
-    pub fn slider(&mut self, label: &str, value: &mut f32, range: RangeInclusive<f32>) {
+    pub fn slider(&mut self, label: &str, value: &mut f32, range: RangeInclusive<f32>) -> Response {
         let id = self.make_id(label);
-        if let Some(Value::Float(v)) = self.window.ctx.consume_edit(&id) {
-            *value = v as f32;
-        }
+        let (clicked, changed) = if let Some(Value::Float(v)) = self.window.ctx.consume_edit(&id) {
+            let new = v as f32;
+            let changed = *value != new;
+            *value = new;
+            (true, changed)
+        } else {
+            (false, false)
+        };
         self.record_child(id.clone());
         self.window
             .ctx
             .declare(build_slider(id, self.window.name.clone(), label, *value, &range));
+        Response { clicked, changed }
     }
 
     /// An integer slider.
-    pub fn slider_int(&mut self, label: &str, value: &mut i32, range: RangeInclusive<i32>) {
+    pub fn slider_int(&mut self, label: &str, value: &mut i32, range: RangeInclusive<i32>) -> Response {
         let id = self.make_id(label);
-        if let Some(Value::Int(v)) = self.window.ctx.consume_edit(&id) {
-            *value = v as i32;
-        }
+        let (clicked, changed) = if let Some(Value::Int(v)) = self.window.ctx.consume_edit(&id) {
+            let new = v as i32;
+            let changed = *value != new;
+            *value = new;
+            (true, changed)
+        } else {
+            (false, false)
+        };
         self.record_child(id.clone());
         self.window.ctx.declare(build_slider_int(
             id,
@@ -579,62 +645,87 @@ impl<'a, 'ctx> Grid<'a, 'ctx> {
             *value,
             &range,
         ));
+        Response { clicked, changed }
     }
 
     /// A checkbox.
-    pub fn checkbox(&mut self, label: &str, value: &mut bool) {
+    pub fn checkbox(&mut self, label: &str, value: &mut bool) -> Response {
         let id = self.make_id(label);
-        if let Some(Value::Bool(v)) = self.window.ctx.consume_edit(&id) {
+        let (clicked, changed) = if let Some(Value::Bool(v)) = self.window.ctx.consume_edit(&id) {
+            let changed = *value != v;
             *value = v;
-        }
+            (true, changed)
+        } else {
+            (false, false)
+        };
         self.record_child(id.clone());
         self.window
             .ctx
             .declare(build_checkbox(id, self.window.name.clone(), label, *value));
+        Response { clicked, changed }
     }
 
     /// An RGB color picker.
-    pub fn color_picker(&mut self, label: &str, value: &mut [f32; 3]) {
+    pub fn color_picker(&mut self, label: &str, value: &mut [f32; 3]) -> Response {
         let id = self.make_id(label);
-        if let Some(Value::Color3(c)) = self.window.ctx.consume_edit(&id) {
+        let (clicked, changed) = if let Some(Value::Color3(c)) = self.window.ctx.consume_edit(&id) {
+            let changed = *value != c;
             *value = c;
-        }
+            (true, changed)
+        } else {
+            (false, false)
+        };
         self.record_child(id.clone());
         self.window
             .ctx
             .declare(build_color3(id, self.window.name.clone(), label, *value));
+        Response { clicked, changed }
     }
 
     /// An RGBA color picker.
-    pub fn color_picker4(&mut self, label: &str, value: &mut [f32; 4]) {
+    pub fn color_picker4(&mut self, label: &str, value: &mut [f32; 4]) -> Response {
         let id = self.make_id(label);
-        if let Some(Value::Color4(c)) = self.window.ctx.consume_edit(&id) {
+        let (clicked, changed) = if let Some(Value::Color4(c)) = self.window.ctx.consume_edit(&id) {
+            let changed = *value != c;
             *value = c;
-        }
+            (true, changed)
+        } else {
+            (false, false)
+        };
         self.record_child(id.clone());
         self.window
             .ctx
             .declare(build_color4(id, self.window.name.clone(), label, *value));
+        Response { clicked, changed }
     }
 
     /// A text input field.
-    pub fn text_input(&mut self, label: &str, value: &mut String) {
+    pub fn text_input(&mut self, label: &str, value: &mut String) -> Response {
         let id = self.make_id(label);
-        if let Some(Value::String(s)) = self.window.ctx.consume_edit(&id) {
+        let (clicked, changed) = if let Some(Value::String(s)) = self.window.ctx.consume_edit(&id) {
+            let changed = *value != s;
             *value = s;
-        }
+            (true, changed)
+        } else {
+            (false, false)
+        };
         self.record_child(id.clone());
         self.window
             .ctx
             .declare(build_text_input(id, self.window.name.clone(), label, value));
+        Response { clicked, changed }
     }
 
     /// A dropdown selector.
-    pub fn dropdown(&mut self, label: &str, selected: &mut usize, options: &[&str]) {
+    pub fn dropdown(&mut self, label: &str, selected: &mut usize, options: &[&str]) -> Response {
         let id = self.make_id(label);
-        if let Some(Value::Enum { selected: s, .. }) = self.window.ctx.consume_edit(&id) {
+        let (clicked, changed) = if let Some(Value::Enum { selected: s, .. }) = self.window.ctx.consume_edit(&id) {
+            let changed = *selected != s;
             *selected = s;
-        }
+            (true, changed)
+        } else {
+            (false, false)
+        };
         self.record_child(id.clone());
         self.window.ctx.declare(build_dropdown(
             id,
@@ -643,17 +734,18 @@ impl<'a, 'ctx> Grid<'a, 'ctx> {
             *selected,
             options,
         ));
+        Response { clicked, changed }
     }
 
-    /// A button. Returns `true` for one frame when clicked.
-    pub fn button(&mut self, label: &str) -> bool {
+    /// A button. Returns a `Response` — use `.clicked()` to check if it was pressed.
+    pub fn button(&mut self, label: &str) -> Response {
         let id = self.make_id(label);
         let clicked = matches!(self.window.ctx.consume_edit(&id), Some(Value::Button(true)));
         self.record_child(id.clone());
         self.window
             .ctx
             .declare(build_button(id, self.window.name.clone(), label));
-        clicked
+        Response { clicked, changed: clicked }
     }
 
     // ── Display widgets ──────────────────────────────────────────────

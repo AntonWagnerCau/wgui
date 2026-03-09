@@ -24,4 +24,4 @@ mod window;
 
 pub use context::{Context, ContextOptions};
 pub use element::AccentColor;
-pub use window::{Grid, Window};
+pub use window::{Grid, Response, Window};
