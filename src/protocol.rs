@@ -16,6 +16,8 @@ pub enum ServerMsg {
         id: ElementId,
         value: Value,
         #[serde(skip_serializing_if = "Option::is_none")]
+        label: Option<String>,
+        #[serde(skip_serializing_if = "Option::is_none")]
         meta: Option<crate::element::ElementMeta>,
     },
 

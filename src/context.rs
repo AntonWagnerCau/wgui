@@ -186,12 +186,18 @@ fn reconcile(prev: &[ElementDecl], current: &[ElementDecl]) -> Vec<ServerMsg> {
             }
             Some(&idx) => {
                 let prev_decl = &prev[idx];
-                let value_changed = prev_decl.value != decl.value || prev_decl.kind != decl.kind;
+                let value_changed = prev_decl.value != decl.value || prev_decl.kind != decl.kind || prev_decl.label != decl.label;
                 let meta_changed = prev_decl.meta != decl.meta;
-                if value_changed || meta_changed {
+                let label_changed = prev_decl.label != decl.label;
+                if value_changed || meta_changed || label_changed {
                     outgoing.push(ServerMsg::Update {
                         id: decl.id.clone(),
                         value: decl.value.clone(),
+                        label: if label_changed {
+                            Some(decl.label.clone())
+                        } else {
+                            None
+                        },
                         meta: if meta_changed {
                             Some(decl.meta.clone())
                         } else {

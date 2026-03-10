@@ -842,6 +842,7 @@
         for (let el of elements) {
           if (el.id === msg.id) {
             el.value = msg.value;
+            if (msg.label) el.label = msg.label;
             if (msg.meta) el.meta = msg.meta;
             found = true;
             updateElementDOM(el);

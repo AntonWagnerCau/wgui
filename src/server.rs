@@ -245,9 +245,12 @@ fn apply_messages_to_mirror(mirror: &mut Vec<ElementDecl>, msgs: &[ServerMsg]) {
             ServerMsg::Add { element } => {
                 mirror.push(element.clone());
             }
-            ServerMsg::Update { id, value, meta } => {
+            ServerMsg::Update { id, value, label, meta } => {
                 if let Some(elem) = mirror.iter_mut().find(|e| &e.id == id) {
                     elem.value = value.clone();
+                    if let Some(l) = label {
+                        elem.label = l.clone();
+                    }
                     if let Some(m) = meta {
                         elem.meta = m.clone();
                     }
@@ -307,6 +310,7 @@ mod tests {
         let msgs = vec![ServerMsg::Update {
             id: "a".to_string(),
             value: Value::Bool(false),
+            label: None,
             meta: None,
         }];
         apply_messages_to_mirror(&mut mirror, &msgs);
