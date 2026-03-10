@@ -1025,6 +1025,24 @@
         }
         break;
       }
+      case 'Label': {
+        const labelEl = row.querySelector('.label-text');
+        if (labelEl) labelEl.textContent = el.value.data;
+        const nameEl = row.querySelector('.widget-label');
+        if (nameEl) nameEl.textContent = el.label;
+        break;
+      }
+      case 'Section': {
+        row.textContent = el.label;
+        break;
+      }
+      case 'Button': {
+        const btn = row.querySelector('.wgui-button');
+        if (btn) btn.textContent = el.label;
+        break;
+      }
+      case 'Separator':
+        break;
       default:
         render();
     }
@@ -1139,7 +1157,7 @@
     },
 
     Section: (el) => {
-      return `<div class="section-header">${esc(el.label)}</div>`;
+      return `<div class="section-header" data-id="${esc(el.id)}">${esc(el.label)}</div>`;
     },
 
     ProgressBar: (el) => {
