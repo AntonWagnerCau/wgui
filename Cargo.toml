@@ -1,6 +1,6 @@
 [package]
 name = "w-gui"
-version = "0.21.7"
+version = "0.21.8"
 edition = "2021"
 description = "A lightweight immediate-mode debug GUI served over localhost"
 repository = "https://github.com/AntonWagnerCau/wgui"
@@ -16,6 +16,7 @@ tungstenite = "0.26"
 serde = { version = "1", features = ["derive", "rc"] }
 serde_json = "1"
 log = "0.4"
+indexmap = "2"
 
 [dev-dependencies]
 env_logger = "0.11"

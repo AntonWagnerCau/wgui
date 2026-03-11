@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::ops::RangeInclusive;
 use std::sync::Arc;
 
@@ -22,170 +23,312 @@ impl Response {
     }
 }
 
-// ── Element declaration builders ─────────────────────────────────────
-// Shared by Window and Grid to avoid duplicating ElementDecl construction.
+// ── WidgetSink trait ─────────────────────────────────────────────────
+// Shared interface for Window, Grid, and Horizontal so widget functions
+// can be written once and called from any container.
 
-fn build_slider(
-    id: String,
-    window: Arc<str>,
-    label: &str,
-    value: f32,
-    range: &RangeInclusive<f32>,
-) -> ElementDecl {
-    ElementDecl {
+pub(crate) trait WidgetSink {
+    fn make_id(&mut self, label: &str) -> String;
+    fn declare(&mut self, decl: ElementDecl);
+    fn consume_edit(&mut self, id: &str) -> Option<Value>;
+    fn window_name(&self) -> Arc<str>;
+    fn record_child(&mut self, id: String);
+}
+
+// ── Generic widget functions ─────────────────────────────────────────
+
+fn widget_slider(sink: &mut impl WidgetSink, label: &str, value: &mut f32, range: &RangeInclusive<f32>) -> Response {
+    let id = sink.make_id(label);
+    let (clicked, changed) = if let Some(Value::Float(v)) = sink.consume_edit(&id) {
+        let new = v as f32;
+        let changed = *value != new;
+        *value = new;
+        (true, changed)
+    } else {
+        (false, false)
+    };
+    sink.record_child(id.clone());
+    sink.declare(ElementDecl {
         id,
         kind: ElementKind::Slider,
         label: label.to_string(),
-        value: Value::Float(value as f64),
+        value: Value::Float(*value as f64),
         meta: ElementMeta {
             min: Some(*range.start() as f64),
             max: Some(*range.end() as f64),
             step: Some(0.01),
             ..Default::default()
         },
-        window,
-    }
+        window: sink.window_name(),
+    });
+    Response { clicked, changed }
 }
 
-fn build_slider_int(
-    id: String,
-    window: Arc<str>,
-    label: &str,
-    value: i32,
-    range: &RangeInclusive<i32>,
-) -> ElementDecl {
-    ElementDecl {
+fn widget_slider_f64(sink: &mut impl WidgetSink, label: &str, value: &mut f64, range: &RangeInclusive<f64>) -> Response {
+    let id = sink.make_id(label);
+    let (clicked, changed) = if let Some(Value::Float(v)) = sink.consume_edit(&id) {
+        let changed = *value != v;
+        *value = v;
+        (true, changed)
+    } else {
+        (false, false)
+    };
+    sink.record_child(id.clone());
+    sink.declare(ElementDecl {
         id,
         kind: ElementKind::Slider,
         label: label.to_string(),
-        value: Value::Int(value as i64),
+        value: Value::Float(*value),
+        meta: ElementMeta {
+            min: Some(*range.start()),
+            max: Some(*range.end()),
+            step: Some(0.001),
+            ..Default::default()
+        },
+        window: sink.window_name(),
+    });
+    Response { clicked, changed }
+}
+
+fn widget_slider_int(sink: &mut impl WidgetSink, label: &str, value: &mut i32, range: &RangeInclusive<i32>) -> Response {
+    let id = sink.make_id(label);
+    let (clicked, changed) = if let Some(Value::Int(v)) = sink.consume_edit(&id) {
+        let new = v as i32;
+        let changed = *value != new;
+        *value = new;
+        (true, changed)
+    } else {
+        (false, false)
+    };
+    sink.record_child(id.clone());
+    sink.declare(ElementDecl {
+        id,
+        kind: ElementKind::Slider,
+        label: label.to_string(),
+        value: Value::Int(*value as i64),
         meta: ElementMeta {
             min: Some(*range.start() as f64),
             max: Some(*range.end() as f64),
             step: Some(1.0),
             ..Default::default()
         },
-        window,
-    }
+        window: sink.window_name(),
+    });
+    Response { clicked, changed }
 }
 
-fn build_checkbox(id: String, window: Arc<str>, label: &str, value: bool) -> ElementDecl {
-    ElementDecl {
+fn widget_slider_uint(sink: &mut impl WidgetSink, label: &str, value: &mut u32, range: &RangeInclusive<u32>) -> Response {
+    let id = sink.make_id(label);
+    let (clicked, changed) = if let Some(Value::Int(v)) = sink.consume_edit(&id) {
+        let new = v as u32;
+        let changed = *value != new;
+        *value = new;
+        (true, changed)
+    } else {
+        (false, false)
+    };
+    sink.record_child(id.clone());
+    sink.declare(ElementDecl {
+        id,
+        kind: ElementKind::Slider,
+        label: label.to_string(),
+        value: Value::Int(*value as i64),
+        meta: ElementMeta {
+            min: Some(*range.start() as f64),
+            max: Some(*range.end() as f64),
+            step: Some(1.0),
+            ..Default::default()
+        },
+        window: sink.window_name(),
+    });
+    Response { clicked, changed }
+}
+
+fn widget_checkbox(sink: &mut impl WidgetSink, label: &str, value: &mut bool) -> Response {
+    let id = sink.make_id(label);
+    let (clicked, changed) = if let Some(Value::Bool(v)) = sink.consume_edit(&id) {
+        let changed = *value != v;
+        *value = v;
+        (true, changed)
+    } else {
+        (false, false)
+    };
+    sink.record_child(id.clone());
+    sink.declare(ElementDecl {
         id,
         kind: ElementKind::Checkbox,
         label: label.to_string(),
-        value: Value::Bool(value),
+        value: Value::Bool(*value),
         meta: ElementMeta::default(),
-        window,
-    }
+        window: sink.window_name(),
+    });
+    Response { clicked, changed }
 }
 
-fn build_color3(id: String, window: Arc<str>, label: &str, value: [f32; 3]) -> ElementDecl {
-    ElementDecl {
+fn widget_color3(sink: &mut impl WidgetSink, label: &str, value: &mut [f32; 3]) -> Response {
+    let id = sink.make_id(label);
+    let (clicked, changed) = if let Some(Value::Color3(c)) = sink.consume_edit(&id) {
+        let changed = *value != c;
+        *value = c;
+        (true, changed)
+    } else {
+        (false, false)
+    };
+    sink.record_child(id.clone());
+    sink.declare(ElementDecl {
         id,
         kind: ElementKind::ColorPicker3,
         label: label.to_string(),
-        value: Value::Color3(value),
+        value: Value::Color3(*value),
         meta: ElementMeta::default(),
-        window,
-    }
+        window: sink.window_name(),
+    });
+    Response { clicked, changed }
 }
 
-fn build_color4(id: String, window: Arc<str>, label: &str, value: [f32; 4]) -> ElementDecl {
-    ElementDecl {
+fn widget_color4(sink: &mut impl WidgetSink, label: &str, value: &mut [f32; 4]) -> Response {
+    let id = sink.make_id(label);
+    let (clicked, changed) = if let Some(Value::Color4(c)) = sink.consume_edit(&id) {
+        let changed = *value != c;
+        *value = c;
+        (true, changed)
+    } else {
+        (false, false)
+    };
+    sink.record_child(id.clone());
+    sink.declare(ElementDecl {
         id,
         kind: ElementKind::ColorPicker4,
         label: label.to_string(),
-        value: Value::Color4(value),
+        value: Value::Color4(*value),
         meta: ElementMeta::default(),
-        window,
-    }
+        window: sink.window_name(),
+    });
+    Response { clicked, changed }
 }
 
-fn build_text_input(id: String, window: Arc<str>, label: &str, value: &str) -> ElementDecl {
-    ElementDecl {
+fn widget_text_input(sink: &mut impl WidgetSink, label: &str, value: &mut String) -> Response {
+    let id = sink.make_id(label);
+    let (clicked, changed) = if let Some(Value::String(s)) = sink.consume_edit(&id) {
+        let changed = *value != s;
+        *value = s;
+        (true, changed)
+    } else {
+        (false, false)
+    };
+    sink.record_child(id.clone());
+    sink.declare(ElementDecl {
         id,
         kind: ElementKind::TextInput,
         label: label.to_string(),
-        value: Value::String(value.to_string()),
+        value: Value::String(value.clone()),
         meta: ElementMeta::default(),
-        window,
-    }
+        window: sink.window_name(),
+    });
+    Response { clicked, changed }
 }
 
-fn build_dropdown(
-    id: String,
-    window: Arc<str>,
-    label: &str,
-    selected: usize,
-    options: &[&str],
-) -> ElementDecl {
-    ElementDecl {
+fn widget_dropdown(sink: &mut impl WidgetSink, label: &str, selected: &mut usize, options: &[&str]) -> Response {
+    let id = sink.make_id(label);
+    let (clicked, changed) = if let Some(Value::Enum { selected: s, .. }) = sink.consume_edit(&id) {
+        let changed = *selected != s;
+        *selected = s;
+        (true, changed)
+    } else {
+        (false, false)
+    };
+    sink.record_child(id.clone());
+    sink.declare(ElementDecl {
         id,
         kind: ElementKind::Dropdown,
         label: label.to_string(),
         value: Value::Enum {
-            selected,
+            selected: *selected,
             options: options.iter().map(|s| s.to_string()).collect(),
         },
         meta: ElementMeta::default(),
-        window,
-    }
+        window: sink.window_name(),
+    });
+    Response { clicked, changed }
 }
 
-fn build_button(id: String, window: Arc<str>, label: &str) -> ElementDecl {
-    ElementDecl {
+fn widget_button(sink: &mut impl WidgetSink, label: &str) -> Response {
+    let id = sink.make_id(label);
+    let clicked = matches!(sink.consume_edit(&id), Some(Value::Button(true)));
+    sink.record_child(id.clone());
+    sink.declare(ElementDecl {
         id,
         kind: ElementKind::Button,
         label: label.to_string(),
         value: Value::Button(false),
         meta: ElementMeta::default(),
-        window,
-    }
+        window: sink.window_name(),
+    });
+    Response { clicked, changed: clicked }
 }
 
-fn build_label(id: String, window: Arc<str>, text: &str) -> ElementDecl {
-    ElementDecl {
+fn widget_button_compact(sink: &mut impl WidgetSink, label: &str) -> Response {
+    let id = sink.make_id(label);
+    let clicked = matches!(sink.consume_edit(&id), Some(Value::Button(true)));
+    sink.record_child(id.clone());
+    sink.declare(ElementDecl {
+        id,
+        kind: ElementKind::ButtonCompact,
+        label: label.to_string(),
+        value: Value::Button(false),
+        meta: ElementMeta::default(),
+        window: sink.window_name(),
+    });
+    Response { clicked, changed: clicked }
+}
+
+fn widget_label(sink: &mut impl WidgetSink, text: &str) {
+    let id = sink.make_id("__label");
+    sink.record_child(id.clone());
+    sink.declare(ElementDecl {
         id,
         kind: ElementKind::Label,
-        label: String::new(), // No label column - text appears once in value
+        label: String::new(),
         value: Value::String(text.to_string()),
         meta: ElementMeta::default(),
-        window,
-    }
+        window: sink.window_name(),
+    });
 }
 
-fn build_progress_bar(
-    id: String,
-    window: Arc<str>,
-    label: &str,
-    value: f64,
-    accent: AccentColor,
-    subtitle: Option<&str>,
-) -> ElementDecl {
-    ElementDecl {
+fn widget_kv(sink: &mut impl WidgetSink, label: &str, value: &str) {
+    let id = sink.make_id(label);
+    sink.record_child(id.clone());
+    sink.declare(ElementDecl {
+        id,
+        kind: ElementKind::KeyValue,
+        label: label.to_string(),
+        value: Value::String(value.to_string()),
+        meta: ElementMeta::default(),
+        window: sink.window_name(),
+    });
+}
+
+fn widget_progress_bar(sink: &mut impl WidgetSink, label: &str, value: f64, accent: AccentColor, subtitle: Option<&str>) {
+    let id = sink.make_id(label);
+    sink.record_child(id.clone());
+    sink.declare(ElementDecl {
         id,
         kind: ElementKind::ProgressBar,
         label: label.to_string(),
         value: Value::Progress(value.clamp(0.0, 1.0)),
         meta: ElementMeta {
-            accent: Some(accent.as_str().to_string()),
+            accent: Some(accent),
             subtitle: subtitle.map(|s| s.to_string()),
             ..Default::default()
         },
-        window,
-    }
+        window: sink.window_name(),
+    });
 }
 
-fn build_stat(
-    id: String,
-    window: Arc<str>,
-    label: &str,
-    value: &str,
-    subvalue: Option<&str>,
-    accent: AccentColor,
-) -> ElementDecl {
-    ElementDecl {
+fn widget_stat(sink: &mut impl WidgetSink, label: &str, value: &str, subvalue: Option<&str>, accent: AccentColor) {
+    let id = sink.make_id(label);
+    sink.record_child(id.clone());
+    sink.declare(ElementDecl {
         id,
         kind: ElementKind::Stat,
         label: label.to_string(),
@@ -194,24 +337,25 @@ fn build_stat(
             subvalue: subvalue.map(|s| s.to_string()),
         },
         meta: ElementMeta {
-            accent: Some(accent.as_str().to_string()),
+            accent: Some(accent),
             ..Default::default()
         },
-        window,
-    }
+        window: sink.window_name(),
+    });
 }
 
-fn build_status(
-    id: String,
-    window: Arc<str>,
+fn widget_status(
+    sink: &mut impl WidgetSink,
     label: &str,
     active: bool,
     active_text: Option<&str>,
     inactive_text: Option<&str>,
     active_color: AccentColor,
     inactive_color: AccentColor,
-) -> ElementDecl {
-    ElementDecl {
+) {
+    let id = sink.make_id(label);
+    sink.record_child(id.clone());
+    sink.declare(ElementDecl {
         id,
         kind: ElementKind::Status,
         label: label.to_string(),
@@ -223,19 +367,14 @@ fn build_status(
             inactive_color: Some(inactive_color.as_str().to_string()),
         },
         meta: ElementMeta::default(),
-        window,
-    }
+        window: sink.window_name(),
+    });
 }
 
-fn build_mini_chart(
-    id: String,
-    window: Arc<str>,
-    label: &str,
-    values: &[f32],
-    unit: Option<&str>,
-    accent: AccentColor,
-) -> ElementDecl {
-    ElementDecl {
+fn widget_mini_chart(sink: &mut impl WidgetSink, label: &str, values: &[f32], unit: Option<&str>, accent: AccentColor) {
+    let id = sink.make_id(label);
+    sink.record_child(id.clone());
+    sink.declare(ElementDecl {
         id,
         kind: ElementKind::MiniChart,
         label: label.to_string(),
@@ -245,21 +384,21 @@ fn build_mini_chart(
             unit: unit.map(|s| s.to_string()),
         },
         meta: ElementMeta {
-            accent: Some(accent.as_str().to_string()),
+            accent: Some(accent),
             ..Default::default()
         },
-        window,
-    }
+        window: sink.window_name(),
+    });
 }
 
-fn build_plot(
-    id: String,
-    window: Arc<str>,
+fn widget_plot(
+    sink: &mut impl WidgetSink,
     label: &str,
     series: &[(&str, &[f32], AccentColor)],
     x_label: Option<&str>,
     y_label: Option<&str>,
-) -> ElementDecl {
+) {
+    let id = sink.make_id(label);
     let plot_series: Vec<PlotSeries> = series
         .iter()
         .map(|(name, values, color)| PlotSeries {
@@ -268,8 +407,8 @@ fn build_plot(
             color: color.as_str().to_string(),
         })
         .collect();
-
-    ElementDecl {
+    sink.record_child(id.clone());
+    sink.declare(ElementDecl {
         id,
         kind: ElementKind::Plot,
         label: label.to_string(),
@@ -279,17 +418,52 @@ fn build_plot(
             y_label: y_label.map(|s| s.to_string()),
         },
         meta: ElementMeta::default(),
-        window,
-    }
+        window: sink.window_name(),
+    });
 }
 
-// ── Window ───────────────────────────────────────────────────────────
+// ── Label-based ID generation ────────────────────────────────────────
+
+fn make_label_id(prefix: &str, label: &str, label_counts: &mut HashMap<String, usize>) -> String {
+    let count = label_counts.entry(label.to_string()).or_insert(0);
+    let id = if *count == 0 {
+        format!("{prefix}::{label}")
+    } else {
+        format!("{prefix}::{label}#{count}")
+    };
+    *count += 1;
+    id
+}
+
+// ── Window ─────────────────────────────────────────────────────────--
 
 /// A named window containing UI elements. Created via `Context::window()`.
 pub struct Window<'a> {
     name: Arc<str>,
     ctx: &'a mut Context,
-    next_idx: usize,
+    label_counts: HashMap<String, usize>,
+}
+
+impl<'a> WidgetSink for Window<'a> {
+    fn make_id(&mut self, label: &str) -> String {
+        make_label_id(&self.name, label, &mut self.label_counts)
+    }
+
+    fn declare(&mut self, decl: ElementDecl) {
+        self.ctx.declare(decl);
+    }
+
+    fn consume_edit(&mut self, id: &str) -> Option<Value> {
+        self.ctx.consume_edit(id)
+    }
+
+    fn window_name(&self) -> Arc<str> {
+        self.name.clone()
+    }
+
+    fn record_child(&mut self, _id: String) {
+        // Window is top-level — no parent to record into
+    }
 }
 
 impl<'a> Window<'a> {
@@ -297,142 +471,94 @@ impl<'a> Window<'a> {
         Self {
             name: Arc::from(name.as_str()),
             ctx,
-            next_idx: 0,
+            label_counts: HashMap::new(),
         }
     }
 
-    fn make_id(&mut self, _label: &str) -> String {
-        let id = format!("{}::_{}", self.name, self.next_idx);
-        self.next_idx += 1;
-        id
-    }
-
-    /// A floating-point slider with a range.
     pub fn slider(&mut self, label: &str, value: &mut f32, range: RangeInclusive<f32>) -> Response {
-        let id = self.make_id(label);
-        let (clicked, changed) = if let Some(Value::Float(v)) = self.ctx.consume_edit(&id) {
-            let new = v as f32;
-            let changed = *value != new;
-            *value = new;
-            (true, changed)
-        } else {
-            (false, false)
-        };
-        self.ctx
-            .declare(build_slider(id, self.name.clone(), label, *value, &range));
-        Response { clicked, changed }
+        widget_slider(self, label, value, &range)
     }
 
-    /// An integer slider with a range.
+    pub fn slider_f64(&mut self, label: &str, value: &mut f64, range: RangeInclusive<f64>) -> Response {
+        widget_slider_f64(self, label, value, &range)
+    }
+
     pub fn slider_int(&mut self, label: &str, value: &mut i32, range: RangeInclusive<i32>) -> Response {
-        let id = self.make_id(label);
-        let (clicked, changed) = if let Some(Value::Int(v)) = self.ctx.consume_edit(&id) {
-            let new = v as i32;
-            let changed = *value != new;
-            *value = new;
-            (true, changed)
-        } else {
-            (false, false)
-        };
-        self.ctx
-            .declare(build_slider_int(id, self.name.clone(), label, *value, &range));
-        Response { clicked, changed }
+        widget_slider_int(self, label, value, &range)
     }
 
-    /// A checkbox (boolean toggle).
+    pub fn slider_uint(&mut self, label: &str, value: &mut u32, range: RangeInclusive<u32>) -> Response {
+        widget_slider_uint(self, label, value, &range)
+    }
+
     pub fn checkbox(&mut self, label: &str, value: &mut bool) -> Response {
+        widget_checkbox(self, label, value)
+    }
+
+    pub fn color_picker(&mut self, label: &str, value: &mut [f32; 3]) -> Response {
+        widget_color3(self, label, value)
+    }
+
+    pub fn color_picker4(&mut self, label: &str, value: &mut [f32; 4]) -> Response {
+        widget_color4(self, label, value)
+    }
+
+    pub fn text_input(&mut self, label: &str, value: &mut String) -> Response {
+        widget_text_input(self, label, value)
+    }
+
+    pub fn dropdown(&mut self, label: &str, selected: &mut usize, options: &[&str]) -> Response {
+        widget_dropdown(self, label, selected, options)
+    }
+
+    pub fn button(&mut self, label: &str) -> Response {
+        widget_button(self, label)
+    }
+
+    pub fn label(&mut self, text: &str) {
+        widget_label(self, text);
+    }
+
+    pub fn kv(&mut self, label: &str, value: &str) {
+        widget_kv(self, label, value);
+    }
+
+    pub fn kv_value(&mut self, label: &str, value: &mut String) -> Response {
         let id = self.make_id(label);
-        let (clicked, changed) = if let Some(Value::Bool(v)) = self.ctx.consume_edit(&id) {
+        let (clicked, changed) = if let Some(Value::String(v)) = self.ctx.consume_edit(&id) {
             let changed = *value != v;
             *value = v;
             (true, changed)
         } else {
             (false, false)
         };
-        self.ctx
-            .declare(build_checkbox(id, self.name.clone(), label, *value));
+        self.ctx.declare(ElementDecl {
+            id,
+            kind: ElementKind::KeyValue,
+            label: label.to_string(),
+            value: Value::String(value.clone()),
+            meta: ElementMeta::default(),
+            window: self.name.clone(),
+        });
         Response { clicked, changed }
     }
 
-    /// An RGB color picker (3-component).
-    pub fn color_picker(&mut self, label: &str, value: &mut [f32; 3]) -> Response {
-        let id = self.make_id(label);
-        let (clicked, changed) = if let Some(Value::Color3(c)) = self.ctx.consume_edit(&id) {
-            let changed = *value != c;
-            *value = c;
-            (true, changed)
-        } else {
-            (false, false)
-        };
-        self.ctx
-            .declare(build_color3(id, self.name.clone(), label, *value));
-        Response { clicked, changed }
+    pub fn button_compact(&mut self, label: &str) -> Response {
+        widget_button_compact(self, label)
     }
 
-    /// An RGBA color picker (4-component).
-    pub fn color_picker4(&mut self, label: &str, value: &mut [f32; 4]) -> Response {
-        let id = self.make_id(label);
-        let (clicked, changed) = if let Some(Value::Color4(c)) = self.ctx.consume_edit(&id) {
-            let changed = *value != c;
-            *value = c;
-            (true, changed)
-        } else {
-            (false, false)
-        };
-        self.ctx
-            .declare(build_color4(id, self.name.clone(), label, *value));
-        Response { clicked, changed }
+    pub fn horizontal<F>(&mut self, f: F)
+    where
+        F: FnOnce(&mut Horizontal<'_, 'a>),
+    {
+        let h_id = self.make_id("__horiz");
+        let mut horiz = Horizontal::new(h_id, self);
+        f(&mut horiz);
+        horiz.finish();
     }
 
-    /// A text input field.
-    pub fn text_input(&mut self, label: &str, value: &mut String) -> Response {
-        let id = self.make_id(label);
-        let (clicked, changed) = if let Some(Value::String(s)) = self.ctx.consume_edit(&id) {
-            let changed = *value != s;
-            *value = s;
-            (true, changed)
-        } else {
-            (false, false)
-        };
-        self.ctx
-            .declare(build_text_input(id, self.name.clone(), label, value));
-        Response { clicked, changed }
-    }
-
-    /// A dropdown selector.
-    pub fn dropdown(&mut self, label: &str, selected: &mut usize, options: &[&str]) -> Response {
-        let id = self.make_id(label);
-        let (clicked, changed) = if let Some(Value::Enum { selected: s, .. }) = self.ctx.consume_edit(&id) {
-            let changed = *selected != s;
-            *selected = s;
-            (true, changed)
-        } else {
-            (false, false)
-        };
-        self.ctx
-            .declare(build_dropdown(id, self.name.clone(), label, *selected, options));
-        Response { clicked, changed }
-    }
-
-    /// A button. Returns a `Response` — use `.clicked()` to check if it was pressed.
-    pub fn button(&mut self, label: &str) -> Response {
-        let id = self.make_id(label);
-        let clicked = matches!(self.ctx.consume_edit(&id), Some(Value::Button(true)));
-        self.ctx
-            .declare(build_button(id, self.name.clone(), label));
-        Response { clicked, changed: clicked }
-    }
-
-    /// A read-only text label.
-    pub fn label(&mut self, text: &str) {
-        let id = self.make_id(text);
-        self.ctx
-            .declare(build_label(id, self.name.clone(), text));
-    }
-
-    /// A visual separator line.
     pub fn separator(&mut self) {
-        let id = format!("{}::__sep_{}", self.name, self.ctx.current_frame_len());
+        let id = self.make_id("__sep");
         self.ctx.declare(ElementDecl {
             id,
             kind: ElementKind::Separator,
@@ -443,9 +569,8 @@ impl<'a> Window<'a> {
         });
     }
 
-    /// A section header for grouping widgets.
     pub fn section(&mut self, title: &str) {
-        let id = format!("{}::__sec_{}", self.name, self.ctx.current_frame_len());
+        let id = self.make_id(title);
         self.ctx.declare(ElementDecl {
             id,
             kind: ElementKind::Section,
@@ -456,40 +581,18 @@ impl<'a> Window<'a> {
         });
     }
 
-    /// A progress bar (value from 0.0 to 1.0).
     pub fn progress_bar(&mut self, label: &str, value: f64, accent: AccentColor) {
-        let id = self.make_id(label);
-        self.ctx
-            .declare(build_progress_bar(id, self.name.clone(), label, value, accent, None));
+        widget_progress_bar(self, label, value, accent, None);
     }
 
-    /// A progress bar with subtitle text.
-    pub fn progress_bar_with_subtitle(
-        &mut self,
-        label: &str,
-        value: f64,
-        accent: AccentColor,
-        subtitle: &str,
-    ) {
-        let id = self.make_id(label);
-        self.ctx.declare(build_progress_bar(
-            id,
-            self.name.clone(),
-            label,
-            value,
-            accent,
-            Some(subtitle),
-        ));
+    pub fn progress_bar_with_subtitle(&mut self, label: &str, value: f64, accent: AccentColor, subtitle: &str) {
+        widget_progress_bar(self, label, value, accent, Some(subtitle));
     }
 
-    /// A stat card displaying a value with optional subvalue.
     pub fn stat(&mut self, label: &str, value: &str, subvalue: Option<&str>, accent: AccentColor) {
-        let id = self.make_id(label);
-        self.ctx
-            .declare(build_stat(id, self.name.clone(), label, value, subvalue, accent));
+        widget_stat(self, label, value, subvalue, accent);
     }
 
-    /// A status indicator with colored dot.
     pub fn status(
         &mut self,
         label: &str,
@@ -499,62 +602,38 @@ impl<'a> Window<'a> {
         active_color: AccentColor,
         inactive_color: AccentColor,
     ) {
-        let id = self.make_id(label);
-        self.ctx.declare(build_status(
-            id,
-            self.name.clone(),
-            label,
-            active,
-            active_text,
-            inactive_text,
-            active_color,
-            inactive_color,
-        ));
+        widget_status(self, label, active, active_text, inactive_text, active_color, inactive_color);
     }
 
-    /// A mini sparkline chart.
-    pub fn mini_chart(
-        &mut self,
-        label: &str,
-        values: &[f32],
-        unit: Option<&str>,
-        accent: AccentColor,
-    ) {
-        let id = self.make_id(label);
-        self.ctx
-            .declare(build_mini_chart(id, self.name.clone(), label, values, unit, accent));
+    pub fn mini_chart(&mut self, label: &str, values: &[f32], unit: Option<&str>, accent: AccentColor) {
+        widget_mini_chart(self, label, values, unit, accent);
     }
 
-    /// Set the accent color for this window.
-    /// Call this first before other widgets in the window.
     pub fn set_accent(&mut self, accent: AccentColor) {
-        let id = format!("{}::__accent_{}", self.name, accent.as_str());
+        let id = self.make_id(&format!("__accent_{}", accent.as_str()));
         self.ctx.declare(ElementDecl {
             id,
             kind: ElementKind::Label,
             label: String::new(),
             value: Value::String(String::new()),
             meta: ElementMeta {
-                accent: Some(accent.as_str().to_string()),
+                accent: Some(accent),
                 ..Default::default()
             },
             window: self.name.clone(),
         });
     }
 
-    /// Create a grid layout container. Elements added within the closure will be
-    /// arranged in a grid with the specified number of columns.
     pub fn grid<F>(&mut self, cols: usize, f: F)
     where
         F: FnOnce(&mut Grid<'_, 'a>),
     {
-        let grid_id = format!("{}::__grid_{}", self.name, self.ctx.current_frame_len());
-        let mut grid = Grid::new(&grid_id, self, cols);
+        let grid_id = self.make_id("__grid");
+        let mut grid = Grid::new(grid_id, self, cols);
         f(&mut grid);
         grid.finish();
     }
 
-    /// Plot a data series as a larger chart.
     pub fn plot(
         &mut self,
         label: &str,
@@ -562,9 +641,128 @@ impl<'a> Window<'a> {
         x_label: Option<&str>,
         y_label: Option<&str>,
     ) {
+        widget_plot(self, label, series, x_label, y_label);
+    }
+}
+
+// ── Horizontal ───────────────────────────────────────────────────────
+
+/// A horizontal layout container for arranging widgets side by side.
+pub struct Horizontal<'a, 'ctx> {
+    id: String,
+    window: &'a mut Window<'ctx>,
+    children: Vec<String>,
+    label_counts: HashMap<String, usize>,
+}
+
+impl<'a, 'ctx> WidgetSink for Horizontal<'a, 'ctx> {
+    fn make_id(&mut self, label: &str) -> String {
+        make_label_id(&self.id, label, &mut self.label_counts)
+    }
+
+    fn declare(&mut self, decl: ElementDecl) {
+        self.window.ctx.declare(decl);
+    }
+
+    fn consume_edit(&mut self, id: &str) -> Option<Value> {
+        self.window.ctx.consume_edit(id)
+    }
+
+    fn window_name(&self) -> Arc<str> {
+        self.window.name.clone()
+    }
+
+    fn record_child(&mut self, id: String) {
+        self.children.push(id);
+    }
+}
+
+impl<'a, 'ctx> Horizontal<'a, 'ctx> {
+    fn new(id: String, window: &'a mut Window<'ctx>) -> Self {
+        Self {
+            id,
+            window,
+            children: Vec::new(),
+            label_counts: HashMap::new(),
+        }
+    }
+
+    fn finish(self) {
+        self.window.ctx.declare(ElementDecl {
+            id: self.id,
+            kind: ElementKind::Horizontal,
+            label: String::new(),
+            value: Value::GridValue {
+                cols: self.children.len(),
+                children: self.children,
+            },
+            meta: ElementMeta::default(),
+            window: self.window.name.clone(),
+        });
+    }
+
+    pub fn button(&mut self, label: &str) -> Response {
         let id = self.make_id(label);
-        self.ctx
-            .declare(build_plot(id, self.name.clone(), label, series, x_label, y_label));
+        let clicked = matches!(self.window.ctx.consume_edit(&id), Some(Value::Button(true)));
+        self.children.push(id.clone());
+        self.window.ctx.declare(ElementDecl {
+            id,
+            kind: ElementKind::ButtonInline,
+            label: label.to_string(),
+            value: Value::Button(false),
+            meta: ElementMeta::default(),
+            window: self.window.name.clone(),
+        });
+        Response { clicked, changed: clicked }
+    }
+
+    pub fn label(&mut self, text: &str) {
+        widget_label(self, text);
+    }
+
+    pub fn kv(&mut self, label: &str, value: &str) {
+        widget_kv(self, label, value);
+    }
+
+    pub fn text_input(&mut self, label: &str, value: &mut String) -> Response {
+        widget_text_input(self, label, value)
+    }
+
+    pub fn text_input_inline(&mut self, placeholder: &str, value: &mut String) -> Response {
+        let id = self.make_id(placeholder);
+        let (clicked, changed) = if let Some(Value::String(s)) = self.window.ctx.consume_edit(&id) {
+            let changed = *value != s;
+            *value = s;
+            (true, changed)
+        } else {
+            (false, false)
+        };
+        self.children.push(id.clone());
+        self.window.ctx.declare(ElementDecl {
+            id,
+            kind: ElementKind::TextInputInline,
+            label: placeholder.to_string(),
+            value: Value::String(value.clone()),
+            meta: ElementMeta::default(),
+            window: self.window.name.clone(),
+        });
+        Response { clicked, changed }
+    }
+
+    pub fn slider(&mut self, label: &str, value: &mut f32, range: RangeInclusive<f32>) -> Response {
+        widget_slider(self, label, value, &range)
+    }
+
+    pub fn slider_f64(&mut self, label: &str, value: &mut f64, range: RangeInclusive<f64>) -> Response {
+        widget_slider_f64(self, label, value, &range)
+    }
+
+    pub fn slider_int(&mut self, label: &str, value: &mut i32, range: RangeInclusive<i32>) -> Response {
+        widget_slider_int(self, label, value, &range)
+    }
+
+    pub fn slider_uint(&mut self, label: &str, value: &mut u32, range: RangeInclusive<u32>) -> Response {
+        widget_slider_uint(self, label, value, &range)
     }
 }
 
@@ -576,20 +774,40 @@ pub struct Grid<'a, 'ctx> {
     window: &'a mut Window<'ctx>,
     cols: usize,
     children: Vec<String>,
+    label_counts: HashMap<String, usize>,
 }
 
-impl<'a, 'ctx> Grid<'a, 'ctx> {
-    fn new(id: &str, window: &'a mut Window<'ctx>, cols: usize) -> Self {
-        Self {
-            id: id.to_string(),
-            window,
-            cols,
-            children: Vec::new(),
-        }
+impl<'a, 'ctx> WidgetSink for Grid<'a, 'ctx> {
+    fn make_id(&mut self, label: &str) -> String {
+        make_label_id(&self.id, label, &mut self.label_counts)
+    }
+
+    fn declare(&mut self, decl: ElementDecl) {
+        self.window.ctx.declare(decl);
+    }
+
+    fn consume_edit(&mut self, id: &str) -> Option<Value> {
+        self.window.ctx.consume_edit(id)
+    }
+
+    fn window_name(&self) -> Arc<str> {
+        self.window.name.clone()
     }
 
     fn record_child(&mut self, id: String) {
         self.children.push(id);
+    }
+}
+
+impl<'a, 'ctx> Grid<'a, 'ctx> {
+    fn new(id: String, window: &'a mut Window<'ctx>, cols: usize) -> Self {
+        Self {
+            id,
+            window,
+            cols,
+            children: Vec::new(),
+            label_counts: HashMap::new(),
+        }
     }
 
     fn finish(self) {
@@ -606,204 +824,62 @@ impl<'a, 'ctx> Grid<'a, 'ctx> {
         });
     }
 
-    fn make_id(&mut self, _label: &str) -> String {
-        let id = format!("{}::_{}", self.id, self.window.next_idx);
-        self.window.next_idx += 1;
-        id
-    }
-
-    // ── Interactive widgets ──────────────────────────────────────────
-
-    /// A floating-point slider.
     pub fn slider(&mut self, label: &str, value: &mut f32, range: RangeInclusive<f32>) -> Response {
-        let id = self.make_id(label);
-        let (clicked, changed) = if let Some(Value::Float(v)) = self.window.ctx.consume_edit(&id) {
-            let new = v as f32;
-            let changed = *value != new;
-            *value = new;
-            (true, changed)
-        } else {
-            (false, false)
-        };
-        self.record_child(id.clone());
-        self.window
-            .ctx
-            .declare(build_slider(id, self.window.name.clone(), label, *value, &range));
-        Response { clicked, changed }
+        widget_slider(self, label, value, &range)
     }
 
-    /// An integer slider.
+    pub fn slider_f64(&mut self, label: &str, value: &mut f64, range: RangeInclusive<f64>) -> Response {
+        widget_slider_f64(self, label, value, &range)
+    }
+
     pub fn slider_int(&mut self, label: &str, value: &mut i32, range: RangeInclusive<i32>) -> Response {
-        let id = self.make_id(label);
-        let (clicked, changed) = if let Some(Value::Int(v)) = self.window.ctx.consume_edit(&id) {
-            let new = v as i32;
-            let changed = *value != new;
-            *value = new;
-            (true, changed)
-        } else {
-            (false, false)
-        };
-        self.record_child(id.clone());
-        self.window.ctx.declare(build_slider_int(
-            id,
-            self.window.name.clone(),
-            label,
-            *value,
-            &range,
-        ));
-        Response { clicked, changed }
+        widget_slider_int(self, label, value, &range)
     }
 
-    /// A checkbox.
+    pub fn slider_uint(&mut self, label: &str, value: &mut u32, range: RangeInclusive<u32>) -> Response {
+        widget_slider_uint(self, label, value, &range)
+    }
+
     pub fn checkbox(&mut self, label: &str, value: &mut bool) -> Response {
-        let id = self.make_id(label);
-        let (clicked, changed) = if let Some(Value::Bool(v)) = self.window.ctx.consume_edit(&id) {
-            let changed = *value != v;
-            *value = v;
-            (true, changed)
-        } else {
-            (false, false)
-        };
-        self.record_child(id.clone());
-        self.window
-            .ctx
-            .declare(build_checkbox(id, self.window.name.clone(), label, *value));
-        Response { clicked, changed }
+        widget_checkbox(self, label, value)
     }
 
-    /// An RGB color picker.
     pub fn color_picker(&mut self, label: &str, value: &mut [f32; 3]) -> Response {
-        let id = self.make_id(label);
-        let (clicked, changed) = if let Some(Value::Color3(c)) = self.window.ctx.consume_edit(&id) {
-            let changed = *value != c;
-            *value = c;
-            (true, changed)
-        } else {
-            (false, false)
-        };
-        self.record_child(id.clone());
-        self.window
-            .ctx
-            .declare(build_color3(id, self.window.name.clone(), label, *value));
-        Response { clicked, changed }
+        widget_color3(self, label, value)
     }
 
-    /// An RGBA color picker.
     pub fn color_picker4(&mut self, label: &str, value: &mut [f32; 4]) -> Response {
-        let id = self.make_id(label);
-        let (clicked, changed) = if let Some(Value::Color4(c)) = self.window.ctx.consume_edit(&id) {
-            let changed = *value != c;
-            *value = c;
-            (true, changed)
-        } else {
-            (false, false)
-        };
-        self.record_child(id.clone());
-        self.window
-            .ctx
-            .declare(build_color4(id, self.window.name.clone(), label, *value));
-        Response { clicked, changed }
+        widget_color4(self, label, value)
     }
 
-    /// A text input field.
     pub fn text_input(&mut self, label: &str, value: &mut String) -> Response {
-        let id = self.make_id(label);
-        let (clicked, changed) = if let Some(Value::String(s)) = self.window.ctx.consume_edit(&id) {
-            let changed = *value != s;
-            *value = s;
-            (true, changed)
-        } else {
-            (false, false)
-        };
-        self.record_child(id.clone());
-        self.window
-            .ctx
-            .declare(build_text_input(id, self.window.name.clone(), label, value));
-        Response { clicked, changed }
+        widget_text_input(self, label, value)
     }
 
-    /// A dropdown selector.
     pub fn dropdown(&mut self, label: &str, selected: &mut usize, options: &[&str]) -> Response {
-        let id = self.make_id(label);
-        let (clicked, changed) = if let Some(Value::Enum { selected: s, .. }) = self.window.ctx.consume_edit(&id) {
-            let changed = *selected != s;
-            *selected = s;
-            (true, changed)
-        } else {
-            (false, false)
-        };
-        self.record_child(id.clone());
-        self.window.ctx.declare(build_dropdown(
-            id,
-            self.window.name.clone(),
-            label,
-            *selected,
-            options,
-        ));
-        Response { clicked, changed }
+        widget_dropdown(self, label, selected, options)
     }
 
-    /// A button. Returns a `Response` — use `.clicked()` to check if it was pressed.
     pub fn button(&mut self, label: &str) -> Response {
-        let id = self.make_id(label);
-        let clicked = matches!(self.window.ctx.consume_edit(&id), Some(Value::Button(true)));
-        self.record_child(id.clone());
-        self.window
-            .ctx
-            .declare(build_button(id, self.window.name.clone(), label));
-        Response { clicked, changed: clicked }
+        widget_button(self, label)
     }
 
-    // ── Display widgets ──────────────────────────────────────────────
-
-    /// A read-only text label.
     pub fn label(&mut self, text: &str) {
-        let id = self.make_id(text);
-        self.record_child(id.clone());
-        self.window
-            .ctx
-            .declare(build_label(id, self.window.name.clone(), text));
+        widget_label(self, text);
     }
 
-    /// A progress bar (value from 0.0 to 1.0).
     pub fn progress_bar(&mut self, label: &str, value: f64, accent: AccentColor) {
-        let id = self.make_id(label);
-        self.record_child(id.clone());
-        self.window
-            .ctx
-            .declare(build_progress_bar(id, self.window.name.clone(), label, value, accent, None));
+        widget_progress_bar(self, label, value, accent, None);
     }
 
-    /// A progress bar with subtitle text.
-    pub fn progress_bar_with_subtitle(
-        &mut self,
-        label: &str,
-        value: f64,
-        accent: AccentColor,
-        subtitle: &str,
-    ) {
-        let id = self.make_id(label);
-        self.record_child(id.clone());
-        self.window.ctx.declare(build_progress_bar(
-            id,
-            self.window.name.clone(),
-            label,
-            value,
-            accent,
-            Some(subtitle),
-        ));
+    pub fn progress_bar_with_subtitle(&mut self, label: &str, value: f64, accent: AccentColor, subtitle: &str) {
+        widget_progress_bar(self, label, value, accent, Some(subtitle));
     }
 
-    /// A stat card.
     pub fn stat(&mut self, label: &str, value: &str, subvalue: Option<&str>, accent: AccentColor) {
-        let id = self.make_id(label);
-        self.record_child(id.clone());
-        self.window
-            .ctx
-            .declare(build_stat(id, self.window.name.clone(), label, value, subvalue, accent));
+        widget_stat(self, label, value, subvalue, accent);
     }
 
-    /// A status indicator.
     pub fn status(
         &mut self,
         label: &str,
@@ -813,41 +889,13 @@ impl<'a, 'ctx> Grid<'a, 'ctx> {
         active_color: AccentColor,
         inactive_color: AccentColor,
     ) {
-        let id = self.make_id(label);
-        self.record_child(id.clone());
-        self.window.ctx.declare(build_status(
-            id,
-            self.window.name.clone(),
-            label,
-            active,
-            active_text,
-            inactive_text,
-            active_color,
-            inactive_color,
-        ));
+        widget_status(self, label, active, active_text, inactive_text, active_color, inactive_color);
     }
 
-    /// A mini sparkline chart.
-    pub fn mini_chart(
-        &mut self,
-        label: &str,
-        values: &[f32],
-        unit: Option<&str>,
-        accent: AccentColor,
-    ) {
-        let id = self.make_id(label);
-        self.record_child(id.clone());
-        self.window.ctx.declare(build_mini_chart(
-            id,
-            self.window.name.clone(),
-            label,
-            values,
-            unit,
-            accent,
-        ));
+    pub fn mini_chart(&mut self, label: &str, values: &[f32], unit: Option<&str>, accent: AccentColor) {
+        widget_mini_chart(self, label, values, unit, accent);
     }
 
-    /// A larger chart.
     pub fn plot(
         &mut self,
         label: &str,
@@ -855,22 +903,20 @@ impl<'a, 'ctx> Grid<'a, 'ctx> {
         x_label: Option<&str>,
         y_label: Option<&str>,
     ) {
-        let id = self.make_id(label);
-        self.record_child(id.clone());
-        self.window.ctx.declare(build_plot(
-            id,
-            self.window.name.clone(),
-            label,
-            series,
-            x_label,
-            y_label,
-        ));
+        widget_plot(self, label, series, x_label, y_label);
     }
 
-    /// A visual separator line.
+    pub fn button_compact(&mut self, label: &str) -> Response {
+        widget_button_compact(self, label)
+    }
+
+    pub fn kv(&mut self, label: &str, value: &str) {
+        widget_kv(self, label, value);
+    }
+
     pub fn separator(&mut self) {
-        let id = format!("{}::__sep_{}", self.id, self.window.ctx.current_frame_len());
-        self.record_child(id.clone());
+        let id = self.make_id("__sep");
+        self.children.push(id.clone());
         self.window.ctx.declare(ElementDecl {
             id,
             kind: ElementKind::Separator,
@@ -881,16 +927,14 @@ impl<'a, 'ctx> Grid<'a, 'ctx> {
         });
     }
 
-    /// Create a nested grid layout container.
     pub fn grid<F>(&mut self, cols: usize, f: F)
     where
         F: FnOnce(&mut Grid<'_, 'ctx>),
     {
-        let grid_id = format!("{}::__grid_{}", self.id, self.window.ctx.current_frame_len());
-        let mut child_grid = Grid::new(&grid_id, self.window, cols);
+        let grid_id = make_label_id(&self.id, "__grid", &mut self.label_counts);
+        let mut child_grid = Grid::new(grid_id.clone(), self.window, cols);
         f(&mut child_grid);
-        let child_id = child_grid.id.clone();
         child_grid.finish();
-        self.children.push(child_id);
+        self.children.push(grid_id);
     }
 }

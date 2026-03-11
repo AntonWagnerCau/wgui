@@ -99,6 +99,16 @@ pub enum ElementKind {
     Grid,
     /// Larger plot/chart for data visualization
     Plot,
+    /// Compact key-value display
+    KeyValue,
+    /// Compact button for dense UIs
+    ButtonCompact,
+    /// Horizontal layout container
+    Horizontal,
+    /// Inline button without label column (for horizontal layouts)
+    ButtonInline,
+    /// Inline text input without label column (for horizontal layouts)
+    TextInputInline,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq)]
@@ -109,9 +119,9 @@ pub struct ElementMeta {
     pub max: Option<f64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub step: Option<f64>,
-    /// Accent color for the element (coral, teal, blue, green, purple, orange, yellow, red)
+    /// Accent color for the element
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub accent: Option<String>,
+    pub accent: Option<AccentColor>,
     /// Subtitle or secondary text
     #[serde(skip_serializing_if = "Option::is_none")]
     pub subtitle: Option<String>,
@@ -134,7 +144,8 @@ pub struct ElementDecl {
 }
 
 /// Accent colors available for UI elements
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
 pub enum AccentColor {
     Coral,
     Teal,

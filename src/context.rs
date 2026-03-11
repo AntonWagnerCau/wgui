@@ -126,11 +126,6 @@ impl Context {
         self.current_frame.push(decl);
     }
 
-    /// Number of elements declared so far this frame (for generating unique separator ids).
-    pub(crate) fn current_frame_len(&self) -> usize {
-        self.current_frame.len()
-    }
-
     /// Finish the current frame: reconcile with previous frame, send diffs over WS.
     pub fn end_frame(&mut self) {
         let outgoing = reconcile(&self.prev_frame, &self.current_frame);
@@ -216,6 +211,31 @@ fn reconcile(prev: &[ElementDecl], current: &[ElementDecl]) -> Vec<ServerMsg> {
             outgoing.push(ServerMsg::Remove {
                 id: prev_decl.id.clone(),
             });
+        }
+    }
+
+    // Detect reorder: same set of IDs per window, different order
+    // Only emit if no adds/removes happened (pure reorder)
+    let has_structural = outgoing.iter().any(|m| matches!(m, ServerMsg::Add { .. } | ServerMsg::Remove { .. }));
+    if !has_structural && !prev.is_empty() {
+        // Group by window and check order
+        let mut prev_order: HashMap<&str, Vec<&str>> = HashMap::new();
+        let mut curr_order: HashMap<&str, Vec<&str>> = HashMap::new();
+        for d in prev {
+            prev_order.entry(d.window.as_ref()).or_default().push(&d.id);
+        }
+        for d in current {
+            curr_order.entry(d.window.as_ref()).or_default().push(&d.id);
+        }
+        for (win, curr_ids) in &curr_order {
+            if let Some(prev_ids) = prev_order.get(win) {
+                if prev_ids.len() == curr_ids.len() && prev_ids != curr_ids {
+                    outgoing.push(ServerMsg::Reorder {
+                        window: win.to_string(),
+                        ids: curr_ids.iter().map(|s| s.to_string()).collect(),
+                    });
+                }
+            }
         }
     }
 

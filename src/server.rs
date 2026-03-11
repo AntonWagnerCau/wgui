@@ -5,6 +5,8 @@ use std::sync::mpsc;
 use std::thread;
 use std::time::Duration;
 
+use indexmap::IndexMap;
+
 use crate::element::ElementDecl;
 use crate::protocol::{ClientMsg, ServerMsg};
 
@@ -120,133 +122,126 @@ fn run_ws(
     log::info!("wgui: WebSocket listening on ws://{bind_addr}:{port}");
 
     // Local mirror of UI state, updated from incoming ServerMsg
-    let mut mirror: Vec<ElementDecl> = Vec::new();
+    let mut mirror: IndexMap<String, ElementDecl> = IndexMap::new();
+    let mut clients: Vec<tungstenite::WebSocket<TcpStream>> = Vec::new();
 
     loop {
-        match listener.accept() {
-            Ok((stream, _addr)) => {
-                log::info!("wgui: new WebSocket client connected");
-                handle_ws_client(&ws_rx, &edit_tx, stream, &mut mirror);
-                log::info!("wgui: WebSocket client disconnected");
-            }
-            Err(ref e) if e.kind() == std::io::ErrorKind::WouldBlock => {
-                // Try to drain pending messages from game loop while waiting for connections
-                while let Ok(msgs) = ws_rx.try_recv() {
-                    apply_messages_to_mirror(&mut mirror, &msgs);
+        // Accept new connections
+        loop {
+            match listener.accept() {
+                Ok((stream, _addr)) => {
+                    stream.set_nonblocking(false).ok();
+                    stream.set_read_timeout(Some(Duration::from_millis(1))).ok();
+                    match tungstenite::accept(stream) {
+                        Ok(mut ws) => {
+                            log::info!("wgui: new WebSocket client connected (total: {})", clients.len() + 1);
+                            // Send snapshot to new client
+                            let snapshot = ServerMsg::Snapshot {
+                                elements: mirror.values().cloned().collect(),
+                            };
+                            if let Ok(json) = serde_json::to_string(&snapshot) {
+                                let _ = ws.send(tungstenite::Message::Text(json.into()));
+                            }
+                            ws.get_ref().set_read_timeout(Some(Duration::from_millis(1))).ok();
+                            clients.push(ws);
+                        }
+                        Err(e) => log::error!("wgui: WS handshake failed: {e}"),
+                    }
                 }
-                thread::sleep(Duration::from_millis(50));
+                Err(ref e) if e.kind() == std::io::ErrorKind::WouldBlock => break,
+                Err(e) => {
+                    log::error!("wgui WS accept error: {e}");
+                    break;
+                }
             }
-            Err(e) => {
-                log::error!("wgui WS accept error: {e}");
-                thread::sleep(Duration::from_millis(100));
-            }
         }
-    }
-}
 
-fn handle_ws_client(
-    ws_rx: &mpsc::Receiver<Vec<ServerMsg>>,
-    edit_tx: &mpsc::Sender<(String, crate::element::Value)>,
-    stream: TcpStream,
-    mirror: &mut Vec<ElementDecl>,
-) {
-    stream
-        .set_nonblocking(false)
-        .expect("failed to set stream blocking");
-    stream
-        .set_read_timeout(Some(Duration::from_millis(16)))
-        .ok();
-
-    let mut ws = match tungstenite::accept(stream) {
-        Ok(ws) => ws,
-        Err(e) => {
-            log::error!("wgui: WS handshake failed: {e}");
-            return;
-        }
-    };
-
-    // Send full snapshot on connect
-    let snapshot = ServerMsg::Snapshot {
-        elements: mirror.clone(),
-    };
-    if let Ok(json) = serde_json::to_string(&snapshot) {
-        if ws.send(tungstenite::Message::Text(json.into())).is_err() {
-            return;
-        }
-    }
-
-    loop {
-        // Drain pending messages from game loop and apply to mirror
+        // Drain pending messages from game loop, apply to mirror, broadcast
+        let mut got_msgs = false;
         loop {
             match ws_rx.try_recv() {
                 Ok(msgs) => {
-                    apply_messages_to_mirror(mirror, &msgs);
-                    // Send all messages to client
+                    got_msgs = true;
+                    apply_messages_to_mirror(&mut mirror, &msgs);
                     for msg in &msgs {
-                        if let Ok(json) = serde_json::to_string(&msg) {
-                            if ws
-                                .send(tungstenite::Message::Text(json.into()))
-                                .is_err()
-                            {
-                                return;
-                            }
+                        if let Ok(json) = serde_json::to_string(msg) {
+                            let text = tungstenite::Message::Text(json.into());
+                            clients.retain_mut(|ws| {
+                                ws.send(text.clone()).is_ok()
+                            });
                         }
                     }
                 }
                 Err(mpsc::TryRecvError::Empty) => break,
                 Err(mpsc::TryRecvError::Disconnected) => {
-                    // Game loop dropped the sender, shut down
-                    let _ = ws.close(None);
+                    for ws in &mut clients {
+                        let _ = ws.close(None);
+                    }
                     return;
                 }
             }
         }
 
-        // Read incoming messages from client (non-blocking with timeout)
-        match ws.read() {
-            Ok(tungstenite::Message::Text(text)) => {
-                if let Ok(client_msg) = serde_json::from_str::<ClientMsg>(&text) {
-                    match client_msg {
-                        ClientMsg::Set { id, value } => {
-                            // Forward to game loop
-                            let _ = edit_tx.send((id, value));
+        // Read incoming messages from all clients
+        clients.retain_mut(|ws| {
+            loop {
+                match ws.read() {
+                    Ok(tungstenite::Message::Text(text)) => {
+                        if let Ok(client_msg) = serde_json::from_str::<ClientMsg>(&text) {
+                            match client_msg {
+                                ClientMsg::Set { id, value } => {
+                                    let _ = edit_tx.send((id, value));
+                                }
+                            }
                         }
+                    }
+                    Ok(tungstenite::Message::Close(_)) => {
+                        let _ = ws.close(None);
+                        log::info!("wgui: WebSocket client disconnected");
+                        return false;
+                    }
+                    Ok(_) => {} // ping/pong/binary
+                    Err(tungstenite::Error::Io(ref e))
+                        if e.kind() == std::io::ErrorKind::WouldBlock
+                            || e.kind() == std::io::ErrorKind::TimedOut =>
+                    {
+                        return true; // No more data, keep client
+                    }
+                    Err(tungstenite::Error::ConnectionClosed | tungstenite::Error::AlreadyClosed) => {
+                        log::info!("wgui: WebSocket client disconnected");
+                        return false;
+                    }
+                    Err(e) => {
+                        log::warn!("wgui: WS read error: {e}");
+                        return false;
                     }
                 }
             }
-            Ok(tungstenite::Message::Close(_)) => {
-                let _ = ws.close(None);
-                break;
-            }
-            Ok(_) => {} // ping/pong/binary — ignore
-            Err(tungstenite::Error::Io(ref e))
-                if e.kind() == std::io::ErrorKind::WouldBlock
-                    || e.kind() == std::io::ErrorKind::TimedOut =>
-            {
-                // No data available, continue loop
-            }
-            Err(tungstenite::Error::ConnectionClosed) => break,
-            Err(tungstenite::Error::AlreadyClosed) => break,
-            Err(e) => {
-                log::warn!("wgui: WS read error: {e}");
-                break;
-            }
+        });
+
+        if !got_msgs && clients.is_empty() {
+            thread::sleep(Duration::from_millis(50));
+        } else if !got_msgs {
+            thread::sleep(Duration::from_millis(8));
         }
     }
 }
 
 /// Apply a batch of ServerMsg to the local mirror.
-fn apply_messages_to_mirror(mirror: &mut Vec<ElementDecl>, msgs: &[ServerMsg]) {
+fn apply_messages_to_mirror(mirror: &mut IndexMap<String, ElementDecl>, msgs: &[ServerMsg]) {
     for msg in msgs {
         match msg {
             ServerMsg::Snapshot { elements } => {
-                *mirror = elements.clone();
+                mirror.clear();
+                for elem in elements {
+                    mirror.insert(elem.id.clone(), elem.clone());
+                }
             }
             ServerMsg::Add { element } => {
-                mirror.push(element.clone());
+                mirror.insert(element.id.clone(), element.clone());
             }
             ServerMsg::Update { id, value, label, meta } => {
-                if let Some(elem) = mirror.iter_mut().find(|e| &e.id == id) {
+                if let Some(elem) = mirror.get_mut(id) {
                     elem.value = value.clone();
                     if let Some(l) = label {
                         elem.label = l.clone();
@@ -257,7 +252,22 @@ fn apply_messages_to_mirror(mirror: &mut Vec<ElementDecl>, msgs: &[ServerMsg]) {
                 }
             }
             ServerMsg::Remove { id } => {
-                mirror.retain(|e| &e.id != id);
+                mirror.shift_remove(id);
+            }
+            ServerMsg::Reorder { ids, .. } => {
+                let mut new_mirror = IndexMap::with_capacity(mirror.len());
+                for id in ids {
+                    if let Some(elem) = mirror.get(id) {
+                        new_mirror.insert(id.clone(), elem.clone());
+                    }
+                }
+                // Keep any elements not in the reorder list at the end
+                for (id, elem) in mirror.iter() {
+                    if !new_mirror.contains_key(id) {
+                        new_mirror.insert(id.clone(), elem.clone());
+                    }
+                }
+                *mirror = new_mirror;
             }
         }
     }
@@ -293,20 +303,24 @@ mod tests {
         }
     }
 
+    fn into_mirror(decls: Vec<ElementDecl>) -> IndexMap<String, ElementDecl> {
+        decls.into_iter().map(|d| (d.id.clone(), d)).collect()
+    }
+
     #[test]
     fn mirror_add() {
-        let mut mirror = vec![];
+        let mut mirror = IndexMap::new();
         let msgs = vec![ServerMsg::Add {
             element: make_decl("a", Value::Bool(true)),
         }];
         apply_messages_to_mirror(&mut mirror, &msgs);
         assert_eq!(mirror.len(), 1);
-        assert_eq!(mirror[0].id, "a");
+        assert_eq!(mirror["a"].id, "a");
     }
 
     #[test]
     fn mirror_update() {
-        let mut mirror = vec![make_decl("a", Value::Bool(true))];
+        let mut mirror = into_mirror(vec![make_decl("a", Value::Bool(true))]);
         let msgs = vec![ServerMsg::Update {
             id: "a".to_string(),
             value: Value::Bool(false),
@@ -314,12 +328,12 @@ mod tests {
             meta: None,
         }];
         apply_messages_to_mirror(&mut mirror, &msgs);
-        assert_eq!(mirror[0].value, Value::Bool(false));
+        assert_eq!(mirror["a"].value, Value::Bool(false));
     }
 
     #[test]
     fn mirror_remove() {
-        let mut mirror = vec![make_decl("a", Value::Bool(true))];
+        let mut mirror = into_mirror(vec![make_decl("a", Value::Bool(true))]);
         let msgs = vec![ServerMsg::Remove {
             id: "a".to_string(),
         }];
@@ -329,13 +343,13 @@ mod tests {
 
     #[test]
     fn mirror_snapshot() {
-        let mut mirror = vec![make_decl("a", Value::Bool(true))];
+        let mut mirror = into_mirror(vec![make_decl("a", Value::Bool(true))]);
         let msgs = vec![ServerMsg::Snapshot {
             elements: vec![make_decl("b", Value::Bool(false))],
         }];
         apply_messages_to_mirror(&mut mirror, &msgs);
         assert_eq!(mirror.len(), 1);
-        assert_eq!(mirror[0].id, "b");
+        assert_eq!(mirror["b"].id, "b");
     }
 
     #[test]

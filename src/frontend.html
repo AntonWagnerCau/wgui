@@ -74,6 +74,12 @@
     margin-bottom: 12px;
   }
 
+  /* Prevent horizontal layout from being split across columns */
+  .horizontal-layout {
+    break-inside: avoid;
+    column-span: all;
+  }
+
   /* Connection status bar */
   #status-bar {
     position: fixed;
@@ -146,7 +152,7 @@
   .card-body {
     display: flex;
     flex-direction: column;
-    padding: 8px 0;
+    padding: 4px 0;
   }
 
   /* ============================================
@@ -356,9 +362,9 @@
   .widget-row {
     display: flex;
     align-items: center;
-    padding: 8px 16px;
+    padding: 6px 16px;
     gap: 12px;
-    min-height: 40px;
+    min-height: 36px;
     transition: background 0.1s;
   }
 
@@ -715,10 +721,106 @@
     transform: scale(0.97);
   }
 
+  /* Compact Button */
+  .wgui-button-compact {
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: var(--radius);
+    padding: 4px 12px;
+    font-family: var(--font);
+    font-size: 11px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s;
+    box-shadow: 0 1px 4px var(--accent-glow);
+    white-space: nowrap;
+  }
+
+  .wgui-button-compact:hover {
+    filter: brightness(1.1);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px var(--accent-glow);
+  }
+
+  .wgui-button-compact:active {
+    transform: scale(0.97);
+  }
+
   /* Label (read-only) */
   .label-text {
     font-size: 12px;
     color: var(--text);
+  }
+
+  /* Key-Value display */
+  .kv-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 4px 16px;
+    min-height: 28px;
+    gap: 12px;
+  }
+
+  .kv-row:hover {
+    background: rgba(255,255,255,0.02);
+  }
+
+  .kv-label {
+    font-size: 12px;
+    color: var(--text-dim);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .kv-value {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--text);
+    text-align: right;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+  }
+
+  /* Horizontal layout */
+  .horizontal-layout {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 16px;
+    flex-wrap: wrap;
+  }
+
+  .horizontal-layout > * {
+    flex: 0 0 auto;
+    min-width: 0;
+  }
+
+  .horizontal-layout > .kv-row,
+  .horizontal-layout > .widget-row {
+    padding: 0;
+    min-height: auto;
+    flex: 1 1 auto;
+  }
+
+  .horizontal-layout .widget-label {
+    flex: 0 0 auto;
+    min-width: auto;
+  }
+
+  .horizontal-layout .widget-control {
+    flex: 1 1 auto;
+  }
+
+  .horizontal-layout .text-input {
+    min-width: 100px;
+    max-width: 200px;
   }
 
   /* Separator */
@@ -780,7 +882,7 @@
   'use strict';
 
   // ── State ──────────────────────────────────────────
-  let elements = [];
+  let elements = new Map(); // id -> element (insertion-ordered)
   let ws = null;
   let reconnectDelay = 500;
   const recentlyInteracted = new Map(); // id -> timestamp
@@ -829,33 +931,44 @@
   function handleMessage(msg) {
     switch (msg.type) {
       case 'snapshot':
-        elements = msg.elements;
+        elements = new Map();
+        for (const el of msg.elements) elements.set(el.id, el);
         render();
         break;
       case 'add':
-        elements = elements.filter(el => el.id !== msg.element.id);
-        elements.push(msg.element);
+        elements.set(msg.element.id, msg.element);
         render();
         break;
       case 'update': {
-        let found = false;
-        for (let el of elements) {
-          if (el.id === msg.id) {
-            el.value = msg.value;
-            if (msg.label) el.label = msg.label;
-            if (msg.meta) el.meta = msg.meta;
-            found = true;
-            updateElementDOM(el);
-            break;
-          }
+        const el = elements.get(msg.id);
+        if (el) {
+          el.value = msg.value;
+          if (msg.label) el.label = msg.label;
+          if (msg.meta) el.meta = msg.meta;
+          updateElementDOM(el);
+        } else {
+          console.warn('wgui: update for unknown id', msg.id);
         }
-        if (!found) console.warn('wgui: update for unknown id', msg.id);
         break;
       }
       case 'remove':
-        elements = elements.filter(el => el.id !== msg.id);
+        elements.delete(msg.id);
         render();
         break;
+      case 'reorder': {
+        const newMap = new Map();
+        for (const id of msg.ids) {
+          const el = elements.get(id);
+          if (el) newMap.set(id, el);
+        }
+        // Keep any elements not in the reorder list
+        for (const [id, el] of elements) {
+          if (!newMap.has(id)) newMap.set(id, el);
+        }
+        elements = newMap;
+        render();
+        break;
+      }
     }
   }
 
@@ -863,7 +976,7 @@
   function render() {
     const app = document.getElementById('app');
 
-    if (elements.length === 0) {
+    if (elements.size === 0) {
       app.innerHTML = `
         <div class="empty-state">
           <div class="logo">wgui</div>
@@ -872,20 +985,21 @@
       return;
     }
 
-    // Collect IDs of elements that are children of a Grid (so we don't render them twice)
-    const gridChildIds = new Set();
-    for (const el of elements) {
-      if (el.kind.type === 'Grid' && el.value.data && el.value.data.children) {
-        for (const childId of el.value.data.children) {
-          gridChildIds.add(childId);
+    // Collect IDs of elements that are children of containers (so we don't render them twice)
+    const containerChildIds = new Set();
+    for (const el of elements.values()) {
+      const children = el.value?.data?.children;
+      if (children && (el.kind.type === 'Grid' || el.kind.type === 'Horizontal')) {
+        for (const childId of children) {
+          containerChildIds.add(childId);
         }
       }
     }
 
-    // Group by window, skipping grid children (they're rendered inside their Grid)
+    // Group by window, skipping container children (they're rendered inside their containers)
     const windows = new Map();
-    for (const el of elements) {
-      if (gridChildIds.has(el.id)) continue;
+    for (const el of elements.values()) {
+      if (containerChildIds.has(el.id)) continue;
       const win = el.window || 'Default';
       if (!windows.has(win)) windows.set(win, []);
       windows.get(win).push(el);
@@ -910,7 +1024,7 @@
     app.innerHTML = html;
     
     // Initialize charts after DOM is ready
-    for (const el of elements) {
+    for (const el of elements.values()) {
       if (el.kind.type === 'MiniChart') {
         initMiniChart(el);
       } else if (el.kind.type === 'Plot') {
@@ -975,6 +1089,11 @@
         if (input && document.activeElement !== input) input.value = el.value.data;
         break;
       }
+      case 'TextInputInline': {
+        const input = document.querySelector(`[data-id="${CSS.escape(el.id)}"].text-input`);
+        if (input && document.activeElement !== input) input.value = el.value.data;
+        break;
+      }
       case 'Dropdown': {
         const select = row.querySelector('select');
         if (select && document.activeElement !== select) select.selectedIndex = el.value.data.selected;
@@ -1020,7 +1139,7 @@
         // Update each child element within the grid
         const children = el.value.data.children || [];
         for (const childId of children) {
-          const child = elements.find(e => e.id === childId);
+          const child = elements.get(childId);
           if (child) updateElementDOM(child);
         }
         break;
@@ -1039,6 +1158,32 @@
       case 'Button': {
         const btn = row.querySelector('.wgui-button');
         if (btn) btn.textContent = el.label;
+        break;
+      }
+      case 'ButtonCompact': {
+        const btn = row.querySelector('.wgui-button-compact');
+        if (btn) btn.textContent = el.label;
+        break;
+      }
+      case 'ButtonInline': {
+        const btn = document.querySelector(`[data-id="${CSS.escape(el.id)}"].wgui-button-compact`);
+        if (btn) btn.textContent = el.label;
+        break;
+      }
+      case 'KeyValue': {
+        const valueEl = row.querySelector('.kv-value');
+        if (valueEl) valueEl.textContent = el.value.data;
+        const labelEl = row.querySelector('.kv-label');
+        if (labelEl) labelEl.textContent = el.label;
+        break;
+      }
+      case 'Horizontal': {
+        // Update each child element within the horizontal layout
+        const children = el.value.data.children || [];
+        for (const childId of children) {
+          const child = elements.get(childId);
+          if (child) updateElementDOM(child);
+        }
         break;
       }
       case 'Separator':
@@ -1143,8 +1288,54 @@
       </div>`;
     },
 
+    ButtonCompact: (el) => {
+      return `<div class="widget-row" data-id="${esc(el.id)}">
+        <span class="widget-label">${esc(el.label)}</span>
+        <div class="widget-control" style="justify-content:flex-end;">
+          <button class="wgui-button-compact" onclick="wgui.onButton('${escJs(el.id)}')">${esc(el.label)}</button>
+        </div>
+      </div>`;
+    },
+
+    ButtonInline: (el) => {
+      return `<button class="wgui-button-compact" data-id="${esc(el.id)}" onclick="wgui.onButton('${escJs(el.id)}')">${esc(el.label)}</button>`;
+    },
+
+    TextInputInline: (el) => {
+      return `<input type="text" class="text-input" data-id="${esc(el.id)}" placeholder="${esc(el.label)}" value="${esc(el.value.data)}"
+        oninput="wgui.onText('${escJs(el.id)}', this.value)">`;
+    },
+
+    KeyValue: (el) => {
+      return `<div class="kv-row" data-id="${esc(el.id)}">
+        <span class="kv-label">${esc(el.label)}</span>
+        <span class="kv-value">${esc(el.value.data)}</span>
+      </div>`;
+    },
+
+    Horizontal: (el) => {
+      const data = el.value.data || {};
+      const children = data.children || [];
+      let html = '<div class="horizontal-layout">';
+      for (const childId of children) {
+        const child = elements.get(childId);
+        if (child) {
+          html += renderElement(child);
+        }
+      }
+      html += '</div>';
+      return html;
+    },
+
     Label: (el) => {
       const hasLabel = el.label && el.label.trim().length > 0;
+      const hasValue = el.value.data && el.value.data.trim().length > 0;
+      
+      // If both label and value are empty, render nothing
+      if (!hasLabel && !hasValue) {
+        return '';
+      }
+      
       if (hasLabel) {
         return `<div class="widget-row" data-id="${esc(el.id)}">
           <span class="widget-label">${esc(el.label)}</span>
@@ -1237,7 +1428,7 @@
       const children = data.children || [];
       let html = `<div class="grid grid-${cols}">`;
       for (const childId of children) {
-        const child = elements.find(e => e.id === childId);
+        const child = elements.get(childId);
         if (child) {
           html += renderElement(child);
         }
@@ -1379,7 +1570,7 @@
     },
 
     onSlider(id, rawVal, inputEl) {
-      const el = elements.find(e => e.id === id);
+      const el = elements.get(id);
       if (!el) return;
       recentlyInteracted.set(id, Date.now());
       const isInt = el.value.type === 'Int';
@@ -1391,7 +1582,7 @@
     },
 
     onCheckbox(id, wrapperEl) {
-      const el = elements.find(e => e.id === id);
+      const el = elements.get(id);
       if (!el) return;
       el.value.data = !el.value.data;
       const box = wrapperEl.querySelector('.checkbox-box');
@@ -1403,7 +1594,7 @@
 
     onColor3(id, hex) {
       const rgb = hexToRgb(hex);
-      const el = elements.find(e => e.id === id);
+      const el = elements.get(id);
       if (el) el.value.data = rgb;
       const row = document.querySelector(`[data-id="${CSS.escape(id)}"]`);
       if (row) row.querySelector('.color-hex').textContent = hex;
@@ -1412,7 +1603,7 @@
 
     onColor4(id, hex) {
       const rgb = hexToRgb(hex);
-      const el = elements.find(e => e.id === id);
+      const el = elements.get(id);
       if (!el) return;
       const a = el.value.data[3] ?? 1.0;
       el.value.data = [...rgb, a];
@@ -1422,7 +1613,7 @@
     },
 
     onColor4Alpha(id, alphaStr) {
-      const el = elements.find(e => e.id === id);
+      const el = elements.get(id);
       if (!el) return;
       el.value.data[3] = parseFloat(alphaStr);
       const row = document.querySelector(`[data-id="${CSS.escape(id)}"]`);
@@ -1434,14 +1625,14 @@
     },
 
     onText(id, val) {
-      const el = elements.find(e => e.id === id);
+      const el = elements.get(id);
       if (el) el.value.data = val;
       send({ type: 'set', id, value: { type: 'String', data: val } });
     },
 
     onDropdown(id, selectedStr, selectEl) {
       const selected = parseInt(selectedStr);
-      const el = elements.find(e => e.id === id);
+      const el = elements.get(id);
       if (!el) return;
       el.value.data.selected = selected;
       send({ type: 'set', id, value: { type: 'Enum', data: { selected, options: el.value.data.options } } });
@@ -1595,7 +1786,7 @@
 
   // Handle window resize for charts
   window.addEventListener('resize', () => {
-    for (const el of elements) {
+    for (const el of elements.values()) {
       if (el.kind.type === 'MiniChart') {
         initMiniChart(el);
       } else if (el.kind.type === 'Plot') {

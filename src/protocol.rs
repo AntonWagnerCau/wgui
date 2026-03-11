@@ -28,6 +28,10 @@ pub enum ServerMsg {
     /// An element was removed (no longer declared this frame).
     #[serde(rename = "remove")]
     Remove { id: ElementId },
+
+    /// Element order changed (same set, different sequence).
+    #[serde(rename = "reorder")]
+    Reorder { window: String, ids: Vec<ElementId> },
 }
 
 /// Messages sent from browser client to server.
