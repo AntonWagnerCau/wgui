@@ -148,7 +148,7 @@ fn build_label(id: String, window: Arc<str>, text: &str) -> ElementDecl {
     ElementDecl {
         id,
         kind: ElementKind::Label,
-        label: text.to_string(),
+        label: String::new(), // No label column - text appears once in value
         value: Value::String(text.to_string()),
         meta: ElementMeta::default(),
         window,

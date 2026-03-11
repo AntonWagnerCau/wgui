@@ -1144,11 +1144,18 @@
     },
 
     Label: (el) => {
+      const hasLabel = el.label && el.label.trim().length > 0;
+      if (hasLabel) {
+        return `<div class="widget-row" data-id="${esc(el.id)}">
+          <span class="widget-label">${esc(el.label)}</span>
+          <div class="widget-control">
+            <span class="label-text">${esc(el.value.data)}</span>
+          </div>
+        </div>`;
+      }
+      // Full-width text when no label (prevents duplication)
       return `<div class="widget-row" data-id="${esc(el.id)}">
-        <span class="widget-label">${esc(el.label)}</span>
-        <div class="widget-control">
-          <span class="label-text">${esc(el.value.data)}</span>
-        </div>
+        <span class="label-text" style="flex:1;padding:0 16px;">${esc(el.value.data)}</span>
       </div>`;
     },
 
