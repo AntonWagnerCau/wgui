@@ -48,6 +48,7 @@ fn widget_slider(sink: &mut impl WidgetSink, label: &str, value: &mut f32, range
         (false, false)
     };
     sink.record_child(id.clone());
+    let step = (*range.end() as f64 - *range.start() as f64) / 10000.0;
     sink.declare(ElementDecl {
         id,
         kind: ElementKind::Slider,
@@ -56,7 +57,7 @@ fn widget_slider(sink: &mut impl WidgetSink, label: &str, value: &mut f32, range
         meta: ElementMeta {
             min: Some(*range.start() as f64),
             max: Some(*range.end() as f64),
-            step: Some(0.01),
+            step: Some(step),
             ..Default::default()
         },
         window: sink.window_name(),
@@ -74,6 +75,7 @@ fn widget_slider_f64(sink: &mut impl WidgetSink, label: &str, value: &mut f64, r
         (false, false)
     };
     sink.record_child(id.clone());
+    let step = (*range.end() - *range.start()) / 10000.0;
     sink.declare(ElementDecl {
         id,
         kind: ElementKind::Slider,
@@ -82,7 +84,7 @@ fn widget_slider_f64(sink: &mut impl WidgetSink, label: &str, value: &mut f64, r
         meta: ElementMeta {
             min: Some(*range.start()),
             max: Some(*range.end()),
-            step: Some(0.001),
+            step: Some(step),
             ..Default::default()
         },
         window: sink.window_name(),
@@ -267,7 +269,7 @@ fn widget_button(sink: &mut impl WidgetSink, label: &str) -> Response {
     Response { clicked, changed: clicked }
 }
 
-fn widget_button_compact(sink: &mut impl WidgetSink, label: &str) -> Response {
+fn widget_button_compact(sink: &mut impl WidgetSink, label: &str, accent: Option<AccentColor>) -> Response {
     let id = sink.make_id(label);
     let clicked = matches!(sink.consume_edit(&id), Some(Value::Button(true)));
     sink.record_child(id.clone());
@@ -276,7 +278,10 @@ fn widget_button_compact(sink: &mut impl WidgetSink, label: &str) -> Response {
         kind: ElementKind::ButtonCompact,
         label: label.to_string(),
         value: Value::Button(false),
-        meta: ElementMeta::default(),
+        meta: ElementMeta {
+            accent,
+            ..Default::default()
+        },
         window: sink.window_name(),
     });
     Response { clicked, changed: clicked }
@@ -394,17 +399,18 @@ fn widget_mini_chart(sink: &mut impl WidgetSink, label: &str, values: &[f32], un
 fn widget_plot(
     sink: &mut impl WidgetSink,
     label: &str,
-    series: &[(&str, &[f32], AccentColor)],
+    series: &[(&str, &[f32], AccentColor, bool)],
     x_label: Option<&str>,
     y_label: Option<&str>,
 ) {
     let id = sink.make_id(label);
     let plot_series: Vec<PlotSeries> = series
         .iter()
-        .map(|(name, values, color)| PlotSeries {
+        .map(|(name, values, color, autoscale)| PlotSeries {
             name: name.to_string(),
             values: values.to_vec(),
             color: color.as_str().to_string(),
+            autoscale: *autoscale,
         })
         .collect();
     sink.record_child(id.clone());
@@ -544,7 +550,11 @@ impl<'a> Window<'a> {
     }
 
     pub fn button_compact(&mut self, label: &str) -> Response {
-        widget_button_compact(self, label)
+        widget_button_compact(self, label, None)
+    }
+
+    pub fn button_compact_accent(&mut self, label: &str, accent: AccentColor) -> Response {
+        widget_button_compact(self, label, Some(accent))
     }
 
     pub fn horizontal<F>(&mut self, f: F)
@@ -641,6 +651,23 @@ impl<'a> Window<'a> {
         x_label: Option<&str>,
         y_label: Option<&str>,
     ) {
+        // Default to autoscale=true for backward compatibility
+        let series_with_autoscale: Vec<(&str, &[f32], AccentColor, bool)> = series
+            .iter()
+            .map(|(name, values, color)| (*name, *values, *color, true))
+            .collect();
+        widget_plot(self, label, &series_with_autoscale, x_label, y_label);
+    }
+
+    /// Plot with explicit autoscale control per series
+    /// series: (name, values, color, autoscale)
+    pub fn plot_with_autoscale(
+        &mut self,
+        label: &str,
+        series: &[(&str, &[f32], AccentColor, bool)],
+        x_label: Option<&str>,
+        y_label: Option<&str>,
+    ) {
         widget_plot(self, label, series, x_label, y_label);
     }
 }
@@ -702,6 +729,14 @@ impl<'a, 'ctx> Horizontal<'a, 'ctx> {
     }
 
     pub fn button(&mut self, label: &str) -> Response {
+        self.button_accent_inner(label, None)
+    }
+
+    pub fn button_accent(&mut self, label: &str, accent: AccentColor) -> Response {
+        self.button_accent_inner(label, Some(accent))
+    }
+
+    fn button_accent_inner(&mut self, label: &str, accent: Option<AccentColor>) -> Response {
         let id = self.make_id(label);
         let clicked = matches!(self.window.ctx.consume_edit(&id), Some(Value::Button(true)));
         self.children.push(id.clone());
@@ -710,7 +745,10 @@ impl<'a, 'ctx> Horizontal<'a, 'ctx> {
             kind: ElementKind::ButtonInline,
             label: label.to_string(),
             value: Value::Button(false),
-            meta: ElementMeta::default(),
+            meta: ElementMeta {
+                accent,
+                ..Default::default()
+            },
             window: self.window.name.clone(),
         });
         Response { clicked, changed: clicked }
@@ -903,11 +941,32 @@ impl<'a, 'ctx> Grid<'a, 'ctx> {
         x_label: Option<&str>,
         y_label: Option<&str>,
     ) {
+        // Default to autoscale=true for backward compatibility
+        let series_with_autoscale: Vec<(&str, &[f32], AccentColor, bool)> = series
+            .iter()
+            .map(|(name, values, color)| (*name, *values, *color, true))
+            .collect();
+        widget_plot(self, label, &series_with_autoscale, x_label, y_label);
+    }
+
+    /// Plot with explicit autoscale control per series
+    /// series: (name, values, color, autoscale)
+    pub fn plot_with_autoscale(
+        &mut self,
+        label: &str,
+        series: &[(&str, &[f32], AccentColor, bool)],
+        x_label: Option<&str>,
+        y_label: Option<&str>,
+    ) {
         widget_plot(self, label, series, x_label, y_label);
     }
 
     pub fn button_compact(&mut self, label: &str) -> Response {
-        widget_button_compact(self, label)
+        widget_button_compact(self, label, None)
+    }
+
+    pub fn button_compact_accent(&mut self, label: &str, accent: AccentColor) -> Response {
+        widget_button_compact(self, label, Some(accent))
     }
 
     pub fn kv(&mut self, label: &str, value: &str) {

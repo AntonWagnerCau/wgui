@@ -71,6 +71,15 @@ pub struct PlotSeries {
     pub name: String,
     pub values: Vec<f32>,
     pub color: String,
+    /// Whether this series should use relative autoscaling
+    /// When true, the series is scaled independently
+    /// When false, the series uses the plot's shared scale
+    #[serde(default = "default_autoscale")]
+    pub autoscale: bool,
+}
+
+fn default_autoscale() -> bool {
+    true
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
