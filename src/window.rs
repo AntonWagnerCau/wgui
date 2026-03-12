@@ -802,6 +802,22 @@ impl<'a, 'ctx> Horizontal<'a, 'ctx> {
     pub fn slider_uint(&mut self, label: &str, value: &mut u32, range: RangeInclusive<u32>) -> Response {
         widget_slider_uint(self, label, value, &range)
     }
+
+    pub fn checkbox(&mut self, label: &str, value: &mut bool) -> Response {
+        widget_checkbox(self, label, value)
+    }
+
+    pub fn color_picker(&mut self, label: &str, value: &mut [f32; 3]) -> Response {
+        widget_color3(self, label, value)
+    }
+
+    pub fn color_picker4(&mut self, label: &str, value: &mut [f32; 4]) -> Response {
+        widget_color4(self, label, value)
+    }
+
+    pub fn dropdown(&mut self, label: &str, selected: &mut usize, options: &[&str]) -> Response {
+        widget_dropdown(self, label, selected, options)
+    }
 }
 
 // ── Grid ─────────────────────────────────────────────────────────────
