@@ -77,7 +77,7 @@ impl Context {
 
         let http_handle =
             server::spawn_http(shutdown.clone(), http_port, bind_addr, &opts.title, opts.favicon);
-        let ws_handle = server::spawn_ws(ws_rx, edit_tx, ws_port, bind_addr);
+        let ws_handle = server::spawn_ws(ws_rx, edit_tx, ws_port, bind_addr, shutdown.clone());
 
         println!("wgui: UI available at http://{bind_addr}:{http_port}");
 

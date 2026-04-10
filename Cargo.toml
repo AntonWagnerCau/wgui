@@ -1,6 +1,6 @@
 [package]
 name = "w-gui"
-version = "0.21.10"
+version = "0.21.20"
 edition = "2021"
 description = "A lightweight immediate-mode debug GUI served over localhost"
 repository = "https://github.com/AntonWagnerCau/wgui"
@@ -17,6 +17,9 @@ serde = { version = "1", features = ["derive", "rc"] }
 serde_json = "1"
 log = "0.4"
 indexmap = "2"
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.59", features = ["Win32_Networking_WinSock"] }
 
 [dev-dependencies]
 env_logger = "0.11"

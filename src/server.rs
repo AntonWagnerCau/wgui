@@ -1,4 +1,5 @@
 use std::net::{TcpListener, TcpStream};
+use std::os::windows::io::{FromRawSocket, RawSocket};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::sync::mpsc;
@@ -41,17 +42,20 @@ pub fn spawn_ws(
     edit_tx: mpsc::Sender<(String, crate::element::Value)>,
     port: u16,
     bind_addr: &str,
+    shutdown: Arc<AtomicBool>,
 ) -> thread::JoinHandle<()> {
     let bind = bind_addr.to_string();
     thread::Builder::new()
         .name("wgui-ws".into())
-        .spawn(move || run_ws(ws_rx, edit_tx, port, &bind))
+        .spawn(move || run_ws(ws_rx, edit_tx, port, &bind, shutdown))
         .expect("failed to spawn wgui WS thread")
 }
 
 fn run_http(shutdown: Arc<AtomicBool>, port: u16, bind_addr: &str, html: String, favicon: Option<Vec<u8>>) {
-    let server = tiny_http::Server::http(format!("{bind_addr}:{port}"))
+    let listener = bind_with_reuse(format!("{bind_addr}:{port}"))
         .unwrap_or_else(|e| panic!("wgui: failed to bind HTTP on port {port}: {e}"));
+    let server = tiny_http::Server::from_listener(listener, None)
+        .expect("wgui: failed to create HTTP server from listener");
 
     log::info!("wgui: serving UI at http://{bind_addr}:{port}");
 
@@ -111,8 +115,9 @@ fn run_ws(
     edit_tx: mpsc::Sender<(String, crate::element::Value)>,
     port: u16,
     bind_addr: &str,
+    shutdown: Arc<AtomicBool>,
 ) {
-    let listener = TcpListener::bind(format!("{bind_addr}:{port}"))
+    let listener = bind_with_reuse(format!("{bind_addr}:{port}"))
         .unwrap_or_else(|e| panic!("wgui: failed to bind WS on port {port}: {e}"));
 
     listener
@@ -126,6 +131,15 @@ fn run_ws(
     let mut clients: Vec<tungstenite::WebSocket<TcpStream>> = Vec::new();
 
     loop {
+        // Check shutdown signal
+        if shutdown.load(Ordering::Acquire) {
+            log::info!("wgui: WS server shutting down");
+            for ws in &mut clients {
+                let _ = ws.close(None);
+            }
+            break;
+        }
+
         // Accept new connections
         loop {
             match listener.accept() {
@@ -158,19 +172,13 @@ fn run_ws(
 
         // Drain pending messages from game loop, apply to mirror, broadcast
         let mut got_msgs = false;
+        let mut all_msgs = Vec::new();
         loop {
             match ws_rx.try_recv() {
                 Ok(msgs) => {
                     got_msgs = true;
                     apply_messages_to_mirror(&mut mirror, &msgs);
-                    for msg in &msgs {
-                        if let Ok(json) = serde_json::to_string(msg) {
-                            let text = tungstenite::Message::Text(json.into());
-                            clients.retain_mut(|ws| {
-                                ws.send(text.clone()).is_ok()
-                            });
-                        }
-                    }
+                    all_msgs.extend(msgs);
                 }
                 Err(mpsc::TryRecvError::Empty) => break,
                 Err(mpsc::TryRecvError::Disconnected) => {
@@ -179,6 +187,16 @@ fn run_ws(
                     }
                     return;
                 }
+            }
+        }
+
+        // Send all messages as a single batch (one WebSocket frame)
+        if !all_msgs.is_empty() {
+            if let Ok(json) = serde_json::to_string(&all_msgs) {
+                let text = tungstenite::Message::Text(json.into());
+                clients.retain_mut(|ws| {
+                    ws.send(text.clone()).is_ok()
+                });
             }
         }
 
@@ -273,12 +291,98 @@ fn apply_messages_to_mirror(mirror: &mut IndexMap<String, ElementDecl>, msgs: &[
     }
 }
 
+/// Bind a TCP listener with SO_REUSEADDR enabled to allow port reuse after crashes.
+fn bind_with_reuse(addr: String) -> std::io::Result<TcpListener> {
+    use std::net::SocketAddr;
+
+    let socket_addr: SocketAddr = addr.parse().map_err(|e| {
+        std::io::Error::new(std::io::ErrorKind::InvalidInput, e)
+    })?;
+
+    // Only IPv4 is supported
+    let v4_addr = match socket_addr {
+        SocketAddr::V4(v4) => v4,
+        SocketAddr::V6(_) => {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::InvalidInput,
+                "IPv6 not supported",
+            ))
+        }
+    };
+
+    unsafe {
+        // Create a Windows socket
+        let socket = windows_sys::Win32::Networking::WinSock::socket(
+            windows_sys::Win32::Networking::WinSock::AF_INET as i32,
+            windows_sys::Win32::Networking::WinSock::SOCK_STREAM as i32,
+            0,
+        );
+
+        if socket == windows_sys::Win32::Networking::WinSock::INVALID_SOCKET {
+            return Err(std::io::Error::last_os_error());
+        }
+
+        // Enable SO_REUSEADDR
+        let reuse: i32 = 1;
+        let result = windows_sys::Win32::Networking::WinSock::setsockopt(
+            socket,
+            windows_sys::Win32::Networking::WinSock::SOL_SOCKET as i32,
+            windows_sys::Win32::Networking::WinSock::SO_REUSEADDR,
+            &reuse as *const _ as *const u8,
+            std::mem::size_of::<i32>() as i32,
+        );
+
+        if result == windows_sys::Win32::Networking::WinSock::SOCKET_ERROR {
+            windows_sys::Win32::Networking::WinSock::closesocket(socket);
+            return Err(std::io::Error::last_os_error());
+        }
+
+        // Bind the socket
+        let ip_bytes = v4_addr.ip().octets();
+        let sockaddr_in = windows_sys::Win32::Networking::WinSock::SOCKADDR_IN {
+            sin_family: windows_sys::Win32::Networking::WinSock::AF_INET as u16,
+            sin_port: v4_addr.port().to_be(),
+            sin_addr: windows_sys::Win32::Networking::WinSock::IN_ADDR {
+                S_un: windows_sys::Win32::Networking::WinSock::IN_ADDR_0 {
+                    S_addr: u32::from_ne_bytes(ip_bytes),
+                },
+            },
+            sin_zero: [0; 8],
+        };
+
+        let result = windows_sys::Win32::Networking::WinSock::bind(
+            socket,
+            &sockaddr_in as *const _ as *const windows_sys::Win32::Networking::WinSock::SOCKADDR,
+            std::mem::size_of::<windows_sys::Win32::Networking::WinSock::SOCKADDR_IN>() as i32,
+        );
+
+        if result == windows_sys::Win32::Networking::WinSock::SOCKET_ERROR {
+            windows_sys::Win32::Networking::WinSock::closesocket(socket);
+            return Err(std::io::Error::last_os_error());
+        }
+
+        // Start listening (required before converting to TcpListener)
+        let result = windows_sys::Win32::Networking::WinSock::listen(
+            socket,
+            128, // backlog
+        );
+
+        if result == windows_sys::Win32::Networking::WinSock::SOCKET_ERROR {
+            windows_sys::Win32::Networking::WinSock::closesocket(socket);
+            return Err(std::io::Error::last_os_error());
+        }
+
+        // Convert to TcpListener
+        Ok(TcpListener::from_raw_socket(socket as RawSocket))
+    }
+}
+
 /// Find an available port pair (http, ws) starting from `start`.
 /// HTTP gets the even port, WS gets the odd port.
 pub fn find_port_pair(start: u16, bind_addr: &str) -> (u16, u16) {
     for base in (start..start + 100).step_by(2) {
-        let http_ok = TcpListener::bind(format!("{bind_addr}:{base}")).is_ok();
-        let ws_ok = TcpListener::bind(format!("{bind_addr}:{}", base + 1)).is_ok();
+        let http_ok = bind_with_reuse(format!("{bind_addr}:{base}")).is_ok();
+        let ws_ok = bind_with_reuse(format!("{bind_addr}:{}", base + 1)).is_ok();
         if http_ok && ws_ok {
             return (base, base + 1);
         }

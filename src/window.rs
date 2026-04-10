@@ -522,7 +522,16 @@ impl<'a> Window<'a> {
     }
 
     pub fn label(&mut self, text: &str) {
-        widget_label(self, text);
+        let id = self.make_id("__label");
+        self.record_child(id.clone());
+        self.declare(ElementDecl {
+            id,
+            kind: ElementKind::LabelInline,
+            label: String::new(),
+            value: Value::String(text.to_string()),
+            meta: ElementMeta::default(),
+            window: self.window_name(),
+        });
     }
 
     pub fn kv(&mut self, label: &str, value: &str) {
@@ -755,7 +764,16 @@ impl<'a, 'ctx> Horizontal<'a, 'ctx> {
     }
 
     pub fn label(&mut self, text: &str) {
-        widget_label(self, text);
+        let id = self.make_id("__label");
+        self.children.push(id.clone());
+        self.window.ctx.declare(ElementDecl {
+            id,
+            kind: ElementKind::LabelInline,
+            label: String::new(),
+            value: Value::String(text.to_string()),
+            meta: ElementMeta::default(),
+            window: self.window.name.clone(),
+        });
     }
 
     pub fn kv(&mut self, label: &str, value: &str) {

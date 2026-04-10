@@ -118,6 +118,8 @@ pub enum ElementKind {
     ButtonInline,
     /// Inline text input without label column (for horizontal layouts)
     TextInputInline,
+    /// Inline label for horizontal layouts (no wrapping)
+    LabelInline,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq)]

@@ -62,12 +62,12 @@
     column-count: 2;
     column-gap: 12px;
     padding: 12px;
-    max-width: 1800px;
     margin: 0 auto;
   }
 
-  @media (min-width: 1200px) { #app { column-count: 3; } }
-  @media (max-width: 700px)  { #app { column-count: 1; } }
+  @media (min-width: 1400px) { #app { column-count: 3; } }
+  @media (min-width: 2200px) { #app { column-count: 4; } }
+  @media (max-width: 900px)  { #app { column-count: 1; } }
 
   #app > .card {
     break-inside: avoid;
@@ -380,8 +380,7 @@
   }
 
   .widget-label {
-    flex: 0 1 180px;
-    min-width: 80px;
+    flex: 0 0 180px;
     font-size: 12px;
     color: var(--text-dim);
     overflow: hidden;
@@ -439,6 +438,7 @@
     font-size: 12px;
     color: var(--text);
     min-width: 75px;
+    flex-shrink: 0;
     text-align: right;
     background: var(--bg-dark);
     padding: 3px 8px;
@@ -511,6 +511,17 @@
     font-size: 12px;
     color: var(--text);
     font-weight: 500;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  /* In horizontal layouts, make checkbox more compact */
+  .horizontal-layout .checkbox-label {
+    font-size: 11px;
+  }
+
+  .horizontal-layout .checkbox-wrapper {
+    gap: 6px;
   }
 
   /* Legacy checkbox (kept for backwards compatibility) */
@@ -910,40 +921,91 @@
     min-width: 0;
   }
 
-  /* Horizontal layout */
+  /* Horizontal layout - compact inline style */
   .horizontal-layout {
     display: flex;
     flex-direction: row;
     align-items: center;
-    gap: 8px;
+    gap: 4px;
     padding: 4px 16px;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
   }
 
   .horizontal-layout > * {
     flex: 0 0 auto;
-    min-width: 0;
   }
 
   .horizontal-layout > .kv-row,
   .horizontal-layout > .widget-row {
     padding: 0;
     min-height: auto;
-    flex: 1 1 auto;
+    flex: 0 1 auto; /* Allow shrinking */
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 4px;
   }
 
+  /* Compact label in horizontal layouts */
   .horizontal-layout .widget-label {
     flex: 0 0 auto;
     min-width: auto;
+    max-width: none;
+    width: auto;
+    font-size: 11px;
+    padding-right: 2px;
   }
 
   .horizontal-layout .widget-control {
-    flex: 1 1 auto;
+    flex: 0 1 auto;
+    min-width: 0;
+    gap: 4px;
+  }
+
+  /* Compact slider in horizontal layouts */
+  .horizontal-layout .slider-container {
+    min-width: 80px;
+    flex: 1 1 150px; /* Grow to fill, base 150px, can shrink */
+    gap: 4px;
+    max-width: none; /* Allow growing beyond base */
+  }
+
+  .horizontal-layout input[type="range"] {
+    flex: 1;
+    min-width: 50px;
+  }
+
+  /* Very compact value display in horizontals */
+  .horizontal-layout .slider-value {
+    min-width: 45px;
+    width: 45px;
+    padding: 2px 4px;
+    font-size: 10px;
+  }
+
+  /* Compact checkbox in horizontals */
+  .horizontal-layout .checkbox-wrapper {
+    gap: 4px;
+  }
+
+  .horizontal-layout .checkbox-label {
+    font-size: 10px;
+    min-width: 20px;
   }
 
   .horizontal-layout .text-input {
-    min-width: 100px;
-    max-width: 200px;
+    min-width: 50px;
+    max-width: 100px;
+    padding: 3px 6px;
+    font-size: 11px;
+  }
+
+  /* Inline label for horizontal layouts */
+  .label-inline {
+    font-size: 12px;
+    color: var(--text);
+    white-space: nowrap;
+    flex-shrink: 0;
   }
 
   /* Separator */
@@ -1089,9 +1151,126 @@
   let reconnectDelay = 500;
   const recentlyInteracted = new Map(); // id -> timestamp
   let chartInstances = new Map();
+  const initRetryCounts = new Map(); // Track retry attempts for chart initialization
+  const MAX_INIT_RETRIES = 10; // Max retries for chart initialization
+  const RECENT_INTERACTION_TTL = 5000; // How long to keep entries in recentlyInteracted (ms)
 
   const wsPort = parseInt(location.port) + 1;
   const wsUrl = `ws://${location.hostname}:${wsPort}`;
+
+  // ── Batched Message Queue ──────────────────────────
+  let messageQueue = [];
+  let isProcessingQueued = false;
+  let pendingRafId = null;
+  const MAX_QUEUE_SIZE = 100; // Drop old messages if queue gets too large
+
+  function enqueueMessage(msg) {
+    messageQueue.push(msg);
+    
+    // If queue is getting too large, fast-forward by dropping non-essential messages
+    if (messageQueue.length > MAX_QUEUE_SIZE) {
+      fastForwardQueue();
+    }
+    
+    if (!isProcessingQueued) {
+      isProcessingQueued = true;
+      pendingRafId = requestAnimationFrame(processMessageQueue);
+    }
+  }
+
+  function fastForwardQueue() {
+    // Keep only the latest update for each element, plus all structural changes
+    const latestUpdates = new Map();
+    const structuralMessages = [];
+    
+    for (const msg of messageQueue) {
+      if (msg.type === 'snapshot') {
+        // Snapshot resets everything - keep only this and later messages
+        structuralMessages.length = 0;
+        structuralMessages.push(msg);
+        latestUpdates.clear();
+      } else if (msg.type === 'add' || msg.type === 'remove' || msg.type === 'reorder') {
+        // Structural changes must be kept
+        structuralMessages.push(msg);
+      } else if (msg.type === 'update') {
+        // For updates, only keep the latest for each element
+        latestUpdates.set(msg.id, msg);
+      }
+    }
+    
+    // Rebuild queue: structural messages first, then latest updates
+    messageQueue = [...structuralMessages, ...latestUpdates.values()];
+  }
+
+  function processMessageQueue() {
+    isProcessingQueued = false;
+    pendingRafId = null;
+    
+    if (messageQueue.length === 0) return;
+    
+    // Process all queued messages in batch
+    const batch = messageQueue;
+    messageQueue = [];
+    
+    // Fast-forward: if there are many updates, coalesce them
+    if (batch.length > 10) {
+      fastForwardQueue();
+    }
+    
+    let needsFullRender = false;
+    const updatedIds = new Set();
+    
+    for (const msg of batch) {
+      switch (msg.type) {
+        case 'snapshot':
+          elements = new Map();
+          for (const el of msg.elements) elements.set(el.id, el);
+          needsFullRender = true;
+          break;
+        case 'add':
+          elements.set(msg.element.id, msg.element);
+          needsFullRender = true;
+          break;
+        case 'remove':
+          elements.delete(msg.id);
+          needsFullRender = true;
+          break;
+        case 'reorder':
+          // Apply reorder to elements map
+          const newMap = new Map();
+          for (const id of msg.ids) {
+            const el = elements.get(id);
+            if (el) newMap.set(id, el);
+          }
+          for (const [id, el] of elements) {
+            if (!newMap.has(id)) newMap.set(id, el);
+          }
+          elements = newMap;
+          needsFullRender = true;
+          break;
+        case 'update': {
+          const el = elements.get(msg.id);
+          if (el) {
+            el.value = msg.value;
+            if (msg.label) el.label = msg.label;
+            if (msg.meta) el.meta = msg.meta;
+            updatedIds.add(msg.id);
+          }
+          break;
+        }
+      }
+    }
+    
+    if (needsFullRender) {
+      render();
+    } else {
+      // Only update changed elements
+      for (const id of updatedIds) {
+        const el = elements.get(id);
+        if (el) updateElementDOM(el);
+      }
+    }
+  }
 
   // ── WebSocket ──────────────────────────────────────
   function connect() {
@@ -1106,6 +1285,13 @@
     ws.onclose = () => {
       setStatus('disconnected');
       ws = null;
+      // Cancel any pending processing
+      if (pendingRafId) {
+        cancelAnimationFrame(pendingRafId);
+        pendingRafId = null;
+      }
+      isProcessingQueued = false;
+      messageQueue = [];
       setTimeout(connect, reconnectDelay);
       reconnectDelay = Math.min(reconnectDelay * 1.5, 5000);
     };
@@ -1113,8 +1299,15 @@
     ws.onerror = () => {};
 
     ws.onmessage = (e) => {
-      const msg = JSON.parse(e.data);
-      handleMessage(msg);
+      const msgs = JSON.parse(e.data);
+      // Server sends arrays of messages
+      if (Array.isArray(msgs)) {
+        for (const msg of msgs) {
+          enqueueMessage(msg);
+        }
+      } else {
+        enqueueMessage(msgs);
+      }
     };
   }
 
@@ -1129,7 +1322,7 @@
     bar.className = s;
   }
 
-  // ── Message Handling ───────────────────────────────
+  // ── Message Handling (legacy, now handled by processMessageQueue) ──
   function handleMessage(msg) {
     switch (msg.type) {
       case 'snapshot':
@@ -1179,7 +1372,7 @@
     const app = document.getElementById('app');
 
     // Clean up old chart instances and tooltips before re-rendering
-    chartInstances.clear();
+    cleanupCharts();
     document.querySelectorAll('.plot-tooltip').forEach(t => t.remove());
 
     if (elements.size === 0) {
@@ -1359,6 +1552,11 @@
         if (labelEl) labelEl.textContent = el.value.data;
         const nameEl = row.querySelector('.widget-label');
         if (nameEl) nameEl.textContent = el.label;
+        break;
+      }
+      case 'LabelInline': {
+        const inlineLabel = document.querySelector(`[data-id="${CSS.escape(el.id)}"].label-inline`);
+        if (inlineLabel) inlineLabel.textContent = el.value.data;
         break;
       }
       case 'Section': {
@@ -1563,6 +1761,13 @@
       </div>`;
     },
 
+    LabelInline: (el) => {
+      // Inline label for horizontal layouts - no wrapping, compact
+      return `<span class="label-inline" data-id="${esc(el.id)}">${esc(el.value.data)}</span>`;
+    },
+
+
+
     Separator: (_el) => {
       return `<div class="separator"></div>`;
     },
@@ -1688,14 +1893,25 @@
     const canvas = document.getElementById(`chart-${el.id}`);
     if (!canvas) return;
     
+    // Check retry count to prevent infinite loops
+    const retryCount = initRetryCounts.get(el.id) || 0;
+    if (retryCount > MAX_INIT_RETRIES) {
+      initRetryCounts.delete(el.id);
+      return; // Give up after too many retries
+    }
+    
     const ctx = canvas.getContext('2d');
     const rect = canvas.getBoundingClientRect();
     
     // If dimensions are 0, the DOM isn't ready yet - retry on next frame
     if (rect.width === 0 || rect.height === 0) {
+      initRetryCounts.set(el.id, retryCount + 1);
       requestAnimationFrame(() => initMiniChart(el));
       return;
     }
+    
+    // Success - clear retry count
+    initRetryCounts.delete(el.id);
     
     canvas.width = rect.width * window.devicePixelRatio;
     canvas.height = rect.height * window.devicePixelRatio;
@@ -1707,10 +1923,14 @@
 
   function updateMiniChart(el) {
     let instance = chartInstances.get(el.id);
-    // If instance doesn't exist (e.g., after re-render), re-initialize
     if (!instance) {
-      initMiniChart(el);
-      instance = chartInstances.get(el.id);
+      // Canvas may not exist yet - try to find it first
+      const canvas = document.getElementById(`chart-${el.id}`);
+      if (canvas) {
+        initMiniChart(el);
+        instance = chartInstances.get(el.id);
+      }
+      if (!instance) return; // Still not initialized
     }
     if (instance) {
       drawMiniChart(el, instance.canvas, instance.ctx);
@@ -1988,14 +2208,25 @@
       return;
     }
     
+    // Check retry count to prevent infinite loops
+    const retryCount = initRetryCounts.get(el.id) || 0;
+    if (retryCount > MAX_INIT_RETRIES) {
+      initRetryCounts.delete(el.id);
+      return; // Give up after too many retries
+    }
+    
     const ctx = canvas.getContext('2d');
     const rect = canvas.getBoundingClientRect();
     
     // If dimensions are 0, the DOM isn't ready yet - retry on next frame
     if (rect.width === 0 || rect.height === 0) {
+      initRetryCounts.set(el.id, retryCount + 1);
       requestAnimationFrame(() => initPlot(el));
       return;
     }
+    
+    // Success - clear retry count
+    initRetryCounts.delete(el.id);
     
     canvas.width = rect.width * window.devicePixelRatio;
     canvas.height = rect.height * window.devicePixelRatio;
@@ -2124,10 +2355,14 @@
 
   function updatePlot(el) {
     let instance = chartInstances.get(el.id);
-    // If instance doesn't exist (e.g., after re-render), re-initialize
     if (!instance) {
-      initPlot(el);
-      instance = chartInstances.get(el.id);
+      // Canvas may not exist yet - try to find it first
+      const canvas = document.getElementById(`plot-${el.id}`);
+      if (canvas) {
+        initPlot(el);
+        instance = chartInstances.get(el.id);
+      }
+      if (!instance) return; // Still not initialized
     }
     if (instance && instance.type === 'plot') {
       const scales = computePlotScales(el);
@@ -2243,15 +2478,45 @@
     }
   }
 
-  // Handle window resize for charts
-  window.addEventListener('resize', () => {
-    for (const el of elements.values()) {
-      if (el.kind.type === 'MiniChart') {
-        initMiniChart(el);
-      } else if (el.kind.type === 'Plot') {
-        initPlot(el);
+  // Clean up all chart instances (call before re-rendering)
+  function cleanupCharts() {
+    for (const instance of chartInstances.values()) {
+      if (instance.canvas) {
+        // Remove event listeners to prevent memory leaks
+        instance.canvas.onmousemove = null;
+        instance.canvas.onmouseleave = null;
       }
     }
+    chartInstances.clear();
+    initRetryCounts.clear(); // Clear retry counts on cleanup
+  }
+
+  // Periodically clean up old entries from recentlyInteracted to prevent unbounded growth
+  function cleanupRecentlyInteracted() {
+    const now = Date.now();
+    for (const [id, timestamp] of recentlyInteracted.entries()) {
+      if (now - timestamp > RECENT_INTERACTION_TTL) {
+        recentlyInteracted.delete(id);
+      }
+    }
+  }
+  // Run cleanup every 10 seconds
+  setInterval(cleanupRecentlyInteracted, 10000);
+
+  // Handle window resize for charts
+  let resizeTimeout = null;
+  window.addEventListener('resize', () => {
+    // Debounce resize to avoid excessive re-initialization
+    if (resizeTimeout) clearTimeout(resizeTimeout);
+    resizeTimeout = setTimeout(() => {
+      for (const el of elements.values()) {
+        if (el.kind.type === 'MiniChart') {
+          updateMiniChart(el);
+        } else if (el.kind.type === 'Plot') {
+          updatePlot(el);
+        }
+      }
+    }, 100);
   });
 
   // ── Scroll-to-top visibility ─────────────────────────
@@ -2262,6 +2527,12 @@
 
   // ── Init ───────────────────────────────────────────
   connect();
+  
+  // Cleanup on page unload
+  window.addEventListener('beforeunload', () => {
+    cleanupCharts();
+    if (ws) ws.close();
+  });
 })();
 </script>
 </body>
