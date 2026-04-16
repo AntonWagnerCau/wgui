@@ -41,4 +41,8 @@ pub enum ClientMsg {
     /// User changed a value in the browser UI.
     #[serde(rename = "set")]
     Set { id: ElementId, value: Value },
+    
+    /// User reordered windows via drag and drop.
+    #[serde(rename = "reorder_window")]
+    ReorderWindow { from: String, to: String },
 }

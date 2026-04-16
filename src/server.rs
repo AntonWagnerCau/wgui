@@ -203,6 +203,7 @@ fn run_ws(
         }
 
         // Read incoming messages from all clients
+        let mut broadcast_msgs: Vec<String> = Vec::new();
         clients.retain_mut(|ws| {
             loop {
                 match ws.read() {
@@ -211,6 +212,27 @@ fn run_ws(
                             match client_msg {
                                 ClientMsg::Set { id, value } => {
                                     let _ = edit_tx.send((id, value));
+                                }
+                                ClientMsg::ReorderWindow { from, to } => {
+                                    // Reorder windows: move 'from' window before 'to' window
+                                    let window_names: Vec<String> = mirror
+                                        .values()
+                                        .map(|e| e.window.to_string())
+                                        .collect::<std::collections::HashSet<_>>()
+                                        .into_iter()
+                                        .collect();
+                                    
+                                    // For now, just log the reorder request
+                                    // Full implementation would require persisting window order
+                                    log::info!("wgui: window reorder request: {} -> {}", from, to);
+                                    
+                                    // Build reorder message to broadcast to all clients
+                                    // This tells clients to reorder their windows
+                                    let reorder_msg = serde_json::json!({
+                                        "type": "reorder_windows",
+                                        "order": window_names
+                                    });
+                                    broadcast_msgs.push(reorder_msg.to_string());
                                 }
                             }
                         }
@@ -238,6 +260,12 @@ fn run_ws(
                 }
             }
         });
+        
+        // Broadcast any messages collected from client handling
+        for msg_text in broadcast_msgs {
+            let text = tungstenite::Message::Text(msg_text.into());
+            clients.retain_mut(|ws| ws.send(text.clone()).is_ok());
+        }
 
         if !got_msgs && clients.is_empty() {
             thread::sleep(Duration::from_millis(50));
