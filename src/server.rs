@@ -1,5 +1,7 @@
-use std::net::{TcpListener, TcpStream};
+#[cfg(windows)]
 use std::os::windows::io::{FromRawSocket, RawSocket};
+
+use std::net::{TcpListener, TcpStream};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::sync::mpsc;
@@ -292,6 +294,28 @@ fn apply_messages_to_mirror(mirror: &mut IndexMap<String, ElementDecl>, msgs: &[
 }
 
 /// Bind a TCP listener with SO_REUSEADDR enabled to allow port reuse after crashes.
+#[cfg(unix)]
+fn bind_with_reuse(addr: String) -> std::io::Result<TcpListener> {
+    use socket2::{Socket, Domain, Type};
+    use std::net::SocketAddr;
+
+    let socket_addr: SocketAddr = addr.parse().map_err(|e| {
+        std::io::Error::new(std::io::ErrorKind::InvalidInput, e)
+    })?;
+
+    let socket = Socket::new(Domain::IPV4, Type::STREAM, None)?;
+    
+    // Enable SO_REUSEADDR
+    socket.set_reuse_address(true)?;
+    
+    socket.bind(&socket_addr.into())?;
+    socket.listen(128)?;
+    
+    Ok(socket.into())
+}
+
+/// Bind a TCP listener with SO_REUSEADDR enabled (Windows version).
+#[cfg(windows)]
 fn bind_with_reuse(addr: String) -> std::io::Result<TcpListener> {
     use std::net::SocketAddr;
 

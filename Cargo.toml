@@ -21,6 +21,9 @@ indexmap = "2"
 [target.'cfg(windows)'.dependencies]
 windows-sys = { version = "0.59", features = ["Win32_Networking_WinSock"] }
 
+[target.'cfg(unix)'.dependencies]
+socket2 = "0.5"
+
 [dev-dependencies]
 env_logger = "0.11"
 puffin = "0.19"
