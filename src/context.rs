@@ -73,15 +73,18 @@ impl Context {
     pub fn with_options(opts: ContextOptions) -> Self {
         let bind_addr = if opts.public { "0.0.0.0" } else { "127.0.0.1" };
 
-        if let Some((http_port, ws_port)) = server::find_port_pair(opts.start_port, bind_addr) {
+        if let Some((http_listener, ws_listener)) = server::find_port_pair(opts.start_port, bind_addr) {
+            let http_port = http_listener.local_addr().map(|a| a.port()).unwrap_or(0);
+            let ws_port = ws_listener.local_addr().map(|a| a.port()).unwrap_or(0);
+
             // Create channels for inter-thread communication
             let (ws_tx, ws_rx) = mpsc::sync_channel::<Vec<ServerMsg>>(2);
             let (edit_tx, edit_rx) = mpsc::channel::<(ElementId, Value)>();
             let shutdown = Arc::new(AtomicBool::new(false));
 
             let http_handle =
-                server::spawn_http(shutdown.clone(), http_port, bind_addr, &opts.title, opts.favicon);
-            let ws_handle = server::spawn_ws(ws_rx, edit_tx, ws_port, bind_addr, shutdown.clone());
+                server::spawn_http(shutdown.clone(), http_listener, &opts.title, opts.favicon);
+            let ws_handle = server::spawn_ws(ws_rx, edit_tx, ws_listener, shutdown.clone());
 
             println!("wgui: UI available at http://{bind_addr}:{http_port}");
 

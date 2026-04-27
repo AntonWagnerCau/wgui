@@ -1,5 +1,3 @@
-#[cfg(windows)]
-
 use std::net::{TcpListener, TcpStream};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
@@ -24,16 +22,14 @@ fn html_escape(s: &str) -> String {
 /// Spawn the HTTP server thread. Returns the join handle.
 pub fn spawn_http(
     shutdown: Arc<AtomicBool>,
-    port: u16,
-    bind_addr: &str,
+    listener: TcpListener,
     title: &str,
     favicon: Option<Vec<u8>>,
 ) -> thread::JoinHandle<()> {
-    let bind = bind_addr.to_string();
     let html = HTML_TEMPLATE.replace("__WGUI_TITLE__", &html_escape(title));
     thread::Builder::new()
         .name("wgui-http".into())
-        .spawn(move || run_http(shutdown, port, &bind, html, favicon))
+        .spawn(move || run_http(shutdown, listener, html, favicon))
         .expect("failed to spawn wgui HTTP thread")
 }
 
@@ -41,24 +37,21 @@ pub fn spawn_http(
 pub fn spawn_ws(
     ws_rx: mpsc::Receiver<Vec<ServerMsg>>,
     edit_tx: mpsc::Sender<(String, crate::element::Value)>,
-    port: u16,
-    bind_addr: &str,
+    listener: TcpListener,
     shutdown: Arc<AtomicBool>,
 ) -> thread::JoinHandle<()> {
-    let bind = bind_addr.to_string();
     thread::Builder::new()
         .name("wgui-ws".into())
-        .spawn(move || run_ws(ws_rx, edit_tx, port, &bind, shutdown))
+        .spawn(move || run_ws(ws_rx, edit_tx, listener, shutdown))
         .expect("failed to spawn wgui WS thread")
 }
 
-fn run_http(shutdown: Arc<AtomicBool>, port: u16, bind_addr: &str, html: String, favicon: Option<Vec<u8>>) {
-    let listener = bind_with_reuse(format!("{bind_addr}:{port}"))
-        .unwrap_or_else(|e| panic!("wgui: failed to bind HTTP on port {port}: {e}"));
+fn run_http(shutdown: Arc<AtomicBool>, listener: TcpListener, html: String, favicon: Option<Vec<u8>>) {
+    let addr = listener.local_addr().expect("wgui: HTTP listener has no local addr");
     let server = tiny_http::Server::from_listener(listener, None)
         .expect("wgui: failed to create HTTP server from listener");
 
-    log::info!("wgui: serving UI at http://{bind_addr}:{port}");
+    log::info!("wgui: serving UI at http://{addr}");
 
     loop {
         if shutdown.load(Ordering::Acquire) {
@@ -114,18 +107,16 @@ fn run_http(shutdown: Arc<AtomicBool>, port: u16, bind_addr: &str, html: String,
 fn run_ws(
     ws_rx: mpsc::Receiver<Vec<ServerMsg>>,
     edit_tx: mpsc::Sender<(String, crate::element::Value)>,
-    port: u16,
-    bind_addr: &str,
+    listener: TcpListener,
     shutdown: Arc<AtomicBool>,
 ) {
-    let listener = bind_with_reuse(format!("{bind_addr}:{port}"))
-        .unwrap_or_else(|e| panic!("wgui: failed to bind WS on port {port}: {e}"));
+    let addr = listener.local_addr().expect("wgui: WS listener has no local addr");
 
     listener
         .set_nonblocking(true)
         .expect("failed to set WS listener non-blocking");
 
-    log::info!("wgui: WebSocket listening on ws://{bind_addr}:{port}");
+    log::info!("wgui: WebSocket listening on ws://{addr}");
 
     // Local mirror of UI state, updated from incoming ServerMsg
     let mut mirror: IndexMap<String, ElementDecl> = IndexMap::new();
@@ -320,35 +311,17 @@ fn apply_messages_to_mirror(mirror: &mut IndexMap<String, ElementDecl>, msgs: &[
     }
 }
 
-/// Bind a TCP listener with SO_REUSEADDR enabled to allow port reuse after crashes.
-fn bind_with_reuse(addr: String) -> std::io::Result<TcpListener> {
-    use socket2::{Socket, Domain, Type};
-    use std::net::SocketAddr;
-
-    let socket_addr: SocketAddr = addr.parse().map_err(|e| {
-        std::io::Error::new(std::io::ErrorKind::InvalidInput, e)
-    })?;
-
-    let socket = Socket::new(Domain::IPV4, Type::STREAM, None)?;
-    
-    // Enable SO_REUSEADDR
-    socket.set_reuse_address(true)?;
-    
-    socket.bind(&socket_addr.into())?;
-    socket.listen(128)?;
-    
-    Ok(socket.into())
-}
-
 /// Find an available port pair (http, ws) starting from `start`.
 /// HTTP gets the even port, WS gets the odd port.
+/// Returns the two bound listeners so there is no race condition between
+/// scanning and serving.
 /// Returns `None` if no free pair is found after scanning 1000 ports.
-pub fn find_port_pair(start: u16, bind_addr: &str) -> Option<(u16, u16)> {
+pub fn find_port_pair(start: u16, bind_addr: &str) -> Option<(TcpListener, TcpListener)> {
     for base in (start..start.saturating_add(1000)).step_by(2) {
-        let http_ok = bind_with_reuse(format!("{bind_addr}:{base}")).is_ok();
-        let ws_ok = bind_with_reuse(format!("{bind_addr}:{}", base + 1)).is_ok();
-        if http_ok && ws_ok {
-            return Some((base, base + 1));
+        let http_ok = TcpListener::bind(format!("{bind_addr}:{base}"));
+        let ws_ok = TcpListener::bind(format!("{bind_addr}:{}", base + 1));
+        if let (Ok(http), Ok(ws)) = (http_ok, ws_ok) {
+            return Some((http, ws));
         }
     }
     log::warn!("wgui: could not find available port pair starting from {start}");
