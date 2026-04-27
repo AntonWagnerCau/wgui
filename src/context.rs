@@ -34,10 +34,12 @@ impl Default for ContextOptions {
 }
 
 pub struct Context {
-    // Sends batched ServerMsg diffs to the WS thread each frame
-    ws_tx: mpsc::SyncSender<Vec<ServerMsg>>,
-    // Receives browser edits from WS thread (wrapped in Mutex for Sync)
-    edit_rx: Mutex<mpsc::Receiver<(ElementId, Value)>>,
+    // Sends batched ServerMsg diffs to the WS thread each frame.
+    // `None` when no free port was found (headless / degraded mode).
+    ws_tx: Option<mpsc::SyncSender<Vec<ServerMsg>>>,
+    // Receives browser edits from WS thread (wrapped in Mutex for Sync).
+    // `None` when no free port was found.
+    edit_rx: Mutex<Option<mpsc::Receiver<(ElementId, Value)>>>,
     // Local cache of pending edits, drained from edit_rx on demand
     incoming_edits: HashMap<ElementId, Value>,
     // Signals HTTP thread to shut down
@@ -47,8 +49,8 @@ pub struct Context {
     current_frame: Vec<ElementDecl>,
     http_port: u16,
     ws_port: u16,
-    _http_handle: JoinHandle<()>,
-    _ws_handle: JoinHandle<()>,
+    _http_handle: Option<JoinHandle<()>>,
+    _ws_handle: Option<JoinHandle<()>>,
 }
 
 impl Context {
@@ -66,41 +68,58 @@ impl Context {
     }
 
     /// Create a new wgui context with the given options.
+    /// If no free port pair is found, the context runs in degraded (headless) mode:
+    /// UI calls still work locally, but nothing is served over the network.
     pub fn with_options(opts: ContextOptions) -> Self {
         let bind_addr = if opts.public { "0.0.0.0" } else { "127.0.0.1" };
-        let (http_port, ws_port) = server::find_port_pair(opts.start_port, bind_addr);
 
-        // Create channels for inter-thread communication
-        let (ws_tx, ws_rx) = mpsc::sync_channel::<Vec<ServerMsg>>(2);
-        let (edit_tx, edit_rx) = mpsc::channel::<(ElementId, Value)>();
-        let shutdown = Arc::new(AtomicBool::new(false));
+        if let Some((http_port, ws_port)) = server::find_port_pair(opts.start_port, bind_addr) {
+            // Create channels for inter-thread communication
+            let (ws_tx, ws_rx) = mpsc::sync_channel::<Vec<ServerMsg>>(2);
+            let (edit_tx, edit_rx) = mpsc::channel::<(ElementId, Value)>();
+            let shutdown = Arc::new(AtomicBool::new(false));
 
-        let http_handle =
-            server::spawn_http(shutdown.clone(), http_port, bind_addr, &opts.title, opts.favicon);
-        let ws_handle = server::spawn_ws(ws_rx, edit_tx, ws_port, bind_addr, shutdown.clone());
+            let http_handle =
+                server::spawn_http(shutdown.clone(), http_port, bind_addr, &opts.title, opts.favicon);
+            let ws_handle = server::spawn_ws(ws_rx, edit_tx, ws_port, bind_addr, shutdown.clone());
 
-        println!("wgui: UI available at http://{bind_addr}:{http_port}");
+            println!("wgui: UI available at http://{bind_addr}:{http_port}");
 
-        Self {
-            ws_tx,
-            edit_rx: Mutex::new(edit_rx),
-            incoming_edits: HashMap::new(),
-            shutdown,
-            prev_frame: Vec::new(),
-            current_frame: Vec::new(),
-            http_port,
-            ws_port,
-            _http_handle: http_handle,
-            _ws_handle: ws_handle,
+            Self {
+                ws_tx: Some(ws_tx),
+                edit_rx: Mutex::new(Some(edit_rx)),
+                incoming_edits: HashMap::new(),
+                shutdown,
+                prev_frame: Vec::new(),
+                current_frame: Vec::new(),
+                http_port,
+                ws_port,
+                _http_handle: Some(http_handle),
+                _ws_handle: Some(ws_handle),
+            }
+        } else {
+            log::warn!("wgui: running in headless mode (no free ports)");
+            Self {
+                ws_tx: None,
+                edit_rx: Mutex::new(None),
+                incoming_edits: HashMap::new(),
+                shutdown: Arc::new(AtomicBool::new(false)),
+                prev_frame: Vec::new(),
+                current_frame: Vec::new(),
+                http_port: 0,
+                ws_port: 0,
+                _http_handle: None,
+                _ws_handle: None,
+            }
         }
     }
 
-    /// Returns the HTTP port the UI is served on.
+    /// Returns the HTTP port the UI is served on, or `0` if running headless.
     pub fn http_port(&self) -> u16 {
         self.http_port
     }
 
-    /// Returns the WebSocket port.
+    /// Returns the WebSocket port, or `0` if running headless.
     pub fn ws_port(&self) -> u16 {
         self.ws_port
     }
@@ -114,8 +133,10 @@ impl Context {
     pub(crate) fn consume_edit(&mut self, id: &str) -> Option<Value> {
         // Drain all pending edits from the channel into the local cache
         let rx = self.edit_rx.lock().unwrap();
-        while let Ok((elem_id, value)) = rx.try_recv() {
-            self.incoming_edits.insert(elem_id, value);
+        if let Some(ref channel) = *rx {
+            while let Ok((elem_id, value)) = channel.try_recv() {
+                self.incoming_edits.insert(elem_id, value);
+            }
         }
         drop(rx);
         self.incoming_edits.remove(id)
@@ -127,17 +148,20 @@ impl Context {
     }
 
     /// Finish the current frame: reconcile with previous frame, send diffs over WS.
+    /// In headless mode this is a no-op.
     pub fn end_frame(&mut self) {
         let outgoing = reconcile(&self.prev_frame, &self.current_frame);
 
         if !outgoing.is_empty() {
-            match self.ws_tx.try_send(outgoing) {
-                Ok(()) => {}
-                Err(mpsc::TrySendError::Full(_)) => {
-                    log::warn!("wgui: WS channel backpressure, skipping frame update");
-                }
-                Err(mpsc::TrySendError::Disconnected(_)) => {
-                    log::warn!("wgui: WS thread disconnected");
+            if let Some(ref tx) = self.ws_tx {
+                match tx.try_send(outgoing) {
+                    Ok(()) => {}
+                    Err(mpsc::TrySendError::Full(_)) => {
+                        log::warn!("wgui: WS channel backpressure, skipping frame update");
+                    }
+                    Err(mpsc::TrySendError::Disconnected(_)) => {
+                        log::warn!("wgui: WS thread disconnected");
+                    }
                 }
             }
         }

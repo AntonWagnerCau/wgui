@@ -1,5 +1,4 @@
 #[cfg(windows)]
-use std::os::windows::io::{FromRawSocket, RawSocket};
 
 use std::net::{TcpListener, TcpStream};
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -322,7 +321,6 @@ fn apply_messages_to_mirror(mirror: &mut IndexMap<String, ElementDecl>, msgs: &[
 }
 
 /// Bind a TCP listener with SO_REUSEADDR enabled to allow port reuse after crashes.
-#[cfg(unix)]
 fn bind_with_reuse(addr: String) -> std::io::Result<TcpListener> {
     use socket2::{Socket, Domain, Type};
     use std::net::SocketAddr;
@@ -342,104 +340,19 @@ fn bind_with_reuse(addr: String) -> std::io::Result<TcpListener> {
     Ok(socket.into())
 }
 
-/// Bind a TCP listener with SO_REUSEADDR enabled (Windows version).
-#[cfg(windows)]
-fn bind_with_reuse(addr: String) -> std::io::Result<TcpListener> {
-    use std::net::SocketAddr;
-
-    let socket_addr: SocketAddr = addr.parse().map_err(|e| {
-        std::io::Error::new(std::io::ErrorKind::InvalidInput, e)
-    })?;
-
-    // Only IPv4 is supported
-    let v4_addr = match socket_addr {
-        SocketAddr::V4(v4) => v4,
-        SocketAddr::V6(_) => {
-            return Err(std::io::Error::new(
-                std::io::ErrorKind::InvalidInput,
-                "IPv6 not supported",
-            ))
-        }
-    };
-
-    unsafe {
-        // Create a Windows socket
-        let socket = windows_sys::Win32::Networking::WinSock::socket(
-            windows_sys::Win32::Networking::WinSock::AF_INET as i32,
-            windows_sys::Win32::Networking::WinSock::SOCK_STREAM as i32,
-            0,
-        );
-
-        if socket == windows_sys::Win32::Networking::WinSock::INVALID_SOCKET {
-            return Err(std::io::Error::last_os_error());
-        }
-
-        // Enable SO_REUSEADDR
-        let reuse: i32 = 1;
-        let result = windows_sys::Win32::Networking::WinSock::setsockopt(
-            socket,
-            windows_sys::Win32::Networking::WinSock::SOL_SOCKET as i32,
-            windows_sys::Win32::Networking::WinSock::SO_REUSEADDR,
-            &reuse as *const _ as *const u8,
-            std::mem::size_of::<i32>() as i32,
-        );
-
-        if result == windows_sys::Win32::Networking::WinSock::SOCKET_ERROR {
-            windows_sys::Win32::Networking::WinSock::closesocket(socket);
-            return Err(std::io::Error::last_os_error());
-        }
-
-        // Bind the socket
-        let ip_bytes = v4_addr.ip().octets();
-        let sockaddr_in = windows_sys::Win32::Networking::WinSock::SOCKADDR_IN {
-            sin_family: windows_sys::Win32::Networking::WinSock::AF_INET as u16,
-            sin_port: v4_addr.port().to_be(),
-            sin_addr: windows_sys::Win32::Networking::WinSock::IN_ADDR {
-                S_un: windows_sys::Win32::Networking::WinSock::IN_ADDR_0 {
-                    S_addr: u32::from_ne_bytes(ip_bytes),
-                },
-            },
-            sin_zero: [0; 8],
-        };
-
-        let result = windows_sys::Win32::Networking::WinSock::bind(
-            socket,
-            &sockaddr_in as *const _ as *const windows_sys::Win32::Networking::WinSock::SOCKADDR,
-            std::mem::size_of::<windows_sys::Win32::Networking::WinSock::SOCKADDR_IN>() as i32,
-        );
-
-        if result == windows_sys::Win32::Networking::WinSock::SOCKET_ERROR {
-            windows_sys::Win32::Networking::WinSock::closesocket(socket);
-            return Err(std::io::Error::last_os_error());
-        }
-
-        // Start listening (required before converting to TcpListener)
-        let result = windows_sys::Win32::Networking::WinSock::listen(
-            socket,
-            128, // backlog
-        );
-
-        if result == windows_sys::Win32::Networking::WinSock::SOCKET_ERROR {
-            windows_sys::Win32::Networking::WinSock::closesocket(socket);
-            return Err(std::io::Error::last_os_error());
-        }
-
-        // Convert to TcpListener
-        Ok(TcpListener::from_raw_socket(socket as RawSocket))
-    }
-}
-
 /// Find an available port pair (http, ws) starting from `start`.
 /// HTTP gets the even port, WS gets the odd port.
-pub fn find_port_pair(start: u16, bind_addr: &str) -> (u16, u16) {
-    for base in (start..start + 100).step_by(2) {
+/// Returns `None` if no free pair is found after scanning 1000 ports.
+pub fn find_port_pair(start: u16, bind_addr: &str) -> Option<(u16, u16)> {
+    for base in (start..start.saturating_add(1000)).step_by(2) {
         let http_ok = bind_with_reuse(format!("{bind_addr}:{base}")).is_ok();
         let ws_ok = bind_with_reuse(format!("{bind_addr}:{}", base + 1)).is_ok();
         if http_ok && ws_ok {
-            return (base, base + 1);
+            return Some((base, base + 1));
         }
     }
-    panic!("wgui: could not find available port pair starting from {start}");
+    log::warn!("wgui: could not find available port pair starting from {start}");
+    None
 }
 
 #[cfg(test)]
