@@ -63,6 +63,14 @@ pub enum Value {
     },
     /// Null value for container elements
     Null,
+    /// Image data as a base64 data URI (e.g. "data:image/png;base64,…")
+    ImageValue {
+        data: String,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        width: Option<u32>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        height: Option<u32>,
+    },
 }
 
 /// A data series for plotting
@@ -120,6 +128,8 @@ pub enum ElementKind {
     TextInputInline,
     /// Inline label for horizontal layouts (no wrapping)
     LabelInline,
+    /// Image display widget
+    Image,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq)]

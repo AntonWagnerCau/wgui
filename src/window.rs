@@ -396,6 +396,23 @@ fn widget_mini_chart(sink: &mut impl WidgetSink, label: &str, values: &[f32], un
     });
 }
 
+fn widget_image(sink: &mut impl WidgetSink, label: &str, data_uri: &str, width: Option<u32>, height: Option<u32>) {
+    let id = sink.make_id(label);
+    sink.record_child(id.clone());
+    sink.declare(ElementDecl {
+        id,
+        kind: ElementKind::Image,
+        label: label.to_string(),
+        value: Value::ImageValue {
+            data: data_uri.to_string(),
+            width,
+            height,
+        },
+        meta: ElementMeta::default(),
+        window: sink.window_name(),
+    });
+}
+
 fn widget_plot(
     sink: &mut impl WidgetSink,
     label: &str,
@@ -679,6 +696,16 @@ impl<'a> Window<'a> {
     ) {
         widget_plot(self, label, series, x_label, y_label);
     }
+
+    /// Display an image from a base64 data URI (e.g. `"data:image/png;base64,…"`).
+    pub fn image(&mut self, label: &str, data_uri: &str) {
+        widget_image(self, label, data_uri, None, None);
+    }
+
+    /// Display an image with an explicit size hint.
+    pub fn image_with_size(&mut self, label: &str, data_uri: &str, width: u32, height: u32) {
+        widget_image(self, label, data_uri, Some(width), Some(height));
+    }
 }
 
 // ── Horizontal ───────────────────────────────────────────────────────
@@ -835,6 +862,10 @@ impl<'a, 'ctx> Horizontal<'a, 'ctx> {
 
     pub fn dropdown(&mut self, label: &str, selected: &mut usize, options: &[&str]) -> Response {
         widget_dropdown(self, label, selected, options)
+    }
+
+    pub fn image(&mut self, label: &str, data_uri: &str) {
+        widget_image(self, label, data_uri, None, None);
     }
 }
 
@@ -993,6 +1024,10 @@ impl<'a, 'ctx> Grid<'a, 'ctx> {
         y_label: Option<&str>,
     ) {
         widget_plot(self, label, series, x_label, y_label);
+    }
+
+    pub fn image(&mut self, label: &str, data_uri: &str) {
+        widget_image(self, label, data_uri, None, None);
     }
 
     pub fn button_compact(&mut self, label: &str) -> Response {

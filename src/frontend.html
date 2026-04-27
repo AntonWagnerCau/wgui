@@ -4,2775 +4,2980 @@
 
 <head>
 
-<meta charset="UTF-8">
+  <meta charset="UTF-8">
 
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>__WGUI_TITLE__</title>
+  <title>__WGUI_TITLE__</title>
 
-<link rel="icon" type="image/png" href="/favicon.png">
+  <link rel="icon" type="image/png" href="/favicon.png">
 
-<style>
+  <style>
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
 
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 
+    :root {
 
-  :root {
+      /* Dark theme base colors heavily inspired by https://www.youtube.com/@PezzzasWork*/
 
-    /* Dark theme base colors heavily inspired by https://www.youtube.com/@PezzzasWork*/
+      --bg: #1e1e1e;
 
-    --bg: #1e1e1e;
+      --bg-dark: #0f0f0f;
 
-    --bg-dark: #0f0f0f;
+      --surface: #2a2a2a;
 
-    --surface: #2a2a2a;
+      --surface-hover: #333333;
 
-    --surface-hover: #333333;
+      --surface-elevated: #3a3a3a;
 
-    --surface-elevated: #3a3a3a;
+      --border: #404040;
 
-    --border: #404040;
+      --border-light: #505050;
 
-    --border-light: #505050;
+      --text: #e0e0e0;
 
-    --text: #e0e0e0;
+      --text-dim: #888888;
 
-    --text-dim: #888888;
+      --text-muted: #666666;
 
-    --text-muted: #666666;
 
-    
 
-    /* Accent colors */
+      /* Accent colors */
 
-    --coral: #e06c5c;
+      --coral: #e06c5c;
 
-    --coral-glow: rgba(224, 108, 92, 0.3);
+      --coral-glow: rgba(224, 108, 92, 0.3);
 
-    --teal: #00bfa5;
+      --teal: #00bfa5;
 
-    --teal-glow: rgba(0, 191, 165, 0.3);
+      --teal-glow: rgba(0, 191, 165, 0.3);
 
-    --blue: #2196f3;
+      --blue: #2196f3;
 
-    --blue-glow: rgba(33, 150, 243, 0.3);
+      --blue-glow: rgba(33, 150, 243, 0.3);
 
-    --green: #4caf50;
+      --green: #4caf50;
 
-    --green-glow: rgba(76, 175, 80, 0.3);
+      --green-glow: rgba(76, 175, 80, 0.3);
 
-    --purple: #9c27b0;
+      --purple: #9c27b0;
 
-    --purple-glow: rgba(156, 39, 176, 0.3);
+      --purple-glow: rgba(156, 39, 176, 0.3);
 
-    --orange: #ff9800;
+      --orange: #ff9800;
 
-    --orange-glow: rgba(255, 152, 0, 0.3);
+      --orange-glow: rgba(255, 152, 0, 0.3);
 
-    --yellow: #ffeb3b;
+      --yellow: #ffeb3b;
 
-    --yellow-glow: rgba(255, 235, 59, 0.3);
+      --yellow-glow: rgba(255, 235, 59, 0.3);
 
-    --red: #f44336;
+      --red: #f44336;
 
-    --red-glow: rgba(244, 67, 54, 0.3);
+      --red-glow: rgba(244, 67, 54, 0.3);
 
-    
 
-    /* Default accent */
 
-    --accent: var(--coral);
+      /* Default accent */
 
-    --accent-glow: var(--coral-glow);
+      --accent: var(--coral);
 
-    
+      --accent-glow: var(--coral-glow);
 
-    --radius: 8px;
 
-    --radius-lg: 12px;
 
-    --font: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      --radius: 8px;
 
-    --mono: 'Cascadia Code', 'Fira Code', 'Consolas', 'Courier New', monospace;
+      --radius-lg: 12px;
 
-  }
+      --font: 'Segoe UI', system-ui, -apple-system, sans-serif;
 
+      --mono: 'Cascadia Code', 'Fira Code', 'Consolas', 'Courier New', monospace;
 
+    }
 
-  body {
 
-    font-family: var(--font);
 
-    font-size: 13px;
+    body {
 
-    background: var(--bg);
+      font-family: var(--font);
 
-    color: var(--text);
+      font-size: 13px;
 
-    min-height: 100vh;
+      background: var(--bg);
 
-    overflow-x: hidden;
+      color: var(--text);
 
-  }
+      min-height: 100vh;
 
+      overflow-x: hidden;
 
+    }
 
-  #app {
 
-    column-count: 2;
 
-    column-gap: 12px;
+    #app {
 
-    padding: 12px;
+      column-count: 2;
 
-    margin: 0 auto;
+      column-gap: 12px;
 
-  }
+      padding: 12px;
 
+      margin: 0 auto;
 
+    }
 
-  @media (min-width: 1400px) { #app { column-count: 3; } }
 
-  @media (min-width: 2200px) { #app { column-count: 4; } }
 
-  @media (max-width: 900px)  { #app { column-count: 1; } }
+    @media (min-width: 1400px) {
+      #app {
+        column-count: 3;
+      }
+    }
 
+    @media (min-width: 2200px) {
+      #app {
+        column-count: 4;
+      }
+    }
 
+    @media (max-width: 900px) {
+      #app {
+        column-count: 1;
+      }
+    }
 
-  #app > .card {
 
-    break-inside: avoid;
 
-    margin-bottom: 12px;
+    #app>.card {
 
-  }
+      break-inside: avoid;
 
+      margin-bottom: 12px;
 
+    }
 
-  /* Prevent horizontal layout from being split across columns */
 
-  .horizontal-layout {
 
-    break-inside: avoid;
+    /* Prevent horizontal layout from being split across columns */
 
-    column-span: all;
+    .horizontal-layout {
 
-  }
+      break-inside: avoid;
 
+      column-span: all;
 
+    }
 
-  /* Connection status bar */
 
-  #status-bar {
 
-    position: fixed;
+    /* Connection status bar */
 
-    top: 0; left: 0; right: 0;
+    #status-bar {
 
-    height: 3px;
+      position: fixed;
 
-    z-index: 100;
+      top: 0;
+      left: 0;
+      right: 0;
 
-    transition: background 0.3s;
+      height: 3px;
 
-  }
+      z-index: 100;
 
-  #status-bar.connected { background: var(--green); }
+      transition: background 0.3s;
 
-  #status-bar.disconnected { background: var(--red); }
+    }
 
-  #status-bar.connecting { background: var(--yellow); }
+    #status-bar.connected {
+      background: var(--green);
+    }
 
+    #status-bar.disconnected {
+      background: var(--red);
+    }
 
+    #status-bar.connecting {
+      background: var(--yellow);
+    }
 
-  /* ============================================
+
+
+    /* ============================================
 
      CARD COMPONENT - Main container style
 
      ============================================ */
 
-  .card {
+    .card {
 
-    background: var(--surface);
+      background: var(--surface);
 
-    border: 2px solid var(--border);
+      border: 2px solid var(--border);
 
-    border-radius: var(--radius-lg);
+      border-radius: var(--radius-lg);
 
-    overflow: hidden;
+      overflow: hidden;
 
-    transition: border-color 0.2s, box-shadow 0.2s;
+      transition: border-color 0.2s, box-shadow 0.2s;
 
-  }
+    }
 
 
 
-  .card.coral { border-color: var(--coral); --accent: var(--coral); --accent-glow: var(--coral-glow); }
+    .card.coral {
+      border-color: var(--coral);
+      --accent: var(--coral);
+      --accent-glow: var(--coral-glow);
+    }
 
-  .card.teal { border-color: var(--teal); --accent: var(--teal); --accent-glow: var(--teal-glow); }
+    .card.teal {
+      border-color: var(--teal);
+      --accent: var(--teal);
+      --accent-glow: var(--teal-glow);
+    }
 
-  .card.blue { border-color: var(--blue); --accent: var(--blue); --accent-glow: var(--blue-glow); }
+    .card.blue {
+      border-color: var(--blue);
+      --accent: var(--blue);
+      --accent-glow: var(--blue-glow);
+    }
 
-  .card.green { border-color: var(--green); --accent: var(--green); --accent-glow: var(--green-glow); }
+    .card.green {
+      border-color: var(--green);
+      --accent: var(--green);
+      --accent-glow: var(--green-glow);
+    }
 
-  .card.purple { border-color: var(--purple); --accent: var(--purple); --accent-glow: var(--purple-glow); }
+    .card.purple {
+      border-color: var(--purple);
+      --accent: var(--purple);
+      --accent-glow: var(--purple-glow);
+    }
 
-  .card.orange { border-color: var(--orange); --accent: var(--orange); --accent-glow: var(--orange-glow); }
+    .card.orange {
+      border-color: var(--orange);
+      --accent: var(--orange);
+      --accent-glow: var(--orange-glow);
+    }
 
-  .card.yellow { border-color: var(--yellow); --accent: var(--yellow); --accent-glow: var(--yellow-glow); }
+    .card.yellow {
+      border-color: var(--yellow);
+      --accent: var(--yellow);
+      --accent-glow: var(--yellow-glow);
+    }
 
-  .card.red { border-color: var(--red); --accent: var(--red); --accent-glow: var(--red-glow); }
+    .card.red {
+      border-color: var(--red);
+      --accent: var(--red);
+      --accent-glow: var(--red-glow);
+    }
 
 
 
-  .card-header {
+    .card-header {
 
-    display: flex;
+      display: flex;
 
-    align-items: center;
+      align-items: center;
 
-    justify-content: space-between;
+      justify-content: space-between;
 
-    padding: 12px 16px;
+      padding: 12px 16px;
 
-    background: rgba(255,255,255,0.02);
+      background: rgba(255, 255, 255, 0.02);
 
-    border-bottom: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
 
-    cursor: pointer;
+      cursor: pointer;
 
-    user-select: none;
+      user-select: none;
 
-  }
+    }
 
 
 
-  .card-header:hover {
+    .card-header:hover {
 
-    background: rgba(255,255,255,0.04);
+      background: rgba(255, 255, 255, 0.04);
 
-  }
+    }
 
 
 
-  .card-title {
+    .card-title {
 
-    font-size: 13px;
+      font-size: 13px;
 
-    font-weight: 600;
+      font-weight: 600;
 
-    text-transform: uppercase;
+      text-transform: uppercase;
 
-    letter-spacing: 0.8px;
+      letter-spacing: 0.8px;
 
-    color: var(--accent);
+      color: var(--accent);
 
-  }
+    }
 
 
 
-  .card-toggle {
+    .card-toggle {
 
-    font-size: 10px;
+      font-size: 10px;
 
-    color: var(--text-dim);
+      color: var(--text-dim);
 
-    transition: transform 0.2s;
+      transition: transform 0.2s;
 
-  }
+    }
 
 
 
-  .card.collapsed .card-toggle {
+    .card.collapsed .card-toggle {
 
-    transform: rotate(-90deg);
+      transform: rotate(-90deg);
 
-  }
+    }
 
 
 
-  .card.collapsed .card-body {
+    .card.collapsed .card-body {
 
-    display: none;
+      display: none;
 
-  }
+    }
 
 
 
-  .card-body {
+    .card-body {
 
-    display: flex;
+      display: flex;
 
-    flex-direction: column;
+      flex-direction: column;
 
-    padding: 4px 0;
+      padding: 4px 0;
 
-  }
+    }
 
 
 
-  /* ============================================
+    /* ============================================
 
      STAT CARD - For metrics display
 
      ============================================ */
 
-  .stat-card {
+    .stat-card {
 
-    background: var(--surface);
+      background: var(--surface);
 
-    border: 2px solid var(--border);
+      border: 2px solid var(--border);
 
-    border-radius: var(--radius-lg);
+      border-radius: var(--radius-lg);
 
-    padding: 16px;
+      padding: 16px;
 
-    display: flex;
+      display: flex;
 
-    flex-direction: column;
+      flex-direction: column;
 
-    gap: 8px;
+      gap: 8px;
 
-    min-width: 0;
+      min-width: 0;
 
-    overflow: hidden;
+      overflow: hidden;
 
-  }
-
-
-
-  .stat-card.coral { border-color: var(--coral); }
-
-  .stat-card.teal { border-color: var(--teal); }
-
-  .stat-card.blue { border-color: var(--blue); }
-
-  .stat-card.green { border-color: var(--green); }
-
-  .stat-card.purple { border-color: var(--purple); }
-
-  .stat-card.orange { border-color: var(--orange); }
-
-  .stat-card.yellow { border-color: var(--yellow); }
-
-  .stat-card.red { border-color: var(--red); }
+    }
 
 
 
-  .stat-value {
+    .stat-card.coral {
+      border-color: var(--coral);
+    }
 
-    font-family: var(--mono);
+    .stat-card.teal {
+      border-color: var(--teal);
+    }
 
-    font-size: 28px;
+    .stat-card.blue {
+      border-color: var(--blue);
+    }
 
-    font-weight: 600;
+    .stat-card.green {
+      border-color: var(--green);
+    }
 
-    color: var(--text);
+    .stat-card.purple {
+      border-color: var(--purple);
+    }
 
-    line-height: 1;
+    .stat-card.orange {
+      border-color: var(--orange);
+    }
 
-    overflow: hidden;
+    .stat-card.yellow {
+      border-color: var(--yellow);
+    }
 
-    text-overflow: ellipsis;
-
-    white-space: nowrap;
-
-  }
-
-
-
-  .stat-label {
-
-    font-size: 11px;
-
-    color: var(--text-dim);
-
-    text-transform: uppercase;
-
-    letter-spacing: 0.5px;
-
-    overflow: hidden;
-
-    text-overflow: ellipsis;
-
-    white-space: nowrap;
-
-  }
+    .stat-card.red {
+      border-color: var(--red);
+    }
 
 
 
-  .stat-subvalue {
+    .stat-value {
 
-    font-family: var(--mono);
+      font-family: var(--mono);
 
-    font-size: 12px;
+      font-size: 28px;
 
-    color: var(--text-muted);
+      font-weight: 600;
 
-    overflow: hidden;
+      color: var(--text);
 
-    text-overflow: ellipsis;
+      line-height: 1;
 
-    white-space: nowrap;
+      overflow: hidden;
 
-  }
+      text-overflow: ellipsis;
+
+      white-space: nowrap;
+
+    }
 
 
 
-  /* ============================================
+    .stat-label {
+
+      font-size: 11px;
+
+      color: var(--text-dim);
+
+      text-transform: uppercase;
+
+      letter-spacing: 0.5px;
+
+      overflow: hidden;
+
+      text-overflow: ellipsis;
+
+      white-space: nowrap;
+
+    }
+
+
+
+    .stat-subvalue {
+
+      font-family: var(--mono);
+
+      font-size: 12px;
+
+      color: var(--text-muted);
+
+      overflow: hidden;
+
+      text-overflow: ellipsis;
+
+      white-space: nowrap;
+
+    }
+
+
+
+    /* ============================================
 
      PROGRESS BAR - Rounded with percentage
 
      ============================================ */
 
-  .progress-container {
+    .progress-container {
 
-    background: var(--surface);
+      background: var(--surface);
 
-    border: 2px solid var(--border);
+      border: 2px solid var(--border);
 
-    border-radius: var(--radius-lg);
+      border-radius: var(--radius-lg);
 
-    padding: 16px;
+      padding: 16px;
 
-    display: flex;
+      display: flex;
 
-    flex-direction: column;
+      flex-direction: column;
 
-    gap: 10px;
+      gap: 10px;
 
-  }
+    }
 
 
 
-  .progress-container.coral { border-color: var(--coral); --accent: var(--coral); }
+    .progress-container.coral {
+      border-color: var(--coral);
+      --accent: var(--coral);
+    }
 
-  .progress-container.teal { border-color: var(--teal); --accent: var(--teal); }
+    .progress-container.teal {
+      border-color: var(--teal);
+      --accent: var(--teal);
+    }
 
-  .progress-container.blue { border-color: var(--blue); --accent: var(--blue); }
+    .progress-container.blue {
+      border-color: var(--blue);
+      --accent: var(--blue);
+    }
 
-  .progress-container.green { border-color: var(--green); --accent: var(--green); }
+    .progress-container.green {
+      border-color: var(--green);
+      --accent: var(--green);
+    }
 
-  .progress-container.purple { border-color: var(--purple); --accent: var(--purple); }
+    .progress-container.purple {
+      border-color: var(--purple);
+      --accent: var(--purple);
+    }
 
-  .progress-container.orange { border-color: var(--orange); --accent: var(--orange); }
+    .progress-container.orange {
+      border-color: var(--orange);
+      --accent: var(--orange);
+    }
 
-  .progress-container.yellow { border-color: var(--yellow); --accent: var(--yellow); }
+    .progress-container.yellow {
+      border-color: var(--yellow);
+      --accent: var(--yellow);
+    }
 
 
 
-  .progress-header {
+    .progress-header {
 
-    display: flex;
+      display: flex;
 
-    justify-content: space-between;
+      justify-content: space-between;
 
-    align-items: baseline;
+      align-items: baseline;
 
-  }
+    }
 
 
 
-  .progress-title {
+    .progress-title {
 
-    font-size: 14px;
+      font-size: 14px;
 
-    font-weight: 500;
+      font-weight: 500;
 
-    color: var(--text);
+      color: var(--text);
 
-  }
+    }
 
 
 
-  .progress-percent {
+    .progress-percent {
 
-    font-family: var(--mono);
+      font-family: var(--mono);
 
-    font-size: 24px;
+      font-size: 24px;
 
-    font-weight: 600;
+      font-weight: 600;
 
-    color: var(--accent);
+      color: var(--accent);
 
-  }
+    }
 
 
 
-  .progress-percent sup {
+    .progress-percent sup {
 
-    font-size: 14px;
+      font-size: 14px;
 
-    font-weight: 400;
+      font-weight: 400;
 
-    margin-left: 2px;
+      margin-left: 2px;
 
-  }
+    }
 
 
 
-  .progress-track {
+    .progress-track {
 
-    height: 8px;
+      height: 8px;
 
-    background: var(--bg);
+      background: var(--bg);
 
-    border-radius: 4px;
+      border-radius: 4px;
 
-    overflow: hidden;
+      overflow: hidden;
 
-    position: relative;
+      position: relative;
 
-  }
+    }
 
 
 
-  .progress-fill {
+    .progress-fill {
 
-    height: 100%;
+      height: 100%;
 
-    background: var(--accent);
+      background: var(--accent);
 
-    border-radius: 4px;
+      border-radius: 4px;
 
-    transition: width 0.3s ease;
+      transition: width 0.3s ease;
 
-    box-shadow: 0 0 10px var(--accent-glow);
+      box-shadow: 0 0 10px var(--accent-glow);
 
-  }
+    }
 
 
 
-  .progress-subtitle {
+    .progress-subtitle {
 
-    font-size: 11px;
+      font-size: 11px;
 
-    color: var(--text-dim);
+      color: var(--text-dim);
 
-  }
+    }
 
 
 
-  /* ============================================
+    /* ============================================
 
      STATUS INDICATOR - Colored dot with label
 
      ============================================ */
 
-  .status-indicator {
+    .status-indicator {
 
-    display: flex;
+      display: flex;
 
-    align-items: center;
+      align-items: center;
 
-    gap: 8px;
+      gap: 8px;
 
-    font-size: 12px;
+      font-size: 12px;
 
-    color: var(--text-dim);
+      color: var(--text-dim);
 
-  }
-
-
-
-  .status-dot {
-
-    width: 10px;
-
-    height: 10px;
-
-    border-radius: 50%;
-
-    background: var(--text-muted);
-
-    box-shadow: 0 0 6px currentColor;
-
-    transition: background 0.2s;
-
-  }
+    }
 
 
 
-  .status-dot.green { background: var(--green); color: var(--green-glow); }
+    .status-dot {
 
-  .status-dot.red { background: var(--red); color: var(--red-glow); }
+      width: 10px;
 
-  .status-dot.yellow { background: var(--yellow); color: var(--yellow-glow); }
+      height: 10px;
 
-  .status-dot.blue { background: var(--blue); color: var(--blue-glow); }
+      border-radius: 50%;
 
-  .status-dot.coral { background: var(--coral); color: var(--coral-glow); }
+      background: var(--text-muted);
 
-  .status-dot.teal { background: var(--teal); color: var(--teal-glow); }
+      box-shadow: 0 0 6px currentColor;
+
+      transition: background 0.2s;
+
+    }
 
 
 
-  /* ============================================
+    .status-dot.green {
+      background: var(--green);
+      color: var(--green-glow);
+    }
+
+    .status-dot.red {
+      background: var(--red);
+      color: var(--red-glow);
+    }
+
+    .status-dot.yellow {
+      background: var(--yellow);
+      color: var(--yellow-glow);
+    }
+
+    .status-dot.blue {
+      background: var(--blue);
+      color: var(--blue-glow);
+    }
+
+    .status-dot.coral {
+      background: var(--coral);
+      color: var(--coral-glow);
+    }
+
+    .status-dot.teal {
+      background: var(--teal);
+      color: var(--teal-glow);
+    }
+
+
+
+    /* ============================================
 
      MINI CHART - Sparkline style
 
      ============================================ */
 
-  .mini-chart {
+    .mini-chart {
 
-    background: var(--surface);
+      background: var(--surface);
 
-    border: 2px solid var(--border);
+      border: 2px solid var(--border);
 
-    border-radius: var(--radius-lg);
+      border-radius: var(--radius-lg);
 
-    padding: 12px;
+      padding: 12px;
 
-    height: 120px;
+      height: 120px;
 
-    display: flex;
+      display: flex;
 
-    flex-direction: column;
+      flex-direction: column;
 
-  }
-
-
-
-  .mini-chart.coral { border-color: var(--coral); --accent: var(--coral); }
-
-  .mini-chart.teal { border-color: var(--teal); --accent: var(--teal); }
-
-  .mini-chart.blue { border-color: var(--blue); --accent: var(--blue); }
-
-  .mini-chart.green { border-color: var(--green); --accent: var(--green); }
+    }
 
 
 
-  .mini-chart-header {
+    .mini-chart.coral {
+      border-color: var(--coral);
+      --accent: var(--coral);
+    }
 
-    display: flex;
+    .mini-chart.teal {
+      border-color: var(--teal);
+      --accent: var(--teal);
+    }
 
-    justify-content: space-between;
+    .mini-chart.blue {
+      border-color: var(--blue);
+      --accent: var(--blue);
+    }
 
-    align-items: center;
-
-    margin-bottom: 8px;
-
-    gap: 4px;
-
-    overflow: hidden;
-
-  }
-
-
-
-  .mini-chart-title {
-
-    font-size: 12px;
-
-    font-weight: 500;
-
-    color: var(--text);
-
-    white-space: nowrap;
-
-    overflow: hidden;
-
-    text-overflow: ellipsis;
-
-    min-width: 0;
-
-  }
+    .mini-chart.green {
+      border-color: var(--green);
+      --accent: var(--green);
+    }
 
 
 
-  .mini-chart-value {
+    .mini-chart-header {
 
-    font-family: var(--mono);
+      display: flex;
 
-    font-size: 14px;
+      justify-content: space-between;
 
-    color: var(--accent);
+      align-items: center;
 
-    white-space: nowrap;
+      margin-bottom: 8px;
 
-    flex-shrink: 0;
+      gap: 4px;
 
-  }
+      overflow: hidden;
 
-
-
-  .mini-chart-canvas {
-
-    flex: 1;
-
-    width: 100%;
-
-    min-height: 0;
-
-  }
+    }
 
 
 
-  /* ============================================
+    .mini-chart-title {
+
+      font-size: 12px;
+
+      font-weight: 500;
+
+      color: var(--text);
+
+      white-space: nowrap;
+
+      overflow: hidden;
+
+      text-overflow: ellipsis;
+
+      min-width: 0;
+
+    }
+
+
+
+    .mini-chart-value {
+
+      font-family: var(--mono);
+
+      font-size: 14px;
+
+      color: var(--accent);
+
+      white-space: nowrap;
+
+      flex-shrink: 0;
+
+    }
+
+
+
+    .mini-chart-canvas {
+
+      flex: 1;
+
+      width: 100%;
+
+      min-height: 0;
+
+    }
+
+
+
+    /* ============================================
 
      LEGACY WIDGET STYLES (updated)
 
      ============================================ */
 
-  
 
-  /* Widget row */
 
-  .widget-row {
+    /* Widget row */
 
-    display: flex;
+    .widget-row {
 
-    align-items: center;
+      display: flex;
 
-    padding: 4px 16px;
+      align-items: center;
 
-    gap: 12px;
+      padding: 4px 16px;
 
-    min-height: 32px;
+      gap: 12px;
 
-    transition: background 0.1s;
+      min-height: 32px;
 
-    position: relative;
+      transition: background 0.1s;
 
-  }
+      position: relative;
 
-  
+    }
 
-  /* Ensure widget-rows containing plots don't have flex alignment issues */
 
-  .widget-row:has(.plot-container) {
 
-    display: block;
+    /* Ensure widget-rows containing plots don't have flex alignment issues */
 
-    padding: 4px 16px;
+    .widget-row:has(.plot-container) {
 
-  }
+      display: block;
 
+      padding: 4px 16px;
 
+    }
 
-  .widget-row:hover {
 
-    background: rgba(255,255,255,0.02);
 
-  }
+    .widget-row:hover {
 
+      background: rgba(255, 255, 255, 0.02);
 
+    }
 
-  .widget-label {
 
-    flex: 0 0 180px;
 
-    font-size: 12px;
+    .widget-label {
 
-    color: var(--text-dim);
+      flex: 0 0 180px;
 
-    overflow: hidden;
+      font-size: 12px;
 
-    text-overflow: ellipsis;
+      color: var(--text-dim);
 
-    white-space: nowrap;
+      overflow: hidden;
 
-    padding-right: 8px;
+      text-overflow: ellipsis;
 
-  }
+      white-space: nowrap;
 
+      padding-right: 8px;
 
+    }
 
-  .widget-control {
 
-    flex: 1;
 
-    display: flex;
+    .widget-control {
 
-    align-items: center;
+      flex: 1;
 
-    gap: 8px;
+      display: flex;
 
-    min-width: 0;
+      align-items: center;
 
-  }
+      gap: 8px;
 
+      min-width: 0;
 
+    }
 
-  /* Slider */
 
-  .slider-container {
 
-    flex: 1;
+    /* Slider */
 
-    display: flex;
+    .slider-container {
 
-    align-items: center;
+      flex: 1;
 
-    gap: 10px;
+      display: flex;
 
-  }
+      align-items: center;
 
+      gap: 10px;
 
+    }
 
-  input[type="range"] {
 
-    flex: 1;
 
-    -webkit-appearance: none;
+    input[type="range"] {
 
-    appearance: none;
+      flex: 1;
 
-    height: 6px;
+      -webkit-appearance: none;
 
-    border-radius: 3px;
+      appearance: none;
 
-    background: var(--bg-dark);
+      height: 6px;
 
-    outline: none;
+      border-radius: 3px;
 
-    border: 1px solid var(--border);
+      background: var(--bg-dark);
 
-  }
+      outline: none;
 
+      border: 1px solid var(--border);
 
+    }
 
-  input[type="range"]::-webkit-slider-thumb {
 
-    -webkit-appearance: none;
 
-    width: 16px;
+    input[type="range"]::-webkit-slider-thumb {
 
-    height: 16px;
+      -webkit-appearance: none;
 
-    border-radius: 50%;
+      width: 16px;
 
-    background: var(--accent);
+      height: 16px;
 
-    cursor: pointer;
+      border-radius: 50%;
 
-    border: 2px solid var(--surface);
+      background: var(--accent);
 
-    box-shadow: 0 0 8px var(--accent-glow);
+      cursor: pointer;
 
-    transition: background 0.15s, transform 0.15s;
+      border: 2px solid var(--surface);
 
-  }
+      box-shadow: 0 0 8px var(--accent-glow);
 
+      transition: background 0.15s, transform 0.15s;
 
+    }
 
-  input[type="range"]::-webkit-slider-thumb:hover {
 
-    background: var(--accent);
 
-    transform: scale(1.1);
+    input[type="range"]::-webkit-slider-thumb:hover {
 
-  }
+      background: var(--accent);
 
+      transform: scale(1.1);
 
+    }
 
-  .slider-value {
 
-    font-family: var(--mono);
 
-    font-size: 12px;
+    .slider-value {
 
-    color: var(--text);
+      font-family: var(--mono);
 
-    min-width: 75px;
+      font-size: 12px;
 
-    flex-shrink: 0;
+      color: var(--text);
 
-    text-align: right;
+      min-width: 75px;
 
-    background: var(--bg-dark);
+      flex-shrink: 0;
 
-    padding: 3px 8px;
+      text-align: right;
 
-    border-radius: var(--radius);
+      background: var(--bg-dark);
 
-    border: 1px solid var(--border-light);
+      padding: 3px 8px;
 
-    font-variant-numeric: tabular-nums;
+      border-radius: var(--radius);
 
-    box-shadow: inset 0 1px 2px rgba(0,0,0,0.2);
+      border: 1px solid var(--border-light);
 
-    cursor: text;
+      font-variant-numeric: tabular-nums;
 
-  }
+      box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.2);
 
+      cursor: text;
 
+    }
 
-  .slider-value-input {
 
-    font-family: var(--mono);
 
-    font-size: 12px;
+    .slider-value-input {
 
-    color: var(--accent);
+      font-family: var(--mono);
 
-    min-width: 75px;
+      font-size: 12px;
 
-    width: 75px;
+      color: var(--accent);
 
-    text-align: right;
+      min-width: 75px;
 
-    background: var(--bg-dark);
+      width: 75px;
 
-    padding: 3px 8px;
+      text-align: right;
 
-    border-radius: var(--radius);
+      background: var(--bg-dark);
 
-    border: 1px solid var(--accent);
+      padding: 3px 8px;
 
-    box-shadow: 0 0 0 2px var(--accent-glow);
+      border-radius: var(--radius);
 
-    outline: none;
+      border: 1px solid var(--accent);
 
-    font-variant-numeric: tabular-nums;
+      box-shadow: 0 0 0 2px var(--accent-glow);
 
-  }
+      outline: none;
 
+      font-variant-numeric: tabular-nums;
 
+    }
 
-  /* Toggle Switch */
 
-  .checkbox-wrapper {
 
-    display: flex;
+    /* Toggle Switch */
 
-    align-items: center;
+    .checkbox-wrapper {
 
-    cursor: pointer;
+      display: flex;
 
-    gap: 10px;
+      align-items: center;
 
-  }
+      cursor: pointer;
 
+      gap: 10px;
 
+    }
 
-  .toggle-switch {
 
-    width: 44px;
 
-    height: 24px;
+    .toggle-switch {
 
-    background: var(--bg-dark);
+      width: 44px;
 
-    border: 2px solid var(--border);
+      height: 24px;
 
-    border-radius: 12px;
+      background: var(--bg-dark);
 
-    position: relative;
+      border: 2px solid var(--border);
 
-    transition: all 0.2s ease;
+      border-radius: 12px;
 
-  }
+      position: relative;
 
+      transition: all 0.2s ease;
 
+    }
 
-  .toggle-switch.checked {
 
-    background: var(--accent);
 
-    border-color: var(--accent);
+    .toggle-switch.checked {
 
-    box-shadow: 0 0 10px var(--accent-glow);
+      background: var(--accent);
 
-  }
+      border-color: var(--accent);
 
+      box-shadow: 0 0 10px var(--accent-glow);
 
+    }
 
-  .toggle-switch::after {
 
-    content: '';
 
-    position: absolute;
+    .toggle-switch::after {
 
-    top: 2px;
+      content: '';
 
-    left: 2px;
+      position: absolute;
 
-    width: 16px;
+      top: 2px;
 
-    height: 16px;
+      left: 2px;
 
-    background: var(--text);
+      width: 16px;
 
-    border-radius: 50%;
+      height: 16px;
 
-    transition: transform 0.2s ease;
+      background: var(--text);
 
-    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+      border-radius: 50%;
 
-  }
+      transition: transform 0.2s ease;
 
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 
+    }
 
-  .toggle-switch.checked::after {
 
-    transform: translateX(20px);
 
-    background: white;
+    .toggle-switch.checked::after {
 
-  }
+      transform: translateX(20px);
 
+      background: white;
 
+    }
 
-  .checkbox-label {
 
-    font-size: 12px;
 
-    color: var(--text);
+    .checkbox-label {
 
-    font-weight: 500;
+      font-size: 12px;
 
-    white-space: nowrap;
+      color: var(--text);
 
-    flex-shrink: 0;
+      font-weight: 500;
 
-  }
+      white-space: nowrap;
 
+      flex-shrink: 0;
 
+    }
 
-  /* In horizontal layouts, make checkbox more compact */
 
-  .horizontal-layout .checkbox-label {
 
-    font-size: 11px;
+    /* In horizontal layouts, make checkbox more compact */
 
-  }
+    .horizontal-layout .checkbox-label {
 
+      font-size: 11px;
 
+    }
 
-  .horizontal-layout .checkbox-wrapper {
 
-    gap: 6px;
 
-  }
+    .horizontal-layout .checkbox-wrapper {
 
+      gap: 6px;
 
+    }
 
-  /* Legacy checkbox (kept for backwards compatibility) */
 
-  .checkbox-box {
 
-    width: 18px;
+    /* Legacy checkbox (kept for backwards compatibility) */
 
-    height: 18px;
+    .checkbox-box {
 
-    border: 2px solid var(--border);
+      width: 18px;
 
-    border-radius: 4px;
+      height: 18px;
 
-    display: flex;
+      border: 2px solid var(--border);
 
-    align-items: center;
+      border-radius: 4px;
 
-    justify-content: center;
+      display: flex;
 
-    transition: all 0.15s;
+      align-items: center;
 
-    background: transparent;
+      justify-content: center;
 
-  }
+      transition: all 0.15s;
 
+      background: transparent;
 
+    }
 
-  .checkbox-box.checked {
 
-    background: var(--accent);
 
-    border-color: var(--accent);
+    .checkbox-box.checked {
 
-    box-shadow: 0 0 8px var(--accent-glow);
+      background: var(--accent);
 
-  }
+      border-color: var(--accent);
 
+      box-shadow: 0 0 8px var(--accent-glow);
 
+    }
 
-  .checkbox-box::after {
 
-    content: '';
 
-    display: block;
+    .checkbox-box::after {
 
-    width: 5px;
+      content: '';
 
-    height: 9px;
+      display: block;
 
-    border: solid white;
+      width: 5px;
 
-    border-width: 0 2px 2px 0;
+      height: 9px;
 
-    transform: rotate(45deg) translate(-1px, -1px);
+      border: solid white;
 
-    opacity: 0;
+      border-width: 0 2px 2px 0;
 
-    transition: opacity 0.15s;
+      transform: rotate(45deg) translate(-1px, -1px);
 
-  }
+      opacity: 0;
 
+      transition: opacity 0.15s;
 
+    }
 
-  .checkbox-box.checked::after {
 
-    opacity: 1;
 
-  }
+    .checkbox-box.checked::after {
 
+      opacity: 1;
 
+    }
 
-  /* Color picker - themed to match */
 
-  .color-picker-wrapper {
 
-    display: flex;
+    /* Color picker - themed to match */
 
-    align-items: center;
+    .color-picker-wrapper {
 
-    gap: 10px;
+      display: flex;
 
-    flex: 1;
+      align-items: center;
 
-  }
+      gap: 10px;
 
+      flex: 1;
 
+    }
 
-  .color-picker-container {
 
-    position: relative;
 
-    display: flex;
+    .color-picker-container {
 
-    align-items: center;
+      position: relative;
 
-    gap: 8px;
+      display: flex;
 
-    background: var(--bg);
+      align-items: center;
 
-    border: 1px solid var(--border);
+      gap: 8px;
 
-    border-radius: var(--radius);
+      background: var(--bg);
 
-    padding: 4px 8px;
+      border: 1px solid var(--border);
 
-    transition: border-color 0.15s, box-shadow 0.15s;
+      border-radius: var(--radius);
 
-  }
+      padding: 4px 8px;
 
+      transition: border-color 0.15s, box-shadow 0.15s;
 
+    }
 
-  .color-picker-container:hover {
 
-    border-color: var(--border-light);
 
-  }
+    .color-picker-container:hover {
 
+      border-color: var(--border-light);
 
+    }
 
-  .color-picker-container:focus-within {
 
-    border-color: var(--accent);
 
-    box-shadow: 0 0 0 2px var(--accent-glow);
+    .color-picker-container:focus-within {
 
-  }
+      border-color: var(--accent);
 
+      box-shadow: 0 0 0 2px var(--accent-glow);
 
+    }
 
-  input[type="color"] {
 
-    -webkit-appearance: none;
 
-    appearance: none;
+    input[type="color"] {
 
-    width: 32px;
+      -webkit-appearance: none;
 
-    height: 24px;
+      appearance: none;
 
-    border: 2px solid var(--border);
+      width: 32px;
 
-    border-radius: var(--radius);
+      height: 24px;
 
-    cursor: pointer;
+      border: 2px solid var(--border);
 
-    background: transparent;
+      border-radius: var(--radius);
 
-    padding: 0;
+      cursor: pointer;
 
-    overflow: hidden;
+      background: transparent;
 
-  }
+      padding: 0;
 
+      overflow: hidden;
 
+    }
 
-  input[type="color"]::-webkit-color-swatch-wrapper {
 
-    padding: 0;
 
-  }
+    input[type="color"]::-webkit-color-swatch-wrapper {
 
+      padding: 0;
 
+    }
 
-  input[type="color"]::-webkit-color-swatch {
 
-    border: none;
 
-    border-radius: 3px;
+    input[type="color"]::-webkit-color-swatch {
 
-  }
+      border: none;
 
+      border-radius: 3px;
 
+    }
 
-  .color-hex {
 
-    font-family: var(--mono);
 
-    font-size: 12px;
+    .color-hex {
 
-    color: var(--text);
+      font-family: var(--mono);
 
-    min-width: 70px;
+      font-size: 12px;
 
-  }
+      color: var(--text);
 
+      min-width: 70px;
 
+    }
 
-  /* Plot container */
 
-  .plot-container {
 
-    background: var(--surface);
+    /* Plot container */
 
-    border: 2px solid var(--border);
+    .plot-container {
 
-    border-radius: var(--radius-lg);
+      background: var(--surface);
 
-    padding: 16px;
+      border: 2px solid var(--border);
 
-    display: flex;
+      border-radius: var(--radius-lg);
 
-    flex-direction: column;
+      padding: 16px;
 
-    gap: 12px;
+      display: flex;
 
-    height: 280px;
+      flex-direction: column;
 
-    position: relative;
+      gap: 12px;
 
-  }
+      height: 280px;
 
+      position: relative;
 
+    }
 
-  .plot-container.coral { border-color: var(--coral); }
 
-  .plot-container.teal { border-color: var(--teal); }
 
-  .plot-container.blue { border-color: var(--blue); }
+    .plot-container.coral {
+      border-color: var(--coral);
+    }
 
-  .plot-container.green { border-color: var(--green); }
+    .plot-container.teal {
+      border-color: var(--teal);
+    }
 
-  .plot-container.purple { border-color: var(--purple); }
+    .plot-container.blue {
+      border-color: var(--blue);
+    }
 
-  .plot-container.orange { border-color: var(--orange); }
+    .plot-container.green {
+      border-color: var(--green);
+    }
 
-  .plot-container.yellow { border-color: var(--yellow); }
+    .plot-container.purple {
+      border-color: var(--purple);
+    }
 
-  .plot-container.red { border-color: var(--red); }
+    .plot-container.orange {
+      border-color: var(--orange);
+    }
 
+    .plot-container.yellow {
+      border-color: var(--yellow);
+    }
 
+    .plot-container.red {
+      border-color: var(--red);
+    }
 
-  .plot-header {
 
-    display: flex;
 
-    justify-content: space-between;
+    .plot-header {
 
-    align-items: center;
+      display: flex;
 
-  }
+      justify-content: space-between;
 
+      align-items: center;
 
+    }
 
-  .plot-title {
 
-    font-size: 13px;
 
-    font-weight: 600;
+    .plot-title {
 
-    color: var(--text);
+      font-size: 13px;
 
-    text-transform: uppercase;
+      font-weight: 600;
 
-    letter-spacing: 0.5px;
+      color: var(--text);
 
-  }
+      text-transform: uppercase;
 
+      letter-spacing: 0.5px;
 
+    }
 
-  .plot-legend {
 
-    display: flex;
 
-    gap: 16px;
+    .plot-legend {
 
-  }
+      display: flex;
 
+      gap: 16px;
 
+    }
 
-  .plot-legend-item {
 
-    display: flex;
 
-    align-items: center;
+    .plot-legend-item {
 
-    gap: 6px;
+      display: flex;
 
-    font-size: 11px;
+      align-items: center;
 
-    color: var(--text-dim);
+      gap: 6px;
 
-  }
+      font-size: 11px;
 
+      color: var(--text-dim);
 
+    }
 
-  .plot-legend-color {
 
-    width: 12px;
 
-    height: 3px;
+    .plot-legend-color {
 
-    border-radius: 2px;
+      width: 12px;
 
-  }
+      height: 3px;
 
+      border-radius: 2px;
 
+    }
 
-  .plot-canvas {
 
-    flex: 1;
 
-    width: 100%;
+    .plot-canvas {
 
-    min-height: 0;
+      flex: 1;
 
-    cursor: crosshair;
+      width: 100%;
 
-  }
+      min-height: 0;
 
+      cursor: crosshair;
 
+    }
 
-  .plot-axis-labels {
 
-    display: flex;
 
-    justify-content: space-between;
+    .plot-axis-labels {
 
-    font-size: 10px;
+      display: flex;
 
-    color: var(--text-muted);
+      justify-content: space-between;
 
-  }
+      font-size: 10px;
 
+      color: var(--text-muted);
 
+    }
 
-  /* Liquid glass tooltip */
 
-  .plot-tooltip {
 
-    position: absolute;
+    /* Liquid glass tooltip */
 
-    background: rgba(30, 30, 30, 0.85);
+    .plot-tooltip {
 
-    backdrop-filter: blur(12px);
+      position: absolute;
 
-    -webkit-backdrop-filter: blur(12px);
+      background: rgba(30, 30, 30, 0.85);
 
-    border: 1px solid rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(12px);
 
-    border-radius: var(--radius);
+      -webkit-backdrop-filter: blur(12px);
 
-    padding: 12px 16px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
 
-    pointer-events: none;
+      border-radius: var(--radius);
 
-    opacity: 0;
+      padding: 12px 16px;
 
-    transition: opacity 0.15s ease;
+      pointer-events: none;
 
-    z-index: 100;
+      opacity: 0;
 
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+      transition: opacity 0.15s ease;
 
-    min-width: 140px;
+      z-index: 100;
 
-  }
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
 
+      min-width: 140px;
 
+    }
 
-  .plot-tooltip.visible {
 
-    opacity: 1;
 
-  }
+    .plot-tooltip.visible {
 
+      opacity: 1;
 
+    }
 
-  .plot-tooltip-title {
 
-    font-size: 11px;
 
-    color: var(--text-dim);
+    .plot-tooltip-title {
 
-    margin-bottom: 8px;
+      font-size: 11px;
 
-    text-transform: uppercase;
+      color: var(--text-dim);
 
-    letter-spacing: 0.5px;
+      margin-bottom: 8px;
 
-  }
+      text-transform: uppercase;
 
+      letter-spacing: 0.5px;
 
+    }
 
-  .plot-tooltip-row {
 
-    display: flex;
 
-    align-items: center;
+    .plot-tooltip-row {
 
-    justify-content: space-between;
+      display: flex;
 
-    gap: 16px;
+      align-items: center;
 
-    font-size: 12px;
+      justify-content: space-between;
 
-    margin: 4px 0;
+      gap: 16px;
 
-  }
+      font-size: 12px;
 
+      margin: 4px 0;
 
+    }
 
-  .plot-tooltip-label {
 
-    display: flex;
 
-    align-items: center;
+    .plot-tooltip-label {
 
-    gap: 8px;
+      display: flex;
 
-    color: var(--text);
+      align-items: center;
 
-  }
+      gap: 8px;
 
+      color: var(--text);
 
+    }
 
-  .plot-tooltip-color {
 
-    width: 8px;
 
-    height: 8px;
+    .plot-tooltip-color {
 
-    border-radius: 2px;
+      width: 8px;
 
-  }
+      height: 8px;
 
+      border-radius: 2px;
 
+    }
 
-  .plot-tooltip-value {
 
-    font-family: var(--mono);
 
-    color: var(--text);
+    .plot-tooltip-value {
 
-    font-weight: 500;
+      font-family: var(--mono);
 
-  }
+      color: var(--text);
 
+      font-weight: 500;
 
+    }
 
-  /* Grid-specific stat card compact mode */
 
-  .grid .stat-card {
 
-    padding: 12px;
+    /* Grid-specific stat card compact mode */
 
-    min-width: 0;
+    .grid .stat-card {
 
-  }
+      padding: 12px;
 
+      min-width: 0;
 
+    }
 
-  .grid .stat-value {
 
-    font-size: 22px;
 
-  }
+    .grid .stat-value {
 
+      font-size: 22px;
 
+    }
 
-  .grid .stat-label {
 
-    font-size: 10px;
 
-  }
+    .grid .stat-label {
 
+      font-size: 10px;
 
+    }
 
-  /* Grid layout improvements */
 
-  .grid {
 
-    display: grid;
+    /* Grid layout improvements */
 
-    gap: 12px;
+    .grid {
 
-    box-sizing: border-box;
+      display: grid;
 
-  }
+      gap: 12px;
 
+      box-sizing: border-box;
 
+    }
 
-  .grid-2 { grid-template-columns: repeat(2, 1fr); }
 
-  .grid-3 { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); }
 
-  .grid-4 { grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); }
+    .grid-2 {
+      grid-template-columns: repeat(2, 1fr);
+    }
 
+    .grid-3 {
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    }
 
+    .grid-4 {
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    }
 
-  @media (max-width: 600px) {
 
-    .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
 
-  }
+    @media (max-width: 600px) {
 
+      .grid-2,
+      .grid-3,
+      .grid-4 {
+        grid-template-columns: 1fr;
+      }
 
+    }
 
-  /* Grid row in card body */
 
-  .card-body > .grid {
 
-    margin: 8px 16px;
+    /* Grid row in card body */
 
-  }
+    .card-body>.grid {
 
+      margin: 8px 16px;
 
+    }
 
-  .card-body > .grid:first-child {
 
-    margin-top: 0;
 
-  }
+    .card-body>.grid:first-child {
 
+      margin-top: 0;
 
+    }
 
-  /* Strip widget-row padding/layout inside grids */
 
-  .grid > .widget-row {
 
-    padding: 0;
+    /* Strip widget-row padding/layout inside grids */
 
-    display: block;
+    .grid>.widget-row {
 
-  }
+      padding: 0;
 
+      display: block;
 
+    }
 
-  /* Text input */
 
-  .text-input {
 
-    flex: 1;
+    /* Text input */
 
-    background: var(--bg);
+    .text-input {
 
-    border: 1px solid var(--border);
+      flex: 1;
 
-    border-radius: var(--radius);
+      background: var(--bg);
 
-    color: var(--text);
+      border: 1px solid var(--border);
 
-    font-family: var(--font);
+      border-radius: var(--radius);
 
-    font-size: 12px;
+      color: var(--text);
 
-    padding: 6px 10px;
+      font-family: var(--font);
 
-    outline: none;
+      font-size: 12px;
 
-    transition: border-color 0.15s, box-shadow 0.15s;
+      padding: 6px 10px;
 
-  }
+      outline: none;
 
+      transition: border-color 0.15s, box-shadow 0.15s;
 
+    }
 
-  .text-input:focus {
 
-    border-color: var(--accent);
 
-    box-shadow: 0 0 0 2px var(--accent-glow);
+    .text-input:focus {
 
-  }
+      border-color: var(--accent);
 
+      box-shadow: 0 0 0 2px var(--accent-glow);
 
+    }
 
-  /* Dropdown / Select */
 
-  select.dropdown {
 
-    flex: 1;
+    /* Dropdown / Select */
 
-    background: var(--bg);
+    select.dropdown {
 
-    border: 1px solid var(--border);
+      flex: 1;
 
-    border-radius: var(--radius);
+      background: var(--bg);
 
-    color: var(--text);
+      border: 1px solid var(--border);
 
-    font-family: var(--font);
+      border-radius: var(--radius);
 
-    font-size: 12px;
+      color: var(--text);
 
-    padding: 6px 10px;
+      font-family: var(--font);
 
-    outline: none;
+      font-size: 12px;
 
-    cursor: pointer;
+      padding: 6px 10px;
 
-    transition: border-color 0.15s;
+      outline: none;
 
-  }
+      cursor: pointer;
 
+      transition: border-color 0.15s;
 
+    }
 
-  select.dropdown:focus {
 
-    border-color: var(--accent);
 
-  }
+    select.dropdown:focus {
 
+      border-color: var(--accent);
 
+    }
 
-  select.dropdown option {
 
-    background: var(--surface);
 
-    color: var(--text);
+    select.dropdown option {
 
-  }
+      background: var(--surface);
 
+      color: var(--text);
 
+    }
 
-  /* Button */
 
-  .wgui-button {
 
-    background: var(--accent);
+    /* Button */
 
-    color: white;
+    .wgui-button {
 
-    border: none;
+      background: var(--accent);
 
-    border-radius: var(--radius);
+      color: white;
 
-    padding: 8px 18px;
+      border: none;
 
-    font-family: var(--font);
+      border-radius: var(--radius);
 
-    font-size: 12px;
+      padding: 8px 18px;
 
-    font-weight: 500;
+      font-family: var(--font);
 
-    cursor: pointer;
+      font-size: 12px;
 
-    transition: all 0.15s;
+      font-weight: 500;
 
-    box-shadow: 0 2px 8px var(--accent-glow);
+      cursor: pointer;
 
-  }
+      transition: all 0.15s;
 
+      box-shadow: 0 2px 8px var(--accent-glow);
 
+    }
 
-  .wgui-button:hover {
 
-    filter: brightness(1.1);
 
-    transform: translateY(-1px);
+    .wgui-button:hover {
 
-    box-shadow: 0 4px 12px var(--accent-glow);
+      filter: brightness(1.1);
 
-  }
+      transform: translateY(-1px);
 
+      box-shadow: 0 4px 12px var(--accent-glow);
 
+    }
 
-  .wgui-button:active {
 
-    transform: scale(0.97);
 
-  }
+    .wgui-button:active {
 
+      transform: scale(0.97);
 
+    }
 
-  /* Compact Button */
 
-  .wgui-button-compact {
 
-    background: var(--accent);
+    /* Compact Button */
 
-    color: white;
+    .wgui-button-compact {
 
-    border: none;
+      background: var(--accent);
 
-    border-radius: var(--radius);
+      color: white;
 
-    padding: 4px 12px;
+      border: none;
 
-    font-family: var(--font);
+      border-radius: var(--radius);
 
-    font-size: 11px;
+      padding: 4px 12px;
 
-    font-weight: 500;
+      font-family: var(--font);
 
-    cursor: pointer;
+      font-size: 11px;
 
-    transition: all 0.15s;
+      font-weight: 500;
 
-    box-shadow: 0 1px 4px var(--accent-glow);
+      cursor: pointer;
 
-    white-space: nowrap;
+      transition: all 0.15s;
 
-  }
+      box-shadow: 0 1px 4px var(--accent-glow);
 
+      white-space: nowrap;
 
+    }
 
-  .wgui-button-compact:hover {
 
-    filter: brightness(1.1);
 
-    transform: translateY(-1px);
+    .wgui-button-compact:hover {
 
-    box-shadow: 0 2px 8px var(--accent-glow);
+      filter: brightness(1.1);
 
-  }
+      transform: translateY(-1px);
 
+      box-shadow: 0 2px 8px var(--accent-glow);
 
+    }
 
-  .wgui-button-compact:active {
 
-    transform: scale(0.97);
 
-  }
+    .wgui-button-compact:active {
 
+      transform: scale(0.97);
 
+    }
 
-  /* Label (read-only) */
 
-  .label-text {
 
-    font-size: 12px;
+    /* Label (read-only) */
 
-    color: var(--text);
+    .label-text {
 
-  }
+      font-size: 12px;
 
+      color: var(--text);
 
+    }
 
-  /* Key-Value display */
 
-  .kv-row {
 
-    display: flex;
+    /* Key-Value display */
 
-    align-items: center;
+    .kv-row {
 
-    justify-content: space-between;
+      display: flex;
 
-    padding: 2px 16px;
+      align-items: center;
 
-    min-height: 24px;
+      justify-content: space-between;
 
-    gap: 12px;
+      padding: 2px 16px;
 
-  }
+      min-height: 24px;
 
+      gap: 12px;
 
+    }
 
-  .kv-row:hover {
 
-    background: rgba(255,255,255,0.02);
 
-  }
+    .kv-row:hover {
 
+      background: rgba(255, 255, 255, 0.02);
 
+    }
 
-  .kv-label {
 
-    font-size: 12px;
 
-    color: var(--text-dim);
+    .kv-label {
 
-    overflow: hidden;
+      font-size: 12px;
 
-    text-overflow: ellipsis;
+      color: var(--text-dim);
 
-    white-space: nowrap;
+      overflow: hidden;
 
-    flex-shrink: 0;
+      text-overflow: ellipsis;
 
-  }
+      white-space: nowrap;
 
+      flex-shrink: 0;
 
+    }
 
-  .kv-value {
 
-    font-family: var(--mono);
 
-    font-size: 12px;
+    .kv-value {
 
-    color: var(--text);
+      font-family: var(--mono);
 
-    text-align: right;
+      font-size: 12px;
 
-    overflow: hidden;
+      color: var(--text);
 
-    text-overflow: ellipsis;
+      text-align: right;
 
-    white-space: nowrap;
+      overflow: hidden;
 
-    min-width: 0;
+      text-overflow: ellipsis;
 
-  }
+      white-space: nowrap;
 
+      min-width: 0;
 
+    }
 
-  /* Horizontal layout - compact inline style */
 
-  .horizontal-layout {
 
-    display: flex;
+    /* Horizontal layout - compact inline style */
 
-    flex-direction: row;
+    .horizontal-layout {
 
-    align-items: center;
+      display: flex;
 
-    gap: 4px;
+      flex-direction: row;
 
-    padding: 4px 16px;
+      align-items: center;
 
-    flex-wrap: nowrap;
+      gap: 4px;
 
-  }
+      padding: 4px 16px;
 
+      flex-wrap: nowrap;
 
+    }
 
-  .horizontal-layout > * {
 
-    flex: 0 0 auto;
 
-  }
+    .horizontal-layout>* {
 
+      flex: 0 0 auto;
 
+    }
 
-  .horizontal-layout > .kv-row,
 
-  .horizontal-layout > .widget-row {
 
-    padding: 0;
+    .horizontal-layout>.kv-row,
 
-    min-height: auto;
+    .horizontal-layout>.widget-row {
 
-    flex: 0 1 auto; /* Allow shrinking */
+      padding: 0;
 
-    min-width: 0;
+      min-height: auto;
 
-    display: flex;
+      flex: 0 1 auto;
+      /* Allow shrinking */
 
-    align-items: center;
+      min-width: 0;
 
-    gap: 4px;
+      display: flex;
 
-  }
+      align-items: center;
 
+      gap: 4px;
 
+    }
 
-  /* Compact label in horizontal layouts */
 
-  .horizontal-layout .widget-label {
 
-    flex: 0 0 auto;
+    /* Compact label in horizontal layouts */
 
-    min-width: auto;
+    .horizontal-layout .widget-label {
 
-    max-width: none;
+      flex: 0 0 auto;
 
-    width: auto;
+      min-width: auto;
 
-    font-size: 11px;
+      max-width: none;
 
-    padding-right: 2px;
+      width: auto;
 
-  }
+      font-size: 11px;
 
+      padding-right: 2px;
 
+    }
 
-  .horizontal-layout .widget-control {
 
-    flex: 0 1 auto;
 
-    min-width: 0;
+    .horizontal-layout .widget-control {
 
-    gap: 4px;
+      flex: 0 1 auto;
 
-  }
+      min-width: 0;
 
+      gap: 4px;
 
+    }
 
-  /* Compact slider in horizontal layouts */
 
-  .horizontal-layout .slider-container {
 
-    min-width: 80px;
+    /* Compact slider in horizontal layouts */
 
-    flex: 1 1 150px; /* Grow to fill, base 150px, can shrink */
+    .horizontal-layout .slider-container {
 
-    gap: 4px;
+      min-width: 80px;
 
-    max-width: none; /* Allow growing beyond base */
+      flex: 1 1 150px;
+      /* Grow to fill, base 150px, can shrink */
 
-  }
+      gap: 4px;
 
+      max-width: none;
+      /* Allow growing beyond base */
 
+    }
 
-  .horizontal-layout input[type="range"] {
 
-    flex: 1;
 
-    min-width: 50px;
+    .horizontal-layout input[type="range"] {
 
-  }
+      flex: 1;
 
+      min-width: 50px;
 
+    }
 
-  /* Very compact value display in horizontals */
 
-  .horizontal-layout .slider-value {
 
-    min-width: 45px;
+    /* Very compact value display in horizontals */
 
-    width: 45px;
+    .horizontal-layout .slider-value {
 
-    padding: 2px 4px;
+      min-width: 45px;
 
-    font-size: 10px;
+      width: 45px;
 
-  }
+      padding: 2px 4px;
 
+      font-size: 10px;
 
+    }
 
-  /* Compact checkbox in horizontals */
 
-  .horizontal-layout .checkbox-wrapper {
 
-    gap: 4px;
+    /* Compact checkbox in horizontals */
 
-  }
+    .horizontal-layout .checkbox-wrapper {
 
+      gap: 4px;
 
+    }
 
-  .horizontal-layout .checkbox-label {
 
-    font-size: 10px;
 
-    min-width: 20px;
+    .horizontal-layout .checkbox-label {
 
-  }
+      font-size: 10px;
 
+      min-width: 20px;
 
+    }
 
-  .horizontal-layout .text-input {
 
-    min-width: 50px;
 
-    max-width: 100px;
+    .horizontal-layout .text-input {
 
-    padding: 3px 6px;
+      min-width: 50px;
 
-    font-size: 11px;
+      max-width: 100px;
 
-  }
+      padding: 3px 6px;
 
+      font-size: 11px;
 
+    }
 
-  /* Inline label for horizontal layouts */
 
-  .label-inline {
 
-    font-size: 12px;
+    /* Inline label for horizontal layouts */
 
-    color: var(--text);
+    .label-inline {
 
-    white-space: nowrap;
+      font-size: 12px;
 
-    flex-shrink: 0;
+      color: var(--text);
 
-  }
+      white-space: nowrap;
 
+      flex-shrink: 0;
 
+    }
 
-  /* Separator */
 
-  .separator {
 
-    height: 1px;
+    /* Separator */
 
-    background: var(--border);
+    .separator {
 
-    margin: 6px 16px;
+      height: 1px;
 
-  }
+      background: var(--border);
 
+      margin: 6px 16px;
 
+    }
 
-  /* Section header */
 
-  .section-header {
 
-    font-size: 11px;
+    /* Section header */
 
-    font-weight: 600;
+    .section-header {
 
-    text-transform: uppercase;
+      font-size: 11px;
 
-    letter-spacing: 0.8px;
+      font-weight: 600;
 
-    color: var(--accent);
+      text-transform: uppercase;
 
-    padding: 10px 16px 4px;
+      letter-spacing: 0.8px;
 
-    margin-top: 4px;
+      color: var(--accent);
 
-    border-top: 1px solid var(--border);
+      padding: 10px 16px 4px;
 
-    position: relative;
+      margin-top: 4px;
 
-    cursor: pointer;
+      border-top: 1px solid var(--border);
 
-    user-select: none;
+      position: relative;
 
-    display: flex;
+      cursor: pointer;
 
-    align-items: center;
+      user-select: none;
 
-    justify-content: space-between;
+      display: flex;
 
-  }
+      align-items: center;
 
+      justify-content: space-between;
 
+    }
 
-  .section-header:hover {
 
-    background: rgba(255,255,255,0.02);
 
-  }
+    .section-header:hover {
 
+      background: rgba(255, 255, 255, 0.02);
 
+    }
 
-  .section-header:first-child {
 
-    margin-top: 0;
 
-    border-top: none;
+    .section-header:first-child {
 
-  }
+      margin-top: 0;
 
+      border-top: none;
 
+    }
 
-  .section-header::before {
+    /* Image widget */
 
-    content: '';
+    .image-widget {
 
-    position: absolute;
+      display: flex;
 
-    left: 0;
+      flex-direction: column;
 
-    top: 50%;
+      gap: 8px;
 
-    transform: translateY(-50%);
+      padding: 8px 16px;
 
-    width: 3px;
+      width: 100%;
 
-    height: 14px;
+    }
 
-    background: var(--accent);
+    .image-widget img {
 
-    border-radius: 0 2px 2px 0;
+      max-width: 100%;
 
-    opacity: 0.7;
+      height: auto;
 
-  }
+      border-radius: var(--radius);
 
+      border: 1px solid var(--border);
 
+      display: block;
 
-  .section-toggle {
+    }
 
-    font-size: 9px;
+    .image-widget-label {
 
-    color: var(--text-dim);
+      font-size: 12px;
 
-    transition: transform 0.2s;
+      color: var(--text-dim);
 
-    flex-shrink: 0;
+      overflow: hidden;
 
-    margin-left: 8px;
+      text-overflow: ellipsis;
 
-  }
+      white-space: nowrap;
 
+    }
 
 
-  .section-header.collapsed .section-toggle {
 
-    transform: rotate(-90deg);
+    .section-header::before {
 
-  }
+      content: '';
 
+      position: absolute;
 
+      left: 0;
 
-  .section-child.section-hidden {
+      top: 50%;
 
-    display: none;
+      transform: translateY(-50%);
 
-  }
+      width: 3px;
 
+      height: 14px;
 
+      background: var(--accent);
 
-  /* Scroll to top button */
+      border-radius: 0 2px 2px 0;
 
-  .scroll-top {
+      opacity: 0.7;
 
-    position: fixed;
+    }
 
-    bottom: 20px;
 
-    right: 20px;
 
-    width: 36px;
+    .section-toggle {
 
-    height: 36px;
+      font-size: 9px;
 
-    border-radius: 50%;
+      color: var(--text-dim);
 
-    background: var(--surface);
+      transition: transform 0.2s;
 
-    border: 1px solid var(--border);
+      flex-shrink: 0;
 
-    color: var(--text-dim);
+      margin-left: 8px;
 
-    font-size: 16px;
+    }
 
-    cursor: pointer;
 
-    display: flex;
 
-    align-items: center;
+    .section-header.collapsed .section-toggle {
 
-    justify-content: center;
+      transform: rotate(-90deg);
 
-    opacity: 0;
+    }
 
-    pointer-events: none;
 
-    transition: opacity 0.2s, background 0.15s;
 
-    z-index: 50;
+    .section-child.section-hidden {
 
-  }
+      display: none;
 
+    }
 
 
-  .scroll-top.visible {
 
-    opacity: 1;
+    /* Scroll to top button */
 
-    pointer-events: auto;
+    .scroll-top {
 
-  }
+      position: fixed;
 
+      bottom: 20px;
 
+      right: 20px;
 
-  .scroll-top:hover {
+      width: 36px;
 
-    background: var(--surface-hover);
+      height: 36px;
 
-    color: var(--text);
+      border-radius: 50%;
 
-  }
+      background: var(--surface);
 
+      border: 1px solid var(--border);
 
+      color: var(--text-dim);
 
-  /* Empty state */
+      font-size: 16px;
 
-  .empty-state {
+      cursor: pointer;
 
-    display: flex;
+      display: flex;
 
-    flex-direction: column;
+      align-items: center;
 
-    align-items: center;
+      justify-content: center;
 
-    justify-content: center;
+      opacity: 0;
 
-    padding: 60px 20px;
+      pointer-events: none;
 
-    color: var(--text-dim);
+      transition: opacity 0.2s, background 0.15s;
 
-    font-size: 14px;
+      z-index: 50;
 
-    gap: 8px;
+    }
 
-    column-span: all;
 
-  }
 
+    .scroll-top.visible {
 
+      opacity: 1;
 
-  .empty-state .logo {
+      pointer-events: auto;
 
-    font-size: 24px;
+    }
 
-    font-weight: 700;
 
-    color: var(--accent);
 
-    letter-spacing: 2px;
+    .scroll-top:hover {
 
-    margin-bottom: 8px;
+      background: var(--surface-hover);
 
-  }
+      color: var(--text);
 
+    }
 
 
-  /* Scrollbar */
 
-  ::-webkit-scrollbar { width: 8px; }
+    /* Empty state */
 
-  ::-webkit-scrollbar-track { background: var(--bg); }
+    .empty-state {
 
-  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+      display: flex;
 
-  ::-webkit-scrollbar-thumb:hover { background: var(--text-dim); }
+      flex-direction: column;
 
-</style>
+      align-items: center;
+
+      justify-content: center;
+
+      padding: 60px 20px;
+
+      color: var(--text-dim);
+
+      font-size: 14px;
+
+      gap: 8px;
+
+      column-span: all;
+
+    }
+
+
+
+    .empty-state .logo {
+
+      font-size: 24px;
+
+      font-weight: 700;
+
+      color: var(--accent);
+
+      letter-spacing: 2px;
+
+      margin-bottom: 8px;
+
+    }
+
+
+
+    /* Scrollbar */
+
+    ::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: var(--bg);
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 4px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--text-dim);
+    }
+  </style>
 
 </head>
 
 <body>
 
-<div id="status-bar" class="connecting"></div>
+  <div id="status-bar" class="connecting"></div>
 
-<div id="app">
+  <div id="app">
 
-  <div class="empty-state">
+    <div class="empty-state">
 
-    <div class="logo">wgui</div>
+      <div class="logo">wgui</div>
 
-    <div>Connecting...</div>
+      <div>Connecting...</div>
+
+    </div>
 
   </div>
 
-</div>
+  <button class="scroll-top" id="scroll-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">&#9650;</button>
 
-<button class="scroll-top" id="scroll-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">&#9650;</button>
 
 
+  <script>
 
-<script>
+    (function () {
 
-(function() {
+      'use strict';
 
-  'use strict';
 
 
+      // ── State ──────────────────────────────────────────
 
-  // ── State ──────────────────────────────────────────
+      let elements = new Map(); // id -> element (insertion-ordered)
 
-  let elements = new Map(); // id -> element (insertion-ordered)
+      let ws = null;
 
-  let ws = null;
+      let reconnectDelay = 500;
 
-  let reconnectDelay = 500;
+      const recentlyInteracted = new Map(); // id -> timestamp
 
-  const recentlyInteracted = new Map(); // id -> timestamp
+      let chartInstances = new Map();
 
-  let chartInstances = new Map();
+      const initRetryCounts = new Map(); // Track retry attempts for chart initialization
 
-  const initRetryCounts = new Map(); // Track retry attempts for chart initialization
+      const MAX_INIT_RETRIES = 10; // Max retries for chart initialization
 
-  const MAX_INIT_RETRIES = 10; // Max retries for chart initialization
+      const RECENT_INTERACTION_TTL = 5000; // How long to keep entries in recentlyInteracted (ms)
 
-  const RECENT_INTERACTION_TTL = 5000; // How long to keep entries in recentlyInteracted (ms)
 
 
+      const wsPort = parseInt(location.port) + 1;
 
-  const wsPort = parseInt(location.port) + 1;
+      const wsUrl = `ws://${location.hostname}:${wsPort}`;
 
-  const wsUrl = `ws://${location.hostname}:${wsPort}`;
 
 
+      // ── Drag and Drop State ───────────────────────────
 
-  // ── Drag and Drop State ───────────────────────────
+      let dragState = {
 
-  let dragState = {
+        dragging: null,
 
-    dragging: null,
+        dragOffset: { x: 0, y: 0 },
 
-    dragOffset: { x: 0, y: 0 },
+        placeholder: null,
 
-    placeholder: null,
+        originalParent: null,
 
-    originalParent: null,
+        draggedData: null
 
-    draggedData: null
+      };
 
-  };
 
 
+      // ── Batched Message Queue ──────────────────────────
 
-  // ── Batched Message Queue ──────────────────────────
+      let messageQueue = [];
 
-  let messageQueue = [];
+      let isProcessingQueued = false;
 
-  let isProcessingQueued = false;
+      let pendingRafId = null;
 
-  let pendingRafId = null;
+      const MAX_QUEUE_SIZE = 100; // Drop old messages if queue gets too large
 
-  const MAX_QUEUE_SIZE = 100; // Drop old messages if queue gets too large
 
 
+      function enqueueMessage(msg) {
 
-  function enqueueMessage(msg) {
+        messageQueue.push(msg);
 
-    messageQueue.push(msg);
 
-    
 
-    // If queue is getting too large, fast-forward by dropping non-essential messages
+        // If queue is getting too large, fast-forward by dropping non-essential messages
 
-    if (messageQueue.length > MAX_QUEUE_SIZE) {
+        if (messageQueue.length > MAX_QUEUE_SIZE) {
 
-      fastForwardQueue();
+          fastForwardQueue();
 
-    }
+        }
 
-    
 
-    if (!isProcessingQueued) {
 
-      isProcessingQueued = true;
+        if (!isProcessingQueued) {
 
-      pendingRafId = requestAnimationFrame(processMessageQueue);
+          isProcessingQueued = true;
 
-    }
-
-  }
-
-
-
-  function fastForwardQueue() {
-
-    // Keep only the latest update for each element, plus all structural changes
-
-    const latestUpdates = new Map();
-
-    const structuralMessages = [];
-
-    
-
-    for (const msg of messageQueue) {
-
-      if (msg.type === 'snapshot') {
-
-        // Snapshot resets everything - keep only this and later messages
-
-        structuralMessages.length = 0;
-
-        structuralMessages.push(msg);
-
-        latestUpdates.clear();
-
-      } else if (msg.type === 'add' || msg.type === 'remove' || msg.type === 'reorder') {
-
-        // Structural changes must be kept
-
-        structuralMessages.push(msg);
-
-      } else if (msg.type === 'update') {
-
-        // For updates, only keep the latest for each element
-
-        latestUpdates.set(msg.id, msg);
-
-      }
-
-    }
-
-    
-
-    // Rebuild queue: structural messages first, then latest updates
-
-    messageQueue = [...structuralMessages, ...latestUpdates.values()];
-
-  }
-
-
-
-  function processMessageQueue() {
-
-    isProcessingQueued = false;
-
-    pendingRafId = null;
-
-    
-
-    if (messageQueue.length === 0) return;
-
-    
-
-    // Process all queued messages in batch
-
-    const batch = messageQueue;
-
-    messageQueue = [];
-
-    
-
-    // Fast-forward: if there are many updates, coalesce them
-
-    if (batch.length > 10) {
-
-      fastForwardQueue();
-
-    }
-
-    
-
-    let needsFullRender = false;
-
-    const updatedIds = new Set();
-
-    
-
-    for (const msg of batch) {
-
-      switch (msg.type) {
-
-        case 'snapshot':
-
-          elements = new Map();
-
-          for (const el of msg.elements) elements.set(el.id, el);
-
-          needsFullRender = true;
-
-          break;
-
-        case 'add':
-
-          elements.set(msg.element.id, msg.element);
-
-          needsFullRender = true;
-
-          break;
-
-        case 'remove':
-
-          elements.delete(msg.id);
-
-          needsFullRender = true;
-
-          break;
-
-        case 'reorder':
-
-          // Apply reorder to elements map
-
-          const newMap = new Map();
-
-          for (const id of msg.ids) {
-
-            const el = elements.get(id);
-
-            if (el) newMap.set(id, el);
-
-          }
-
-          for (const [id, el] of elements) {
-
-            if (!newMap.has(id)) newMap.set(id, el);
-
-          }
-
-          elements = newMap;
-
-          needsFullRender = true;
-
-          break;
-
-        case 'update': {
-
-          const el = elements.get(msg.id);
-
-          if (el) {
-
-            el.value = msg.value;
-
-            if (msg.label) el.label = msg.label;
-
-            if (msg.meta) el.meta = msg.meta;
-
-            updatedIds.add(msg.id);
-
-          }
-
-          break;
+          pendingRafId = requestAnimationFrame(processMessageQueue);
 
         }
 
       }
 
-    }
 
-    
 
-    if (needsFullRender) {
+      function fastForwardQueue() {
 
-      render();
+        // Keep only the latest update for each element, plus all structural changes
 
-    } else {
+        const latestUpdates = new Map();
 
-      // Only update changed elements
+        const structuralMessages = [];
 
-      for (const id of updatedIds) {
 
-        const el = elements.get(id);
 
-        if (el) updateElementDOM(el);
+        for (const msg of messageQueue) {
+
+          if (msg.type === 'snapshot') {
+
+            // Snapshot resets everything - keep only this and later messages
+
+            structuralMessages.length = 0;
+
+            structuralMessages.push(msg);
+
+            latestUpdates.clear();
+
+          } else if (msg.type === 'add' || msg.type === 'remove' || msg.type === 'reorder') {
+
+            // Structural changes must be kept
+
+            structuralMessages.push(msg);
+
+          } else if (msg.type === 'update') {
+
+            // For updates, only keep the latest for each element
+
+            latestUpdates.set(msg.id, msg);
+
+          }
+
+        }
+
+
+
+        // Rebuild queue: structural messages first, then latest updates
+
+        messageQueue = [...structuralMessages, ...latestUpdates.values()];
 
       }
 
-    }
-
-  }
 
 
+      function processMessageQueue() {
 
-  // ── WebSocket ──────────────────────────────────────
-
-  function connect() {
-
-    setStatus('connecting');
-
-    ws = new WebSocket(wsUrl);
-
-
-
-    ws.onopen = () => {
-
-      setStatus('connected');
-
-      reconnectDelay = 500;
-
-    };
-
-
-
-    ws.onclose = () => {
-
-      setStatus('disconnected');
-
-      ws = null;
-
-      // Cancel any pending processing
-
-      if (pendingRafId) {
-
-        cancelAnimationFrame(pendingRafId);
+        isProcessingQueued = false;
 
         pendingRafId = null;
 
-      }
 
-      isProcessingQueued = false;
 
-      messageQueue = [];
-
-      setTimeout(connect, reconnectDelay);
-
-      reconnectDelay = Math.min(reconnectDelay * 1.5, 5000);
-
-    };
+        if (messageQueue.length === 0) return;
 
 
 
-    ws.onerror = () => {};
+        // Process all queued messages in batch
+
+        const batch = messageQueue;
+
+        messageQueue = [];
 
 
 
-    ws.onmessage = (e) => {
+        // Fast-forward: if there are many updates, coalesce them
 
-      const msgs = JSON.parse(e.data);
+        if (batch.length > 10) {
 
-      // Server sends arrays of messages
-
-      if (Array.isArray(msgs)) {
-
-        for (const msg of msgs) {
-
-          enqueueMessage(msg);
+          fastForwardQueue();
 
         }
 
-      } else {
 
-        enqueueMessage(msgs);
 
-      }
+        let needsFullRender = false;
 
-    };
-
-  }
+        const updatedIds = new Set();
 
 
 
-  function send(msg) {
+        for (const msg of batch) {
 
-    if (ws && ws.readyState === WebSocket.OPEN) {
+          switch (msg.type) {
 
-      ws.send(JSON.stringify(msg));
+            case 'snapshot':
 
-    }
+              elements = new Map();
 
-  }
+              for (const el of msg.elements) elements.set(el.id, el);
+
+              needsFullRender = true;
+
+              break;
+
+            case 'add':
+
+              elements.set(msg.element.id, msg.element);
+
+              needsFullRender = true;
+
+              break;
+
+            case 'remove':
+
+              elements.delete(msg.id);
+
+              needsFullRender = true;
+
+              break;
+
+            case 'reorder':
+
+              // Apply reorder to elements map
+
+              const newMap = new Map();
+
+              for (const id of msg.ids) {
+
+                const el = elements.get(id);
+
+                if (el) newMap.set(id, el);
+
+              }
+
+              for (const [id, el] of elements) {
+
+                if (!newMap.has(id)) newMap.set(id, el);
+
+              }
+
+              elements = newMap;
+
+              needsFullRender = true;
+
+              break;
+
+            case 'update': {
+
+              const el = elements.get(msg.id);
+
+              if (el) {
+
+                el.value = msg.value;
+
+                if (msg.label) el.label = msg.label;
+
+                if (msg.meta) el.meta = msg.meta;
+
+                updatedIds.add(msg.id);
+
+              }
+
+              break;
+
+            }
+
+          }
+
+        }
 
 
 
-  function setStatus(s) {
+        if (needsFullRender) {
 
-    const bar = document.getElementById('status-bar');
-
-    bar.className = s;
-
-  }
-
-
-
-  // ── Message Handling (legacy, now handled by processMessageQueue) ──
-
-  function handleMessage(msg) {
-
-    switch (msg.type) {
-
-      case 'snapshot':
-
-        elements = new Map();
-
-        for (const el of msg.elements) elements.set(el.id, el);
-
-        render();
-
-        break;
-
-      case 'add':
-
-        elements.set(msg.element.id, msg.element);
-
-        render();
-
-        break;
-
-      case 'update': {
-
-        const el = elements.get(msg.id);
-
-        if (el) {
-
-          el.value = msg.value;
-
-          if (msg.label) el.label = msg.label;
-
-          if (msg.meta) el.meta = msg.meta;
-
-          updateElementDOM(el);
+          render();
 
         } else {
 
-          console.warn('wgui: update for unknown id', msg.id);
+          // Only update changed elements
+
+          for (const id of updatedIds) {
+
+            const el = elements.get(id);
+
+            if (el) updateElementDOM(el);
+
+          }
 
         }
-
-        break;
 
       }
 
-      case 'remove':
 
-        elements.delete(msg.id);
 
-        render();
+      // ── WebSocket ──────────────────────────────────────
 
-        break;
+      function connect() {
 
-      case 'reorder': {
+        setStatus('connecting');
 
-        const newMap = new Map();
+        ws = new WebSocket(wsUrl);
 
-        for (const id of msg.ids) {
 
-          const el = elements.get(id);
 
-          if (el) newMap.set(id, el);
+        ws.onopen = () => {
 
-        }
+          setStatus('connected');
 
-        // Keep any elements not in the reorder list
+          reconnectDelay = 500;
 
-        for (const [id, el] of elements) {
+        };
 
-          if (!newMap.has(id)) newMap.set(id, el);
 
-        }
 
-        elements = newMap;
+        ws.onclose = () => {
 
-        render();
+          setStatus('disconnected');
 
-        break;
+          ws = null;
+
+          // Cancel any pending processing
+
+          if (pendingRafId) {
+
+            cancelAnimationFrame(pendingRafId);
+
+            pendingRafId = null;
+
+          }
+
+          isProcessingQueued = false;
+
+          messageQueue = [];
+
+          setTimeout(connect, reconnectDelay);
+
+          reconnectDelay = Math.min(reconnectDelay * 1.5, 5000);
+
+        };
+
+
+
+        ws.onerror = () => { };
+
+
+
+        ws.onmessage = (e) => {
+
+          const msgs = JSON.parse(e.data);
+
+          // Server sends arrays of messages
+
+          if (Array.isArray(msgs)) {
+
+            for (const msg of msgs) {
+
+              enqueueMessage(msg);
+
+            }
+
+          } else {
+
+            enqueueMessage(msgs);
+
+          }
+
+        };
 
       }
 
-    }
-
-  }
 
 
+      function send(msg) {
 
-  // ── Rendering ──────────────────────────────────────
+        if (ws && ws.readyState === WebSocket.OPEN) {
 
-  function render() {
+          ws.send(JSON.stringify(msg));
 
-    const app = document.getElementById('app');
+        }
 
-
-
-    // Clean up old chart instances and tooltips before re-rendering
-
-    cleanupCharts();
-
-    document.querySelectorAll('.plot-tooltip').forEach(t => t.remove());
+      }
 
 
 
-    if (elements.size === 0) {
+      function setStatus(s) {
 
-      app.innerHTML = `
+        const bar = document.getElementById('status-bar');
+
+        bar.className = s;
+
+      }
+
+
+
+      // ── Message Handling (legacy, now handled by processMessageQueue) ──
+
+      function handleMessage(msg) {
+
+        switch (msg.type) {
+
+          case 'snapshot':
+
+            elements = new Map();
+
+            for (const el of msg.elements) elements.set(el.id, el);
+
+            render();
+
+            break;
+
+          case 'add':
+
+            elements.set(msg.element.id, msg.element);
+
+            render();
+
+            break;
+
+          case 'update': {
+
+            const el = elements.get(msg.id);
+
+            if (el) {
+
+              el.value = msg.value;
+
+              if (msg.label) el.label = msg.label;
+
+              if (msg.meta) el.meta = msg.meta;
+
+              updateElementDOM(el);
+
+            } else {
+
+              console.warn('wgui: update for unknown id', msg.id);
+
+            }
+
+            break;
+
+          }
+
+          case 'remove':
+
+            elements.delete(msg.id);
+
+            render();
+
+            break;
+
+          case 'reorder': {
+
+            const newMap = new Map();
+
+            for (const id of msg.ids) {
+
+              const el = elements.get(id);
+
+              if (el) newMap.set(id, el);
+
+            }
+
+            // Keep any elements not in the reorder list
+
+            for (const [id, el] of elements) {
+
+              if (!newMap.has(id)) newMap.set(id, el);
+
+            }
+
+            elements = newMap;
+
+            render();
+
+            break;
+
+          }
+
+        }
+
+      }
+
+
+
+      // ── Rendering ──────────────────────────────────────
+
+      function render() {
+
+        const app = document.getElementById('app');
+
+
+
+        // Clean up old chart instances and tooltips before re-rendering
+
+        cleanupCharts();
+
+        document.querySelectorAll('.plot-tooltip').forEach(t => t.remove());
+
+
+
+        if (elements.size === 0) {
+
+          app.innerHTML = `
 
         <div class="empty-state">
 
@@ -2782,461 +2987,485 @@
 
         </div>`;
 
-      return;
+          return;
 
-    }
+        }
 
 
 
-    // Collect IDs of elements that are children of containers (so we don't render them twice)
+        // Collect IDs of elements that are children of containers (so we don't render them twice)
 
-    const containerChildIds = new Set();
+        const containerChildIds = new Set();
 
-    for (const el of elements.values()) {
+        for (const el of elements.values()) {
 
-      const children = el.value?.data?.children;
+          const children = el.value?.data?.children;
 
-      if (children && (el.kind.type === 'Grid' || el.kind.type === 'Horizontal')) {
+          if (children && (el.kind.type === 'Grid' || el.kind.type === 'Horizontal')) {
 
-        for (const childId of children) {
+            for (const childId of children) {
 
-          containerChildIds.add(childId);
+              containerChildIds.add(childId);
+
+            }
+
+          }
+
+        }
+
+
+
+        // Group by window, skipping container children (they're rendered inside their containers)
+
+        const windows = new Map();
+
+        for (const el of elements.values()) {
+
+          if (containerChildIds.has(el.id)) continue;
+
+          const win = el.window || 'Default';
+
+          if (!windows.has(win)) windows.set(win, []);
+
+          windows.get(win).push(el);
+
+        }
+
+
+
+        let html = '';
+
+        for (const [name, elems] of windows) {
+
+          // Determine accent color from first element if specified
+
+          const firstAccent = elems[0]?.meta?.accent || 'coral';
+
+          html += `<div class="card ${firstAccent}" data-window="${esc(name)}">`;
+
+          html += `<div class="card-header" onclick="wgui.toggleCard(this)">`;
+
+          html += `<span class="card-title">${esc(name)}</span>`;
+
+          html += `<span class="card-toggle">&#9660;</span>`;
+
+          html += `</div>`;
+
+          html += `<div class="card-body">`;
+
+          for (const el of elems) {
+
+            html += renderElement(el);
+
+          }
+
+          html += `</div></div>`;
+
+        }
+
+
+
+        app.innerHTML = html;
+
+
+
+        // Initialize charts after DOM is fully rendered and laid out
+
+        requestAnimationFrame(() => {
+
+          for (const el of elements.values()) {
+
+            if (el.kind.type === 'MiniChart') {
+
+              initMiniChart(el);
+
+            } else if (el.kind.type === 'Plot') {
+
+              initPlot(el);
+
+            }
+
+          }
+
+        });
+
+      }
+
+
+
+      function renderElement(el) {
+
+        const r = renderers[el.kind.type];
+
+        if (r) return r(el);
+
+        return `<div class="widget-row"><span class="widget-label">${esc(el.label)}</span><span class="widget-control">Unknown: ${esc(el.kind.type)}</span></div>`;
+
+      }
+
+
+
+      // ── Update a single element without full re-render ─
+
+      function updateElementDOM(el) {
+
+        const row = document.querySelector(`[data-id="${CSS.escape(el.id)}"]`);
+
+        if (!row) { console.warn('wgui: no DOM for', el.id, '→ full render'); render(); return; }
+
+
+
+        switch (el.kind.type) {
+
+          case 'Slider': {
+
+            const input = row.querySelector('input[type="range"]');
+
+            const display = row.querySelector('.slider-value');
+
+            const val = el.value.type === 'Float' ? el.value.data : el.value.data;
+
+            const recent = recentlyInteracted.get(el.id);
+
+            const isActive = document.activeElement === input || (recent && Date.now() - recent < 500);
+
+            if (input && !isActive) input.value = val;
+
+            if (display && !isActive) display.textContent = formatNum(val, el.meta.step);
+
+            break;
+
+          }
+
+          case 'Checkbox': {
+
+            const toggle = row.querySelector('.toggle-switch');
+
+            if (toggle) {
+
+              if (el.value.data) toggle.classList.add('checked');
+
+              else toggle.classList.remove('checked');
+
+            }
+
+            const label = row.querySelector('.checkbox-label');
+
+            if (label) label.textContent = el.value.data ? 'On' : 'Off';
+
+            break;
+
+          }
+
+          case 'ColorPicker3': {
+
+            const input = row.querySelector('input[type="color"]');
+
+            const hexLabel = row.querySelector('.color-hex');
+
+            const hex = rgbToHex(el.value.data);
+
+            if (input && document.activeElement !== input) input.value = hex;
+
+            if (hexLabel) hexLabel.textContent = hex;
+
+            break;
+
+          }
+
+          case 'ColorPicker4': {
+
+            const input = row.querySelector('input[type="color"]');
+
+            const hexLabel = row.querySelector('.color-hex');
+
+            const hex = rgbToHex(el.value.data);
+
+            const alpha = el.value.data[3] ?? 1.0;
+
+            if (input && document.activeElement !== input) input.value = hex;
+
+            if (hexLabel) hexLabel.textContent = hex;
+
+            const alphaSlider = row.querySelector('input[type="range"]');
+
+            if (alphaSlider && document.activeElement !== alphaSlider) alphaSlider.value = alpha;
+
+            const alphaText = row.querySelector('.alpha-text');
+
+            if (alphaText) alphaText.textContent = `α${alpha.toFixed(2)}`;
+
+            break;
+
+          }
+
+          case 'TextInput': {
+
+            const input = row.querySelector('.text-input');
+
+            if (input && document.activeElement !== input) input.value = el.value.data;
+
+            break;
+
+          }
+
+          case 'TextInputInline': {
+
+            const input = document.querySelector(`[data-id="${CSS.escape(el.id)}"].text-input`);
+
+            if (input && document.activeElement !== input) input.value = el.value.data;
+
+            break;
+
+          }
+
+          case 'Dropdown': {
+
+            const select = row.querySelector('select');
+
+            if (select && document.activeElement !== select) select.selectedIndex = el.value.data.selected;
+
+            break;
+
+          }
+
+          case 'ProgressBar': {
+
+            const fill = row.querySelector('.progress-fill');
+
+            const percent = row.querySelector('.progress-percent');
+
+            const subtitle = row.querySelector('.progress-subtitle');
+
+            const val = el.value.data;
+
+            const pct = Math.round(val * 100);
+
+            if (fill) fill.style.width = pct + '%';
+
+            if (percent) percent.innerHTML = pct + '<sup>%</sup>';
+
+            if (subtitle && el.meta.subtitle) subtitle.textContent = el.meta.subtitle;
+
+            break;
+
+          }
+
+          case 'Stat': {
+
+            const valueEl = row.querySelector('.stat-value');
+
+            const subEl = row.querySelector('.stat-subvalue');
+
+            if (valueEl) valueEl.textContent = el.value.data.value;
+
+            if (subEl && el.value.data.subvalue) subEl.textContent = el.value.data.subvalue;
+
+            break;
+
+          }
+
+          case 'Status': {
+
+            const data = el.value.data;
+
+            const color = data.active ? (data.activeColor || data.active_color || 'green') : (data.inactiveColor || data.inactive_color || 'red');
+
+            const text = data.active ? (data.activeText || data.active_text || 'Active') : (data.inactiveText || data.inactive_text || 'Inactive');
+
+            const dot = row.querySelector('.status-dot');
+
+            const span = row.querySelector('.status-indicator span');
+
+            if (dot) { dot.className = 'status-dot ' + color; }
+
+            if (span) span.textContent = text;
+
+            break;
+
+          }
+
+          case 'MiniChart': {
+
+            updateMiniChart(el);
+
+            break;
+
+          }
+
+          case 'Plot': {
+
+            updatePlot(el);
+
+            break;
+
+          }
+
+          case 'Grid': {
+
+            // Update each child element within the grid
+
+            const children = el.value.data.children || [];
+
+            for (const childId of children) {
+
+              const child = elements.get(childId);
+
+              if (child) updateElementDOM(child);
+
+            }
+
+            break;
+
+          }
+
+          case 'Label': {
+
+            const labelEl = row.querySelector('.label-text');
+
+            if (labelEl) labelEl.textContent = el.value.data;
+
+            const nameEl = row.querySelector('.widget-label');
+
+            if (nameEl) nameEl.textContent = el.label;
+
+            break;
+
+          }
+
+          case 'LabelInline': {
+
+            const inlineLabel = document.querySelector(`[data-id="${CSS.escape(el.id)}"].label-inline`);
+
+            if (inlineLabel) inlineLabel.textContent = el.value.data;
+
+            break;
+
+          }
+
+          case 'Section': {
+
+            row.textContent = el.label;
+
+            break;
+
+          }
+
+          case 'Button': {
+
+            const btn = row.querySelector('.wgui-button');
+
+            if (btn) btn.textContent = el.label;
+
+            break;
+
+          }
+
+          case 'ButtonCompact': {
+
+            const btn = row.querySelector('.wgui-button-compact');
+
+            if (btn) btn.textContent = el.label;
+
+            break;
+
+          }
+
+          case 'ButtonInline': {
+
+            const btn = document.querySelector(`[data-id="${CSS.escape(el.id)}"].wgui-button-compact`);
+
+            if (btn) btn.textContent = el.label;
+
+            break;
+
+          }
+
+          case 'KeyValue': {
+
+            const valueEl = row.querySelector('.kv-value');
+
+            if (valueEl) valueEl.textContent = el.value.data;
+
+            const labelEl = row.querySelector('.kv-label');
+
+            if (labelEl) labelEl.textContent = el.label;
+
+            break;
+
+          }
+
+          case 'Horizontal': {
+
+            // Update each child element within the horizontal layout
+
+            const children = el.value.data.children || [];
+
+            for (const childId of children) {
+
+              const child = elements.get(childId);
+
+              if (child) updateElementDOM(child);
+
+            }
+
+            break;
+
+          }
+
+          case 'Separator':
+
+            break;
+
+          case 'Image': {
+
+            const img = row.querySelector('.image-widget img');
+
+            if (img) {
+
+              const d = el.value.data;
+
+              if (img.src !== d.data) img.src = d.data;
+
+              if (d.width) img.style.width = d.width + 'px';
+
+              if (d.height) img.style.height = d.height + 'px';
+
+            }
+
+            const imgLabel = row.querySelector('.image-widget-label');
+
+            if (imgLabel) imgLabel.textContent = el.label;
+
+            break;
+
+          }
+
+          default:
+
+            render();
 
         }
 
       }
 
-    }
 
 
+      // ── Component Renderers ────────────────────────────
 
-    // Group by window, skipping container children (they're rendered inside their containers)
+      const renderers = {
 
-    const windows = new Map();
+        Slider: (el) => {
 
-    for (const el of elements.values()) {
+          const val = el.value.data;
 
-      if (containerChildIds.has(el.id)) continue;
+          const min = el.meta.min ?? 0;
 
-      const win = el.window || 'Default';
+          const max = el.meta.max ?? 1;
 
-      if (!windows.has(win)) windows.set(win, []);
+          const step = el.meta.step ?? 0.01;
 
-      windows.get(win).push(el);
-
-    }
-
-
-
-    let html = '';
-
-    for (const [name, elems] of windows) {
-
-      // Determine accent color from first element if specified
-
-      const firstAccent = elems[0]?.meta?.accent || 'coral';
-
-      html += `<div class="card ${firstAccent}" data-window="${esc(name)}">`;
-
-      html += `<div class="card-header" onclick="wgui.toggleCard(this)">`;
-
-      html += `<span class="card-title">${esc(name)}</span>`;
-
-      html += `<span class="card-toggle">&#9660;</span>`;
-
-      html += `</div>`;
-
-      html += `<div class="card-body">`;
-
-      for (const el of elems) {
-
-        html += renderElement(el);
-
-      }
-
-      html += `</div></div>`;
-
-    }
-
-
-
-    app.innerHTML = html;
-
-    
-
-    // Initialize charts after DOM is fully rendered and laid out
-
-    requestAnimationFrame(() => {
-
-      for (const el of elements.values()) {
-
-        if (el.kind.type === 'MiniChart') {
-
-          initMiniChart(el);
-
-        } else if (el.kind.type === 'Plot') {
-
-          initPlot(el);
-
-        }
-
-      }
-
-    });
-
-  }
-
-
-
-  function renderElement(el) {
-
-    const r = renderers[el.kind.type];
-
-    if (r) return r(el);
-
-    return `<div class="widget-row"><span class="widget-label">${esc(el.label)}</span><span class="widget-control">Unknown: ${esc(el.kind.type)}</span></div>`;
-
-  }
-
-
-
-  // ── Update a single element without full re-render ─
-
-  function updateElementDOM(el) {
-
-    const row = document.querySelector(`[data-id="${CSS.escape(el.id)}"]`);
-
-    if (!row) { console.warn('wgui: no DOM for', el.id, '→ full render'); render(); return; }
-
-
-
-    switch (el.kind.type) {
-
-      case 'Slider': {
-
-        const input = row.querySelector('input[type="range"]');
-
-        const display = row.querySelector('.slider-value');
-
-        const val = el.value.type === 'Float' ? el.value.data : el.value.data;
-
-        const recent = recentlyInteracted.get(el.id);
-
-        const isActive = document.activeElement === input || (recent && Date.now() - recent < 500);
-
-        if (input && !isActive) input.value = val;
-
-        if (display && !isActive) display.textContent = formatNum(val, el.meta.step);
-
-        break;
-
-      }
-
-      case 'Checkbox': {
-
-        const toggle = row.querySelector('.toggle-switch');
-
-        if (toggle) {
-
-          if (el.value.data) toggle.classList.add('checked');
-
-          else toggle.classList.remove('checked');
-
-        }
-
-        const label = row.querySelector('.checkbox-label');
-
-        if (label) label.textContent = el.value.data ? 'On' : 'Off';
-
-        break;
-
-      }
-
-      case 'ColorPicker3': {
-
-        const input = row.querySelector('input[type="color"]');
-
-        const hexLabel = row.querySelector('.color-hex');
-
-        const hex = rgbToHex(el.value.data);
-
-        if (input && document.activeElement !== input) input.value = hex;
-
-        if (hexLabel) hexLabel.textContent = hex;
-
-        break;
-
-      }
-
-      case 'ColorPicker4': {
-
-        const input = row.querySelector('input[type="color"]');
-
-        const hexLabel = row.querySelector('.color-hex');
-
-        const hex = rgbToHex(el.value.data);
-
-        const alpha = el.value.data[3] ?? 1.0;
-
-        if (input && document.activeElement !== input) input.value = hex;
-
-        if (hexLabel) hexLabel.textContent = hex;
-
-        const alphaSlider = row.querySelector('input[type="range"]');
-
-        if (alphaSlider && document.activeElement !== alphaSlider) alphaSlider.value = alpha;
-
-        const alphaText = row.querySelector('.alpha-text');
-
-        if (alphaText) alphaText.textContent = `α${alpha.toFixed(2)}`;
-
-        break;
-
-      }
-
-      case 'TextInput': {
-
-        const input = row.querySelector('.text-input');
-
-        if (input && document.activeElement !== input) input.value = el.value.data;
-
-        break;
-
-      }
-
-      case 'TextInputInline': {
-
-        const input = document.querySelector(`[data-id="${CSS.escape(el.id)}"].text-input`);
-
-        if (input && document.activeElement !== input) input.value = el.value.data;
-
-        break;
-
-      }
-
-      case 'Dropdown': {
-
-        const select = row.querySelector('select');
-
-        if (select && document.activeElement !== select) select.selectedIndex = el.value.data.selected;
-
-        break;
-
-      }
-
-      case 'ProgressBar': {
-
-        const fill = row.querySelector('.progress-fill');
-
-        const percent = row.querySelector('.progress-percent');
-
-        const subtitle = row.querySelector('.progress-subtitle');
-
-        const val = el.value.data;
-
-        const pct = Math.round(val * 100);
-
-        if (fill) fill.style.width = pct + '%';
-
-        if (percent) percent.innerHTML = pct + '<sup>%</sup>';
-
-        if (subtitle && el.meta.subtitle) subtitle.textContent = el.meta.subtitle;
-
-        break;
-
-      }
-
-      case 'Stat': {
-
-        const valueEl = row.querySelector('.stat-value');
-
-        const subEl = row.querySelector('.stat-subvalue');
-
-        if (valueEl) valueEl.textContent = el.value.data.value;
-
-        if (subEl && el.value.data.subvalue) subEl.textContent = el.value.data.subvalue;
-
-        break;
-
-      }
-
-      case 'Status': {
-
-        const data = el.value.data;
-
-        const color = data.active ? (data.activeColor || data.active_color || 'green') : (data.inactiveColor || data.inactive_color || 'red');
-
-        const text = data.active ? (data.activeText || data.active_text || 'Active') : (data.inactiveText || data.inactive_text || 'Inactive');
-
-        const dot = row.querySelector('.status-dot');
-
-        const span = row.querySelector('.status-indicator span');
-
-        if (dot) { dot.className = 'status-dot ' + color; }
-
-        if (span) span.textContent = text;
-
-        break;
-
-      }
-
-      case 'MiniChart': {
-
-        updateMiniChart(el);
-
-        break;
-
-      }
-
-      case 'Plot': {
-
-        updatePlot(el);
-
-        break;
-
-      }
-
-      case 'Grid': {
-
-        // Update each child element within the grid
-
-        const children = el.value.data.children || [];
-
-        for (const childId of children) {
-
-          const child = elements.get(childId);
-
-          if (child) updateElementDOM(child);
-
-        }
-
-        break;
-
-      }
-
-      case 'Label': {
-
-        const labelEl = row.querySelector('.label-text');
-
-        if (labelEl) labelEl.textContent = el.value.data;
-
-        const nameEl = row.querySelector('.widget-label');
-
-        if (nameEl) nameEl.textContent = el.label;
-
-        break;
-
-      }
-
-      case 'LabelInline': {
-
-        const inlineLabel = document.querySelector(`[data-id="${CSS.escape(el.id)}"].label-inline`);
-
-        if (inlineLabel) inlineLabel.textContent = el.value.data;
-
-        break;
-
-      }
-
-      case 'Section': {
-
-        row.textContent = el.label;
-
-        break;
-
-      }
-
-      case 'Button': {
-
-        const btn = row.querySelector('.wgui-button');
-
-        if (btn) btn.textContent = el.label;
-
-        break;
-
-      }
-
-      case 'ButtonCompact': {
-
-        const btn = row.querySelector('.wgui-button-compact');
-
-        if (btn) btn.textContent = el.label;
-
-        break;
-
-      }
-
-      case 'ButtonInline': {
-
-        const btn = document.querySelector(`[data-id="${CSS.escape(el.id)}"].wgui-button-compact`);
-
-        if (btn) btn.textContent = el.label;
-
-        break;
-
-      }
-
-      case 'KeyValue': {
-
-        const valueEl = row.querySelector('.kv-value');
-
-        if (valueEl) valueEl.textContent = el.value.data;
-
-        const labelEl = row.querySelector('.kv-label');
-
-        if (labelEl) labelEl.textContent = el.label;
-
-        break;
-
-      }
-
-      case 'Horizontal': {
-
-        // Update each child element within the horizontal layout
-
-        const children = el.value.data.children || [];
-
-        for (const childId of children) {
-
-          const child = elements.get(childId);
-
-          if (child) updateElementDOM(child);
-
-        }
-
-        break;
-
-      }
-
-      case 'Separator':
-
-        break;
-
-      default:
-
-        render();
-
-    }
-
-  }
-
-
-
-  // ── Component Renderers ────────────────────────────
-
-  const renderers = {
-
-    Slider: (el) => {
-
-      const val = el.value.data;
-
-      const min = el.meta.min ?? 0;
-
-      const max = el.meta.max ?? 1;
-
-      const step = el.meta.step ?? 0.01;
-
-      return `<div class="widget-row" data-id="${esc(el.id)}">
+          return `<div class="widget-row" data-id="${esc(el.id)}">
 
         <span class="widget-label" title="${esc(el.label)}">${esc(el.label)}</span>
 
@@ -3252,15 +3481,15 @@
 
       </div>`;
 
-    },
+        },
 
 
 
-    Checkbox: (el) => {
+        Checkbox: (el) => {
 
-      const checked = el.value.data ? 'checked' : '';
+          const checked = el.value.data ? 'checked' : '';
 
-      return `<div class="widget-row" data-id="${esc(el.id)}">
+          return `<div class="widget-row" data-id="${esc(el.id)}">
 
         <span class="widget-label" title="${esc(el.label)}">${esc(el.label)}</span>
 
@@ -3278,15 +3507,15 @@
 
       </div>`;
 
-    },
+        },
 
 
 
-    ColorPicker3: (el) => {
+        ColorPicker3: (el) => {
 
-      const hex = rgbToHex(el.value.data);
+          const hex = rgbToHex(el.value.data);
 
-      return `<div class="widget-row" data-id="${esc(el.id)}">
+          return `<div class="widget-row" data-id="${esc(el.id)}">
 
         <span class="widget-label">${esc(el.label)}</span>
 
@@ -3306,17 +3535,17 @@
 
       </div>`;
 
-    },
+        },
 
 
 
-    ColorPicker4: (el) => {
+        ColorPicker4: (el) => {
 
-      const hex = rgbToHex(el.value.data);
+          const hex = rgbToHex(el.value.data);
 
-      const alpha = el.value.data[3] ?? 1.0;
+          const alpha = el.value.data[3] ?? 1.0;
 
-      return `<div class="widget-row" data-id="${esc(el.id)}">
+          return `<div class="widget-row" data-id="${esc(el.id)}">
 
         <span class="widget-label">${esc(el.label)}</span>
 
@@ -3342,13 +3571,13 @@
 
       </div>`;
 
-    },
+        },
 
 
 
-    TextInput: (el) => {
+        TextInput: (el) => {
 
-      return `<div class="widget-row" data-id="${esc(el.id)}">
+          return `<div class="widget-row" data-id="${esc(el.id)}">
 
         <span class="widget-label">${esc(el.label)}</span>
 
@@ -3362,19 +3591,19 @@
 
       </div>`;
 
-    },
+        },
 
 
 
-    Dropdown: (el) => {
+        Dropdown: (el) => {
 
-      const opts = el.value.data.options.map((o, i) =>
+          const opts = el.value.data.options.map((o, i) =>
 
-        `<option value="${i}" ${i === el.value.data.selected ? 'selected' : ''}>${esc(o)}</option>`
+            `<option value="${i}" ${i === el.value.data.selected ? 'selected' : ''}>${esc(o)}</option>`
 
-      ).join('');
+          ).join('');
 
-      return `<div class="widget-row" data-id="${esc(el.id)}">
+          return `<div class="widget-row" data-id="${esc(el.id)}">
 
         <span class="widget-label">${esc(el.label)}</span>
 
@@ -3390,15 +3619,15 @@
 
       </div>`;
 
-    },
+        },
 
 
 
-    Button: (el) => {
+        Button: (el) => {
 
-      const accentStyle = el.meta.accent ? ` style="background:var(--${el.meta.accent});box-shadow:0 2px 8px var(--${el.meta.accent}-glow)"` : '';
+          const accentStyle = el.meta.accent ? ` style="background:var(--${el.meta.accent});box-shadow:0 2px 8px var(--${el.meta.accent}-glow)"` : '';
 
-      return `<div class="widget-row" data-id="${esc(el.id)}">
+          return `<div class="widget-row" data-id="${esc(el.id)}">
 
         <span class="widget-label"></span>
 
@@ -3410,15 +3639,15 @@
 
       </div>`;
 
-    },
+        },
 
 
 
-    ButtonCompact: (el) => {
+        ButtonCompact: (el) => {
 
-      const accentStyle = el.meta.accent ? ` style="background:var(--${el.meta.accent});box-shadow:0 1px 4px var(--${el.meta.accent}-glow)"` : '';
+          const accentStyle = el.meta.accent ? ` style="background:var(--${el.meta.accent});box-shadow:0 1px 4px var(--${el.meta.accent}-glow)"` : '';
 
-      return `<div class="widget-row" data-id="${esc(el.id)}">
+          return `<div class="widget-row" data-id="${esc(el.id)}">
 
         <span class="widget-label">${esc(el.label)}</span>
 
@@ -3430,33 +3659,33 @@
 
       </div>`;
 
-    },
+        },
 
 
 
-    ButtonInline: (el) => {
+        ButtonInline: (el) => {
 
-      const accentStyle = el.meta.accent ? ` style="background:var(--${el.meta.accent});box-shadow:0 1px 4px var(--${el.meta.accent}-glow)"` : '';
+          const accentStyle = el.meta.accent ? ` style="background:var(--${el.meta.accent});box-shadow:0 1px 4px var(--${el.meta.accent}-glow)"` : '';
 
-      return `<button class="wgui-button-compact"${accentStyle} data-id="${esc(el.id)}" onclick="wgui.onButton('${escJs(el.id)}')">${esc(el.label)}</button>`;
+          return `<button class="wgui-button-compact"${accentStyle} data-id="${esc(el.id)}" onclick="wgui.onButton('${escJs(el.id)}')">${esc(el.label)}</button>`;
 
-    },
+        },
 
 
 
-    TextInputInline: (el) => {
+        TextInputInline: (el) => {
 
-      return `<input type="text" class="text-input" data-id="${esc(el.id)}" placeholder="${esc(el.label)}" value="${esc(el.value.data)}"
+          return `<input type="text" class="text-input" data-id="${esc(el.id)}" placeholder="${esc(el.label)}" value="${esc(el.value.data)}"
 
         oninput="wgui.onText('${escJs(el.id)}', this.value)">`;
 
-    },
+        },
 
 
 
-    KeyValue: (el) => {
+        KeyValue: (el) => {
 
-      return `<div class="kv-row" data-id="${esc(el.id)}">
+          return `<div class="kv-row" data-id="${esc(el.id)}">
 
         <span class="kv-label" title="${esc(el.label)}">${esc(el.label)}</span>
 
@@ -3464,59 +3693,59 @@
 
       </div>`;
 
-    },
+        },
 
 
 
-    Horizontal: (el) => {
+        Horizontal: (el) => {
 
-      const data = el.value.data || {};
+          const data = el.value.data || {};
 
-      const children = data.children || [];
+          const children = data.children || [];
 
-      let html = '<div class="horizontal-layout">';
+          let html = '<div class="horizontal-layout">';
 
-      for (const childId of children) {
+          for (const childId of children) {
 
-        const child = elements.get(childId);
+            const child = elements.get(childId);
 
-        if (child) {
+            if (child) {
 
-          html += renderElement(child);
+              html += renderElement(child);
 
-        }
+            }
 
-      }
+          }
 
-      html += '</div>';
+          html += '</div>';
 
-      return html;
+          return html;
 
-    },
+        },
 
 
 
-    Label: (el) => {
+        Label: (el) => {
 
-      const hasLabel = el.label && el.label.trim().length > 0;
+          const hasLabel = el.label && el.label.trim().length > 0;
 
-      const hasValue = el.value.data && el.value.data.trim().length > 0;
+          const hasValue = el.value.data && el.value.data.trim().length > 0;
 
-      
 
-      // If both label and value are empty, render nothing
 
-      if (!hasLabel && !hasValue) {
+          // If both label and value are empty, render nothing
 
-        return '';
+          if (!hasLabel && !hasValue) {
 
-      }
+            return '';
 
-      
+          }
 
-      if (hasLabel) {
 
-        return `<div class="widget-row" data-id="${esc(el.id)}">
+
+          if (hasLabel) {
+
+            return `<div class="widget-row" data-id="${esc(el.id)}">
 
           <span class="widget-label">${esc(el.label)}</span>
 
@@ -3528,61 +3757,61 @@
 
         </div>`;
 
-      }
+          }
 
-      // Full-width text when no label (prevents duplication)
+          // Full-width text when no label (prevents duplication)
 
-      return `<div class="widget-row" data-id="${esc(el.id)}">
+          return `<div class="widget-row" data-id="${esc(el.id)}">
 
         <span class="label-text" style="flex:1;padding:0 16px;">${esc(el.value.data)}</span>
 
       </div>`;
 
-    },
+        },
 
 
 
-    LabelInline: (el) => {
+        LabelInline: (el) => {
 
-      // Inline label for horizontal layouts - no wrapping, compact
+          // Inline label for horizontal layouts - no wrapping, compact
 
-      return `<span class="label-inline" data-id="${esc(el.id)}">${esc(el.value.data)}</span>`;
+          return `<span class="label-inline" data-id="${esc(el.id)}">${esc(el.value.data)}</span>`;
 
-    },
-
-
+        },
 
 
 
 
 
-    Separator: (_el) => {
-
-      return `<div class="separator"></div>`;
-
-    },
 
 
+        Separator: (_el) => {
 
-    Section: (el) => {
+          return `<div class="separator"></div>`;
 
-      return `<div class="section-header" data-id="${esc(el.id)}" onclick="wgui.toggleSection(this)"><span>${esc(el.label)}</span><span class="section-toggle">&#9660;</span></div>`;
-
-    },
+        },
 
 
 
-    ProgressBar: (el) => {
+        Section: (el) => {
 
-      const val = el.value.data;
+          return `<div class="section-header" data-id="${esc(el.id)}" onclick="wgui.toggleSection(this)"><span>${esc(el.label)}</span><span class="section-toggle">&#9660;</span></div>`;
 
-      const pct = Math.round(val * 100);
+        },
 
-      const accent = el.meta.accent || 'coral';
 
-      const subtitle = el.meta.subtitle || '';
 
-      return `<div class="widget-row" data-id="${esc(el.id)}">
+        ProgressBar: (el) => {
+
+          const val = el.value.data;
+
+          const pct = Math.round(val * 100);
+
+          const accent = el.meta.accent || 'coral';
+
+          const subtitle = el.meta.subtitle || '';
+
+          return `<div class="widget-row" data-id="${esc(el.id)}">
 
         <div class="progress-container ${accent}" style="flex: 1;">
 
@@ -3606,17 +3835,17 @@
 
       </div>`;
 
-    },
+        },
 
 
 
-    Stat: (el) => {
+        Stat: (el) => {
 
-      const accent = el.meta.accent || 'coral';
+          const accent = el.meta.accent || 'coral';
 
-      const data = el.value.data;
+          const data = el.value.data;
 
-      return `<div class="widget-row" data-id="${esc(el.id)}">
+          return `<div class="widget-row" data-id="${esc(el.id)}">
 
         <div class="stat-card ${accent}" style="flex: 1;">
 
@@ -3630,19 +3859,19 @@
 
       </div>`;
 
-    },
+        },
 
 
 
-    Status: (el) => {
+        Status: (el) => {
 
-      const data = el.value.data;
+          const data = el.value.data;
 
-      const color = data.active ? (data.activeColor || 'green') : (data.inactiveColor || 'red');
+          const color = data.active ? (data.activeColor || 'green') : (data.inactiveColor || 'red');
 
-      const text = data.active ? (data.activeText || 'Active') : (data.inactiveText || 'Inactive');
+          const text = data.active ? (data.activeText || 'Active') : (data.inactiveText || 'Inactive');
 
-      return `<div class="widget-row" data-id="${esc(el.id)}">
+          return `<div class="widget-row" data-id="${esc(el.id)}">
 
         <span class="widget-label">${esc(el.label)}</span>
 
@@ -3660,25 +3889,25 @@
 
       </div>`;
 
-    },
+        },
 
 
 
-    MiniChart: (el) => {
+        MiniChart: (el) => {
 
-      const accent = el.meta.accent || 'coral';
+          const accent = el.meta.accent || 'coral';
 
-      const data = el.value.data;
+          const data = el.value.data;
 
-      const currentValue = Array.isArray(data.values) && data.values.length > 0 
+          const currentValue = Array.isArray(data.values) && data.values.length > 0
 
-        ? data.values[data.values.length - 1] 
+            ? data.values[data.values.length - 1]
 
-        : (data.current || 0);
+            : (data.current || 0);
 
-      const unit = data.unit || '';
+          const unit = data.unit || '';
 
-      return `<div class="widget-row" data-id="${esc(el.id)}">
+          return `<div class="widget-row" data-id="${esc(el.id)}">
 
         <div class="mini-chart ${accent}" style="flex: 1;">
 
@@ -3696,75 +3925,75 @@
 
       </div>`;
 
-    },
+        },
 
 
 
-    Grid: (el) => {
+        Grid: (el) => {
 
-      const data = el.value.data || {};
+          const data = el.value.data || {};
 
-      const cols = data.cols || 2;
+          const cols = data.cols || 2;
 
-      const children = data.children || [];
+          const children = data.children || [];
 
-      let html = `<div class="grid grid-${cols}">`;
+          let html = `<div class="grid grid-${cols}">`;
 
-      for (const childId of children) {
+          for (const childId of children) {
 
-        const child = elements.get(childId);
+            const child = elements.get(childId);
 
-        if (child) {
+            if (child) {
 
-          html += renderElement(child);
+              html += renderElement(child);
 
-        }
+            }
 
-      }
+          }
 
-      html += '</div>';
+          html += '</div>';
 
-      return html;
+          return html;
 
-    },
+        },
 
 
 
-    Plot: (el) => {
+        Plot: (el) => {
 
-      const data = el.value.data || {};
+          const data = el.value.data || {};
 
-      const series = data.series || [];
+          const series = data.series || [];
 
-      const xLabel = data.x_label || '';
+          const xLabel = data.x_label || '';
 
-      const yLabel = data.y_label || '';
+          const yLabel = data.y_label || '';
 
-      
 
-      // Use first series color as accent
 
-      const accent = series.length > 0 ? series[0].color : 'coral';
+          // Use first series color as accent
 
-      
+          const accent = series.length > 0 ? series[0].color : 'coral';
 
-      // Build legend
 
-      let legendHtml = '';
 
-      if (series.length > 1) {
+          // Build legend
 
-        legendHtml = '<div class="plot-legend">' + 
+          let legendHtml = '';
 
-          series.map(s => `<div class="plot-legend-item"><div class="plot-legend-color" style="background:var(--${s.color})"></div>${esc(s.name)}</div>`).join('') +
+          if (series.length > 1) {
 
-          '</div>';
+            legendHtml = '<div class="plot-legend">' +
 
-      }
+              series.map(s => `<div class="plot-legend-item"><div class="plot-legend-color" style="background:var(--${s.color})"></div>${esc(s.name)}</div>`).join('') +
 
-      
+              '</div>';
 
-      return `<div class="widget-row" data-id="${esc(el.id)}">
+          }
+
+
+
+          return `<div class="widget-row" data-id="${esc(el.id)}">
 
         <div class="plot-container ${accent}" style="flex: 1;">
 
@@ -3790,923 +4019,947 @@
 
       </div>`;
 
-    }
+        },
 
-  };
+        Image: (el) => {
 
+          const data = el.value.data;
 
+          const style = [];
 
-  // ── Mini Chart Canvas Drawing ──────────────────────
+          if (data.width) style.push(`width:${data.width}px`);
 
-  function initMiniChart(el) {
+          if (data.height) style.push(`height:${data.height}px`);
 
-    const canvas = document.getElementById(`chart-${el.id}`);
+          const styleAttr = style.length ? ` style="${style.join(';')}"` : '';
 
-    if (!canvas) return;
+          const labelHtml = el.label ? `<div class="image-widget-label">${esc(el.label)}</div>` : '';
 
-    
+          return `<div class="widget-row" data-id="${esc(el.id)}">
 
-    // Check retry count to prevent infinite loops
+        <div class="image-widget" style="flex:1;">
 
-    const retryCount = initRetryCounts.get(el.id) || 0;
+          ${labelHtml}
 
-    if (retryCount > MAX_INIT_RETRIES) {
+          <img src="${esc(data.data)}"${styleAttr} alt="${esc(el.label)}">
 
-      initRetryCounts.delete(el.id);
+        </div>
 
-      return; // Give up after too many retries
-
-    }
-
-    
-
-    const ctx = canvas.getContext('2d');
-
-    const rect = canvas.getBoundingClientRect();
-
-    
-
-    // If dimensions are 0, the DOM isn't ready yet - retry on next frame
-
-    if (rect.width === 0 || rect.height === 0) {
-
-      initRetryCounts.set(el.id, retryCount + 1);
-
-      requestAnimationFrame(() => initMiniChart(el));
-
-      return;
-
-    }
-
-    
-
-    // Success - clear retry count
-
-    initRetryCounts.delete(el.id);
-
-    
-
-    canvas.width = rect.width * window.devicePixelRatio;
-
-    canvas.height = rect.height * window.devicePixelRatio;
-
-    ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
-
-    
-
-    chartInstances.set(el.id, { canvas, ctx, el });
-
-    drawMiniChart(el, canvas, ctx);
-
-  }
-
-
-
-  function updateMiniChart(el) {
-
-    let instance = chartInstances.get(el.id);
-
-    if (!instance) {
-
-      // Canvas may not exist yet - try to find it first
-
-      const canvas = document.getElementById(`chart-${el.id}`);
-
-      if (canvas) {
-
-        initMiniChart(el);
-
-        instance = chartInstances.get(el.id);
-
-      }
-
-      if (!instance) return; // Still not initialized
-
-    }
-
-    if (instance) {
-
-      drawMiniChart(el, instance.canvas, instance.ctx);
-
-    }
-
-    // Update the displayed value text
-
-    const row = document.querySelector(`[data-id="${CSS.escape(el.id)}"]`);
-
-    if (row) {
-
-      const valSpan = row.querySelector('.mini-chart-value');
-
-      if (valSpan) {
-
-        const data = el.value.data;
-
-        const values = data.values || [];
-
-        const current = values.length > 0 ? values[values.length - 1] : (data.current || 0);
-
-        const unit = data.unit || '';
-
-        valSpan.textContent = `${current}${unit}`;
-
-      }
-
-    }
-
-  }
-
-
-
-  function drawMiniChart(el, canvas, ctx) {
-
-    const data = el.value.data;
-
-    const values = data.values || [];
-
-    if (values.length < 2) return;
-
-
-
-    const width = canvas.width / window.devicePixelRatio;
-
-    const height = canvas.height / window.devicePixelRatio;
-
-    const accent = getComputedStyle(canvas.closest('.mini-chart')).getPropertyValue('--accent').trim() || '#e06c5c';
-
-
-
-    ctx.clearRect(0, 0, width, height);
-
-
-
-    const min = Math.min(...values);
-
-    const max = Math.max(...values);
-
-    const range = max - min || 1;
-
-    const padding = 4;
-
-
-
-    // Draw grid lines
-
-    ctx.strokeStyle = 'rgba(128, 128, 128, 0.1)';
-
-    ctx.lineWidth = 1;
-
-    for (let i = 0; i <= 3; i++) {
-
-      const y = padding + (height - 2 * padding) * (i / 3);
-
-      ctx.beginPath();
-
-      ctx.moveTo(0, y);
-
-      ctx.lineTo(width, y);
-
-      ctx.stroke();
-
-    }
-
-
-
-    // Draw area under the line
-
-    const gradient = ctx.createLinearGradient(0, 0, 0, height);
-
-    gradient.addColorStop(0, accent + '40');
-
-    gradient.addColorStop(1, accent + '00');
-
-    
-
-    ctx.beginPath();
-
-    ctx.moveTo(0, height - padding - ((values[0] - min) / range) * (height - 2 * padding));
-
-    for (let i = 1; i < values.length; i++) {
-
-      const x = (i / (values.length - 1)) * width;
-
-      const y = height - padding - ((values[i] - min) / range) * (height - 2 * padding);
-
-      ctx.lineTo(x, y);
-
-    }
-
-    ctx.lineTo(width, height);
-
-    ctx.lineTo(0, height);
-
-    ctx.closePath();
-
-    ctx.fillStyle = gradient;
-
-    ctx.fill();
-
-
-
-    // Draw the line
-
-    ctx.beginPath();
-
-    ctx.strokeStyle = accent;
-
-    ctx.lineWidth = 2;
-
-    ctx.lineJoin = 'round';
-
-    for (let i = 0; i < values.length; i++) {
-
-      const x = (i / (values.length - 1)) * width;
-
-      const y = height - padding - ((values[i] - min) / range) * (height - 2 * padding);
-
-      if (i === 0) ctx.moveTo(x, y);
-
-      else ctx.lineTo(x, y);
-
-    }
-
-    ctx.stroke();
-
-  }
-
-
-
-  // ── Event Handlers ─────────────────────────────────
-
-  window.wgui = {
-
-    toggleCard(headerEl) {
-
-      headerEl.parentElement.classList.toggle('collapsed');
-
-    },
-
-
-
-    onSlider(id, rawVal, inputEl) {
-
-      const el = elements.get(id);
-
-      if (!el) return;
-
-      recentlyInteracted.set(id, Date.now());
-
-      const isInt = el.value.type === 'Int';
-
-      const val = isInt ? parseInt(rawVal) : parseFloat(rawVal);
-
-      el.value.data = val;
-
-      const display = inputEl.parentElement.querySelector('.slider-value');
-
-      if (display) display.textContent = formatNum(val, el.meta.step);
-
-      send({ type: 'set', id, value: isInt ? { type: 'Int', data: val } : { type: 'Float', data: val } });
-
-    },
-
-
-
-    onCheckbox(id, wrapperEl) {
-
-      const el = elements.get(id);
-
-      if (!el) return;
-
-      el.value.data = !el.value.data;
-
-      const toggle = wrapperEl.querySelector('.toggle-switch');
-
-      toggle.classList.toggle('checked');
-
-      const label = wrapperEl.querySelector('.checkbox-label');
-
-      if (label) label.textContent = el.value.data ? 'On' : 'Off';
-
-      send({ type: 'set', id, value: { type: 'Bool', data: el.value.data } });
-
-    },
-
-
-
-    onColor3(id, hex) {
-
-      const rgb = hexToRgb(hex);
-
-      const el = elements.get(id);
-
-      if (el) el.value.data = rgb;
-
-      const row = document.querySelector(`[data-id="${CSS.escape(id)}"]`);
-
-      if (row) row.querySelector('.color-hex').textContent = hex;
-
-      send({ type: 'set', id, value: { type: 'Color3', data: rgb } });
-
-    },
-
-
-
-    onColor4(id, hex) {
-
-      const rgb = hexToRgb(hex);
-
-      const el = elements.get(id);
-
-      if (!el) return;
-
-      const a = el.value.data[3] ?? 1.0;
-
-      el.value.data = [...rgb, a];
-
-      const row = document.querySelector(`[data-id="${CSS.escape(id)}"]`);
-
-      if (row) row.querySelector('.color-hex').textContent = hex;
-
-      send({ type: 'set', id, value: { type: 'Color4', data: el.value.data } });
-
-    },
-
-
-
-    onColor4Alpha(id, alphaStr) {
-
-      const el = elements.get(id);
-
-      if (!el) return;
-
-      el.value.data[3] = parseFloat(alphaStr);
-
-      const row = document.querySelector(`[data-id="${CSS.escape(id)}"]`);
-
-      if (row) {
-
-        const alphaText = row.querySelector('.alpha-text');
-
-        if (alphaText) alphaText.textContent = `α${el.value.data[3].toFixed(2)}`;
-
-      }
-
-      send({ type: 'set', id, value: { type: 'Color4', data: el.value.data } });
-
-    },
-
-
-
-    onText(id, val) {
-
-      const el = elements.get(id);
-
-      if (el) el.value.data = val;
-
-      send({ type: 'set', id, value: { type: 'String', data: val } });
-
-    },
-
-
-
-    onDropdown(id, selectedStr, selectEl) {
-
-      const selected = parseInt(selectedStr);
-
-      const el = elements.get(id);
-
-      if (!el) return;
-
-      el.value.data.selected = selected;
-
-      send({ type: 'set', id, value: { type: 'Enum', data: { selected, options: el.value.data.options } } });
-
-    },
-
-
-
-    onButton(id) {
-
-      send({ type: 'set', id, value: { type: 'Button', data: true } });
-
-    },
-
-
-
-    editSliderValue(id, spanEl) {
-
-      const el = elements.get(id);
-
-      if (!el) return;
-
-      const val = el.value.data;
-
-      const step = el.meta.step ?? 0.01;
-
-      const input = document.createElement('input');
-
-      input.type = 'text';
-
-      input.className = 'slider-value-input';
-
-      input.value = formatNum(val, step);
-
-      spanEl.replaceWith(input);
-
-      input.focus();
-
-      input.select();
-
-
-
-      const commit = () => {
-
-        const parsed = parseFloat(input.value);
-
-        if (!isNaN(parsed)) {
-
-          const min = el.meta.min ?? 0;
-
-          const max = el.meta.max ?? 1;
-
-          const clamped = Math.min(max, Math.max(min, parsed));
-
-          const isInt = el.value.type === 'Int';
-
-          el.value.data = isInt ? Math.round(clamped) : clamped;
-
-          send({ type: 'set', id, value: isInt ? { type: 'Int', data: el.value.data } : { type: 'Float', data: el.value.data } });
-
-          // Update the slider thumb
-
-          const row = document.querySelector(`[data-id="${CSS.escape(id)}"]`);
-
-          if (row) {
-
-            const slider = row.querySelector('input[type="range"]');
-
-            if (slider) slider.value = el.value.data;
-
-          }
+      </div>`;
 
         }
-
-        const span = document.createElement('span');
-
-        span.className = 'slider-value';
-
-        span.textContent = formatNum(el.value.data, step);
-
-        span.onclick = () => wgui.editSliderValue(id, span);
-
-        input.replaceWith(span);
 
       };
 
 
 
-      input.addEventListener('blur', commit);
+      // ── Mini Chart Canvas Drawing ──────────────────────
 
-      input.addEventListener('keydown', (e) => {
+      function initMiniChart(el) {
 
-        if (e.key === 'Enter') { e.preventDefault(); input.blur(); }
+        const canvas = document.getElementById(`chart-${el.id}`);
 
-        if (e.key === 'Escape') { input.value = formatNum(val, step); input.blur(); }
-
-      });
-
-    },
+        if (!canvas) return;
 
 
 
-    toggleSection(headerEl) {
+        // Check retry count to prevent infinite loops
 
-      const collapsed = headerEl.classList.toggle('collapsed');
+        const retryCount = initRetryCounts.get(el.id) || 0;
 
-      // Toggle visibility of all sibling elements until next section-header
+        if (retryCount > MAX_INIT_RETRIES) {
 
-      let sibling = headerEl.nextElementSibling;
+          initRetryCounts.delete(el.id);
 
-      while (sibling && !sibling.classList.contains('section-header')) {
-
-        if (collapsed) {
-
-          sibling.classList.add('section-child', 'section-hidden');
-
-        } else {
-
-          sibling.classList.remove('section-hidden');
+          return; // Give up after too many retries
 
         }
 
-        sibling = sibling.nextElementSibling;
+
+
+        const ctx = canvas.getContext('2d');
+
+        const rect = canvas.getBoundingClientRect();
+
+
+
+        // If dimensions are 0, the DOM isn't ready yet - retry on next frame
+
+        if (rect.width === 0 || rect.height === 0) {
+
+          initRetryCounts.set(el.id, retryCount + 1);
+
+          requestAnimationFrame(() => initMiniChart(el));
+
+          return;
+
+        }
+
+
+
+        // Success - clear retry count
+
+        initRetryCounts.delete(el.id);
+
+
+
+        canvas.width = rect.width * window.devicePixelRatio;
+
+        canvas.height = rect.height * window.devicePixelRatio;
+
+        ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+
+
+
+        chartInstances.set(el.id, { canvas, ctx, el });
+
+        drawMiniChart(el, canvas, ctx);
 
       }
 
-    }
 
-  };
 
+      function updateMiniChart(el) {
 
+        let instance = chartInstances.get(el.id);
 
-  // ── Helpers ────────────────────────────────────────
+        if (!instance) {
 
-  function esc(s) {
+          // Canvas may not exist yet - try to find it first
 
-    if (s == null) return '';
+          const canvas = document.getElementById(`chart-${el.id}`);
 
-    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+          if (canvas) {
 
-  }
+            initMiniChart(el);
 
+            instance = chartInstances.get(el.id);
 
+          }
 
-  function escJs(s) {
+          if (!instance) return; // Still not initialized
 
-    return String(s).replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+        }
 
-  }
+        if (instance) {
 
+          drawMiniChart(el, instance.canvas, instance.ctx);
 
+        }
 
-  function formatNum(v, step) {
+        // Update the displayed value text
 
-    const num = Number(v);
+        const row = document.querySelector(`[data-id="${CSS.escape(el.id)}"]`);
 
-    
+        if (row) {
 
-    // Handle scientific notation for very small or very large numbers
+          const valSpan = row.querySelector('.mini-chart-value');
 
-    const absVal = Math.abs(num);
+          if (valSpan) {
 
-    if ((absVal > 0 && absVal < 0.0001) || absVal >= 10000000) {
+            const data = el.value.data;
 
-      return num.toExponential(3);
+            const values = data.values || [];
 
-    }
+            const current = values.length > 0 ? values[values.length - 1] : (data.current || 0);
 
-    
+            const unit = data.unit || '';
 
-    // If step is provided and >= 1, show as integer
+            valSpan.textContent = `${current}${unit}`;
 
-    if (step && step >= 1) return String(Math.round(num));
+          }
 
-    
-
-    // If step is provided, use appropriate decimal places
-
-    if (step && step > 0) {
-
-      const decimals = Math.ceil(-Math.log10(step));
-
-      return num.toFixed(Math.max(0, Math.min(decimals, 4)));
-
-    }
-
-    
-
-    // Smart formatting based on value magnitude
-
-    if (absVal >= 100) return num.toFixed(1);
-
-    if (absVal >= 1) return num.toFixed(2);
-
-    if (absVal >= 0.01) return num.toFixed(3);
-
-    return num.toFixed(4);
-
-  }
-
-
-
-  function rgbToHex(arr) {
-
-    const r = Math.round((arr[0] ?? 0) * 255);
-
-    const g = Math.round((arr[1] ?? 0) * 255);
-
-    const b = Math.round((arr[2] ?? 0) * 255);
-
-    return '#' + [r, g, b].map(c => c.toString(16).padStart(2, '0')).join('');
-
-  }
-
-
-
-  function hexToRgb(hex) {
-
-    const r = parseInt(hex.slice(1, 3), 16) / 255;
-
-    const g = parseInt(hex.slice(3, 5), 16) / 255;
-
-    const b = parseInt(hex.slice(5, 7), 16) / 255;
-
-    return [r, g, b];
-
-  }
-
-
-
-  // Store current hover state for plots to prevent flicker during updates
-
-  const plotHoverState = new Map(); // el.id -> hoverIndex
-
-
-
-  // ── Plot Canvas Drawing ────────────────────────────
-
-  function initPlot(el) {
-
-    const canvas = document.getElementById(`plot-${el.id}`);
-
-    if (!canvas) return;
-
-    
-
-    // Check if already initialized - if so, just redraw
-
-    let instance = chartInstances.get(el.id);
-
-    if (instance && instance.type === 'plot') {
-
-      const scales = computePlotScales(el);
-
-      instance.scales = scales;
-
-      // Preserve hover state during redraw
-
-      const hoverIndex = plotHoverState.get(el.id) ?? -1;
-
-      drawPlot(el, canvas, instance.ctx, scales, hoverIndex);
-
-      return;
-
-    }
-
-    
-
-    // Check retry count to prevent infinite loops
-
-    const retryCount = initRetryCounts.get(el.id) || 0;
-
-    if (retryCount > MAX_INIT_RETRIES) {
-
-      initRetryCounts.delete(el.id);
-
-      return; // Give up after too many retries
-
-    }
-
-    
-
-    const ctx = canvas.getContext('2d');
-
-    const rect = canvas.getBoundingClientRect();
-
-    
-
-    // If dimensions are 0, the DOM isn't ready yet - retry on next frame
-
-    if (rect.width === 0 || rect.height === 0) {
-
-      initRetryCounts.set(el.id, retryCount + 1);
-
-      requestAnimationFrame(() => initPlot(el));
-
-      return;
-
-    }
-
-    
-
-    // Success - clear retry count
-
-    initRetryCounts.delete(el.id);
-
-    
-
-    canvas.width = rect.width * window.devicePixelRatio;
-
-    canvas.height = rect.height * window.devicePixelRatio;
-
-    ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
-
-    
-
-    // Create tooltip element - always fresh to avoid DOM issues
-
-    const tooltip = document.createElement('div');
-
-    tooltip.id = `tooltip-${el.id}`;
-
-    tooltip.className = 'plot-tooltip';
-
-    canvas.closest('.plot-container').appendChild(tooltip);
-
-    
-
-    // Store series scales for hover detection
-
-    const scales = computePlotScales(el);
-
-    chartInstances.set(el.id, { canvas, ctx, el, type: 'plot', tooltip, scales });
-
-    
-
-    // Add mouse event listeners
-
-    canvas.onmousemove = (e) => handlePlotHover(e, el, canvas, tooltip, scales);
-
-    canvas.onmouseleave = () => {
-
-      plotHoverState.delete(el.id);
-
-      tooltip.classList.remove('visible');
-
-      // Redraw to clear hover line
-
-      const instance = chartInstances.get(el.id);
-
-      if (instance) {
-
-        drawPlot(el, canvas, instance.ctx, instance.scales, -1);
+        }
 
       }
 
-    };
-
-    
-
-    drawPlot(el, canvas, ctx, scales);
-
-  }
 
 
+      function drawMiniChart(el, canvas, ctx) {
 
-  function computePlotScales(el) {
+        const data = el.value.data;
 
-    const data = el.value.data || {};
+        const values = data.values || [];
 
-    const series = data.series || [];
+        if (values.length < 2) return;
 
-    
 
-    // First, compute global scale for non-autoscale series
 
-    let globalMin = Infinity;
+        const width = canvas.width / window.devicePixelRatio;
 
-    let globalMax = -Infinity;
+        const height = canvas.height / window.devicePixelRatio;
 
-    let hasFixedScale = false;
+        const accent = getComputedStyle(canvas.closest('.mini-chart')).getPropertyValue('--accent').trim() || '#e06c5c';
 
-    
 
-    for (const s of series) {
 
-      const autoscale = s.autoscale !== false; // default true
+        ctx.clearRect(0, 0, width, height);
 
-      const values = s.values || [];
 
-      if (!autoscale && values.length > 0) {
-
-        globalMin = Math.min(globalMin, ...values);
-
-        globalMax = Math.max(globalMax, ...values);
-
-        hasFixedScale = true;
-
-      }
-
-    }
-
-    
-
-    if (hasFixedScale) {
-
-      globalMin = globalMin === Infinity ? 0 : globalMin;
-
-      globalMax = globalMax === -Infinity ? 1 : globalMax;
-
-    }
-
-    
-
-    const scales = [];
-
-    
-
-    for (const s of series) {
-
-      const autoscale = s.autoscale !== false; // default true
-
-      const values = s.values || [];
-
-      
-
-      if (values.length === 0) {
-
-        scales.push({ min: 0, max: 1, range: 1, autoscale });
-
-      } else if (!autoscale && hasFixedScale) {
-
-        // Use shared global scale
-
-        scales.push({
-
-          min: globalMin,
-
-          max: globalMax,
-
-          range: globalMax - globalMin || 1,
-
-          autoscale: false
-
-        });
-
-      } else {
-
-        // Individual autoscale
 
         const min = Math.min(...values);
 
         const max = Math.max(...values);
 
-        scales.push({
+        const range = max - min || 1;
 
-          min,
+        const padding = 4;
 
-          max,
 
-          range: max - min || 1,
 
-          autoscale: true
+        // Draw grid lines
 
-        });
+        ctx.strokeStyle = 'rgba(128, 128, 128, 0.1)';
+
+        ctx.lineWidth = 1;
+
+        for (let i = 0; i <= 3; i++) {
+
+          const y = padding + (height - 2 * padding) * (i / 3);
+
+          ctx.beginPath();
+
+          ctx.moveTo(0, y);
+
+          ctx.lineTo(width, y);
+
+          ctx.stroke();
+
+        }
+
+
+
+        // Draw area under the line
+
+        const gradient = ctx.createLinearGradient(0, 0, 0, height);
+
+        gradient.addColorStop(0, accent + '40');
+
+        gradient.addColorStop(1, accent + '00');
+
+
+
+        ctx.beginPath();
+
+        ctx.moveTo(0, height - padding - ((values[0] - min) / range) * (height - 2 * padding));
+
+        for (let i = 1; i < values.length; i++) {
+
+          const x = (i / (values.length - 1)) * width;
+
+          const y = height - padding - ((values[i] - min) / range) * (height - 2 * padding);
+
+          ctx.lineTo(x, y);
+
+        }
+
+        ctx.lineTo(width, height);
+
+        ctx.lineTo(0, height);
+
+        ctx.closePath();
+
+        ctx.fillStyle = gradient;
+
+        ctx.fill();
+
+
+
+        // Draw the line
+
+        ctx.beginPath();
+
+        ctx.strokeStyle = accent;
+
+        ctx.lineWidth = 2;
+
+        ctx.lineJoin = 'round';
+
+        for (let i = 0; i < values.length; i++) {
+
+          const x = (i / (values.length - 1)) * width;
+
+          const y = height - padding - ((values[i] - min) / range) * (height - 2 * padding);
+
+          if (i === 0) ctx.moveTo(x, y);
+
+          else ctx.lineTo(x, y);
+
+        }
+
+        ctx.stroke();
 
       }
 
-    }
-
-    return scales;
-
-  }
 
 
+      // ── Event Handlers ─────────────────────────────────
 
-  function handlePlotHover(e, el, canvas, tooltip, scales) {
+      window.wgui = {
 
-    const data = el.value.data || {};
+        toggleCard(headerEl) {
 
-    const series = data.series || [];
+          headerEl.parentElement.classList.toggle('collapsed');
 
-    if (series.length === 0 || !series[0].values) return;
+        },
 
-    
 
-    const rect = canvas.getBoundingClientRect();
 
-    const x = e.clientX - rect.left;
+        onSlider(id, rawVal, inputEl) {
 
-    const padding = { top: 10, right: 10, bottom: 10, left: 10 };
+          const el = elements.get(id);
 
-    const plotWidth = rect.width - padding.left - padding.right;
+          if (!el) return;
 
-    
+          recentlyInteracted.set(id, Date.now());
 
-    // Find nearest data index
+          const isInt = el.value.type === 'Int';
 
-    const dataIndex = Math.round(((x - padding.left) / plotWidth) * (series[0].values.length - 1));
+          const val = isInt ? parseInt(rawVal) : parseFloat(rawVal);
 
-    const clampedIndex = Math.max(0, Math.min(dataIndex, series[0].values.length - 1));
+          el.value.data = val;
 
-    
+          const display = inputEl.parentElement.querySelector('.slider-value');
 
-    // Position tooltip
+          if (display) display.textContent = formatNum(val, el.meta.step);
 
-    const tooltipX = Math.min(x + 16, rect.width - 160);
+          send({ type: 'set', id, value: isInt ? { type: 'Int', data: val } : { type: 'Float', data: val } });
 
-    const tooltipY = 40;
+        },
 
-    tooltip.style.left = tooltipX + 'px';
 
-    tooltip.style.top = tooltipY + 'px';
 
-    
+        onCheckbox(id, wrapperEl) {
 
-    // Build tooltip content
+          const el = elements.get(id);
 
-    let tooltipHtml = `<div class="plot-tooltip-title">Frame ${clampedIndex}</div>`;
+          if (!el) return;
 
-    for (let i = 0; i < series.length; i++) {
+          el.value.data = !el.value.data;
 
-      const s = series[i];
+          const toggle = wrapperEl.querySelector('.toggle-switch');
 
-      const value = s.values[clampedIndex];
+          toggle.classList.toggle('checked');
 
-      const colorVar = getComputedStyle(canvas.closest('.plot-container')).getPropertyValue(`--${s.color}`).trim() || '#e06c5c';
+          const label = wrapperEl.querySelector('.checkbox-label');
 
-      tooltipHtml += `
+          if (label) label.textContent = el.value.data ? 'On' : 'Off';
+
+          send({ type: 'set', id, value: { type: 'Bool', data: el.value.data } });
+
+        },
+
+
+
+        onColor3(id, hex) {
+
+          const rgb = hexToRgb(hex);
+
+          const el = elements.get(id);
+
+          if (el) el.value.data = rgb;
+
+          const row = document.querySelector(`[data-id="${CSS.escape(id)}"]`);
+
+          if (row) row.querySelector('.color-hex').textContent = hex;
+
+          send({ type: 'set', id, value: { type: 'Color3', data: rgb } });
+
+        },
+
+
+
+        onColor4(id, hex) {
+
+          const rgb = hexToRgb(hex);
+
+          const el = elements.get(id);
+
+          if (!el) return;
+
+          const a = el.value.data[3] ?? 1.0;
+
+          el.value.data = [...rgb, a];
+
+          const row = document.querySelector(`[data-id="${CSS.escape(id)}"]`);
+
+          if (row) row.querySelector('.color-hex').textContent = hex;
+
+          send({ type: 'set', id, value: { type: 'Color4', data: el.value.data } });
+
+        },
+
+
+
+        onColor4Alpha(id, alphaStr) {
+
+          const el = elements.get(id);
+
+          if (!el) return;
+
+          el.value.data[3] = parseFloat(alphaStr);
+
+          const row = document.querySelector(`[data-id="${CSS.escape(id)}"]`);
+
+          if (row) {
+
+            const alphaText = row.querySelector('.alpha-text');
+
+            if (alphaText) alphaText.textContent = `α${el.value.data[3].toFixed(2)}`;
+
+          }
+
+          send({ type: 'set', id, value: { type: 'Color4', data: el.value.data } });
+
+        },
+
+
+
+        onText(id, val) {
+
+          const el = elements.get(id);
+
+          if (el) el.value.data = val;
+
+          send({ type: 'set', id, value: { type: 'String', data: val } });
+
+        },
+
+
+
+        onDropdown(id, selectedStr, selectEl) {
+
+          const selected = parseInt(selectedStr);
+
+          const el = elements.get(id);
+
+          if (!el) return;
+
+          el.value.data.selected = selected;
+
+          send({ type: 'set', id, value: { type: 'Enum', data: { selected, options: el.value.data.options } } });
+
+        },
+
+
+
+        onButton(id) {
+
+          send({ type: 'set', id, value: { type: 'Button', data: true } });
+
+        },
+
+
+
+        editSliderValue(id, spanEl) {
+
+          const el = elements.get(id);
+
+          if (!el) return;
+
+          const val = el.value.data;
+
+          const step = el.meta.step ?? 0.01;
+
+          const input = document.createElement('input');
+
+          input.type = 'text';
+
+          input.className = 'slider-value-input';
+
+          input.value = formatNum(val, step);
+
+          spanEl.replaceWith(input);
+
+          input.focus();
+
+          input.select();
+
+
+
+          const commit = () => {
+
+            const parsed = parseFloat(input.value);
+
+            if (!isNaN(parsed)) {
+
+              const min = el.meta.min ?? 0;
+
+              const max = el.meta.max ?? 1;
+
+              const clamped = Math.min(max, Math.max(min, parsed));
+
+              const isInt = el.value.type === 'Int';
+
+              el.value.data = isInt ? Math.round(clamped) : clamped;
+
+              send({ type: 'set', id, value: isInt ? { type: 'Int', data: el.value.data } : { type: 'Float', data: el.value.data } });
+
+              // Update the slider thumb
+
+              const row = document.querySelector(`[data-id="${CSS.escape(id)}"]`);
+
+              if (row) {
+
+                const slider = row.querySelector('input[type="range"]');
+
+                if (slider) slider.value = el.value.data;
+
+              }
+
+            }
+
+            const span = document.createElement('span');
+
+            span.className = 'slider-value';
+
+            span.textContent = formatNum(el.value.data, step);
+
+            span.onclick = () => wgui.editSliderValue(id, span);
+
+            input.replaceWith(span);
+
+          };
+
+
+
+          input.addEventListener('blur', commit);
+
+          input.addEventListener('keydown', (e) => {
+
+            if (e.key === 'Enter') { e.preventDefault(); input.blur(); }
+
+            if (e.key === 'Escape') { input.value = formatNum(val, step); input.blur(); }
+
+          });
+
+        },
+
+
+
+        toggleSection(headerEl) {
+
+          const collapsed = headerEl.classList.toggle('collapsed');
+
+          // Toggle visibility of all sibling elements until next section-header
+
+          let sibling = headerEl.nextElementSibling;
+
+          while (sibling && !sibling.classList.contains('section-header')) {
+
+            if (collapsed) {
+
+              sibling.classList.add('section-child', 'section-hidden');
+
+            } else {
+
+              sibling.classList.remove('section-hidden');
+
+            }
+
+            sibling = sibling.nextElementSibling;
+
+          }
+
+        }
+
+      };
+
+
+
+      // ── Helpers ────────────────────────────────────────
+
+      function esc(s) {
+
+        if (s == null) return '';
+
+        return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+      }
+
+
+
+      function escJs(s) {
+
+        return String(s).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+
+      }
+
+
+
+      function formatNum(v, step) {
+
+        const num = Number(v);
+
+
+
+        // Handle scientific notation for very small or very large numbers
+
+        const absVal = Math.abs(num);
+
+        if ((absVal > 0 && absVal < 0.0001) || absVal >= 10000000) {
+
+          return num.toExponential(3);
+
+        }
+
+
+
+        // If step is provided and >= 1, show as integer
+
+        if (step && step >= 1) return String(Math.round(num));
+
+
+
+        // If step is provided, use appropriate decimal places
+
+        if (step && step > 0) {
+
+          const decimals = Math.ceil(-Math.log10(step));
+
+          return num.toFixed(Math.max(0, Math.min(decimals, 4)));
+
+        }
+
+
+
+        // Smart formatting based on value magnitude
+
+        if (absVal >= 100) return num.toFixed(1);
+
+        if (absVal >= 1) return num.toFixed(2);
+
+        if (absVal >= 0.01) return num.toFixed(3);
+
+        return num.toFixed(4);
+
+      }
+
+
+
+      function rgbToHex(arr) {
+
+        const r = Math.round((arr[0] ?? 0) * 255);
+
+        const g = Math.round((arr[1] ?? 0) * 255);
+
+        const b = Math.round((arr[2] ?? 0) * 255);
+
+        return '#' + [r, g, b].map(c => c.toString(16).padStart(2, '0')).join('');
+
+      }
+
+
+
+      function hexToRgb(hex) {
+
+        const r = parseInt(hex.slice(1, 3), 16) / 255;
+
+        const g = parseInt(hex.slice(3, 5), 16) / 255;
+
+        const b = parseInt(hex.slice(5, 7), 16) / 255;
+
+        return [r, g, b];
+
+      }
+
+
+
+      // Store current hover state for plots to prevent flicker during updates
+
+      const plotHoverState = new Map(); // el.id -> hoverIndex
+
+
+
+      // ── Plot Canvas Drawing ────────────────────────────
+
+      function initPlot(el) {
+
+        const canvas = document.getElementById(`plot-${el.id}`);
+
+        if (!canvas) return;
+
+
+
+        // Check if already initialized - if so, just redraw
+
+        let instance = chartInstances.get(el.id);
+
+        if (instance && instance.type === 'plot') {
+
+          const scales = computePlotScales(el);
+
+          instance.scales = scales;
+
+          // Preserve hover state during redraw
+
+          const hoverIndex = plotHoverState.get(el.id) ?? -1;
+
+          drawPlot(el, canvas, instance.ctx, scales, hoverIndex);
+
+          return;
+
+        }
+
+
+
+        // Check retry count to prevent infinite loops
+
+        const retryCount = initRetryCounts.get(el.id) || 0;
+
+        if (retryCount > MAX_INIT_RETRIES) {
+
+          initRetryCounts.delete(el.id);
+
+          return; // Give up after too many retries
+
+        }
+
+
+
+        const ctx = canvas.getContext('2d');
+
+        const rect = canvas.getBoundingClientRect();
+
+
+
+        // If dimensions are 0, the DOM isn't ready yet - retry on next frame
+
+        if (rect.width === 0 || rect.height === 0) {
+
+          initRetryCounts.set(el.id, retryCount + 1);
+
+          requestAnimationFrame(() => initPlot(el));
+
+          return;
+
+        }
+
+
+
+        // Success - clear retry count
+
+        initRetryCounts.delete(el.id);
+
+
+
+        canvas.width = rect.width * window.devicePixelRatio;
+
+        canvas.height = rect.height * window.devicePixelRatio;
+
+        ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+
+
+
+        // Create tooltip element - always fresh to avoid DOM issues
+
+        const tooltip = document.createElement('div');
+
+        tooltip.id = `tooltip-${el.id}`;
+
+        tooltip.className = 'plot-tooltip';
+
+        canvas.closest('.plot-container').appendChild(tooltip);
+
+
+
+        // Store series scales for hover detection
+
+        const scales = computePlotScales(el);
+
+        chartInstances.set(el.id, { canvas, ctx, el, type: 'plot', tooltip, scales });
+
+
+
+        // Add mouse event listeners
+
+        canvas.onmousemove = (e) => handlePlotHover(e, el, canvas, tooltip, scales);
+
+        canvas.onmouseleave = () => {
+
+          plotHoverState.delete(el.id);
+
+          tooltip.classList.remove('visible');
+
+          // Redraw to clear hover line
+
+          const instance = chartInstances.get(el.id);
+
+          if (instance) {
+
+            drawPlot(el, canvas, instance.ctx, instance.scales, -1);
+
+          }
+
+        };
+
+
+
+        drawPlot(el, canvas, ctx, scales);
+
+      }
+
+
+
+      function computePlotScales(el) {
+
+        const data = el.value.data || {};
+
+        const series = data.series || [];
+
+
+
+        // First, compute global scale for non-autoscale series
+
+        let globalMin = Infinity;
+
+        let globalMax = -Infinity;
+
+        let hasFixedScale = false;
+
+
+
+        for (const s of series) {
+
+          const autoscale = s.autoscale !== false; // default true
+
+          const values = s.values || [];
+
+          if (!autoscale && values.length > 0) {
+
+            globalMin = Math.min(globalMin, ...values);
+
+            globalMax = Math.max(globalMax, ...values);
+
+            hasFixedScale = true;
+
+          }
+
+        }
+
+
+
+        if (hasFixedScale) {
+
+          globalMin = globalMin === Infinity ? 0 : globalMin;
+
+          globalMax = globalMax === -Infinity ? 1 : globalMax;
+
+        }
+
+
+
+        const scales = [];
+
+
+
+        for (const s of series) {
+
+          const autoscale = s.autoscale !== false; // default true
+
+          const values = s.values || [];
+
+
+
+          if (values.length === 0) {
+
+            scales.push({ min: 0, max: 1, range: 1, autoscale });
+
+          } else if (!autoscale && hasFixedScale) {
+
+            // Use shared global scale
+
+            scales.push({
+
+              min: globalMin,
+
+              max: globalMax,
+
+              range: globalMax - globalMin || 1,
+
+              autoscale: false
+
+            });
+
+          } else {
+
+            // Individual autoscale
+
+            const min = Math.min(...values);
+
+            const max = Math.max(...values);
+
+            scales.push({
+
+              min,
+
+              max,
+
+              range: max - min || 1,
+
+              autoscale: true
+
+            });
+
+          }
+
+        }
+
+        return scales;
+
+      }
+
+
+
+      function handlePlotHover(e, el, canvas, tooltip, scales) {
+
+        const data = el.value.data || {};
+
+        const series = data.series || [];
+
+        if (series.length === 0 || !series[0].values) return;
+
+
+
+        const rect = canvas.getBoundingClientRect();
+
+        const x = e.clientX - rect.left;
+
+        const padding = { top: 10, right: 10, bottom: 10, left: 10 };
+
+        const plotWidth = rect.width - padding.left - padding.right;
+
+
+
+        // Find nearest data index
+
+        const dataIndex = Math.round(((x - padding.left) / plotWidth) * (series[0].values.length - 1));
+
+        const clampedIndex = Math.max(0, Math.min(dataIndex, series[0].values.length - 1));
+
+
+
+        // Position tooltip
+
+        const tooltipX = Math.min(x + 16, rect.width - 160);
+
+        const tooltipY = 40;
+
+        tooltip.style.left = tooltipX + 'px';
+
+        tooltip.style.top = tooltipY + 'px';
+
+
+
+        for (let i = 0; i < series.length; i++) {
+
+          const s = series[i];
+
+          const value = s.values[clampedIndex];
+
+          const colorVar = getComputedStyle(canvas.closest('.plot-container')).getPropertyValue(`--${s.color}`).trim() || '#e06c5c';
+
+          tooltipHtml += `
 
         <div class="plot-tooltip-row">
 
@@ -4722,393 +4975,392 @@
 
         </div>`;
 
-    }
-
-    tooltip.innerHTML = tooltipHtml;
-
-    tooltip.classList.add('visible');
-
-    
-
-    // Redraw with hover line
-
-    const instance = chartInstances.get(el.id);
-
-    if (instance) {
-
-      drawPlot(el, canvas, instance.ctx, scales, clampedIndex);
-
-    }
-
-  }
-
-
-
-  function updatePlot(el) {
-
-    let instance = chartInstances.get(el.id);
-
-    if (!instance) {
-
-      // Canvas may not exist yet - try to find it first
-
-      const canvas = document.getElementById(`plot-${el.id}`);
-
-      if (canvas) {
-
-        initPlot(el);
-
-        instance = chartInstances.get(el.id);
-
-      }
-
-      if (!instance) return; // Still not initialized
-
-    }
-
-    if (instance && instance.type === 'plot') {
-
-      const scales = computePlotScales(el);
-
-      instance.scales = scales;
-
-      drawPlot(el, instance.canvas, instance.ctx, scales);
-
-    }
-
-  }
-
-
-
-  function drawPlot(el, canvas, ctx, scales, hoverIndex = -1) {
-
-    const data = el.value.data || {};
-
-    const series = data.series || [];
-
-    if (series.length === 0) return;
-
-    
-
-    if (!scales || scales.length !== series.length) {
-
-      scales = computePlotScales(el);
-
-    }
-
-
-
-    const width = canvas.width / window.devicePixelRatio;
-
-    const height = canvas.height / window.devicePixelRatio;
-
-    
-
-    const padding = { top: 10, right: 10, bottom: 10, left: 10 };
-
-    const plotWidth = width - padding.left - padding.right;
-
-    const plotHeight = height - padding.top - padding.bottom;
-
-
-
-    ctx.clearRect(0, 0, width, height);
-
-    
-
-    // Draw grid lines
-
-    ctx.strokeStyle = 'rgba(128, 128, 128, 0.15)';
-
-    ctx.lineWidth = 1;
-
-    for (let i = 0; i <= 4; i++) {
-
-      const y = padding.top + (plotHeight) * (i / 4);
-
-      ctx.beginPath();
-
-      ctx.moveTo(padding.left, y);
-
-      ctx.lineTo(width - padding.right, y);
-
-      ctx.stroke();
-
-    }
-
-
-
-    // Draw each series with its own scale
-
-    for (let si = 0; si < series.length; si++) {
-
-      const s = series[si];
-
-      const values = s.values || [];
-
-      if (values.length < 2) continue;
-
-      
-
-      const scale = scales[si];
-
-      const color = getComputedStyle(canvas.closest('.plot-container')).getPropertyValue(`--${s.color}`).trim() || '#e06c5c';
-
-      
-
-      // Draw line
-
-      ctx.beginPath();
-
-      ctx.strokeStyle = color;
-
-      ctx.lineWidth = 2;
-
-      ctx.lineJoin = 'round';
-
-      
-
-      for (let i = 0; i < values.length; i++) {
-
-        const x = padding.left + (i / (values.length - 1)) * plotWidth;
-
-        const y = padding.top + plotHeight - ((values[i] - scale.min) / scale.range) * plotHeight;
-
-        if (i === 0) ctx.moveTo(x, y);
-
-        else ctx.lineTo(x, y);
-
-      }
-
-      ctx.stroke();
-
-      
-
-      // Draw area under line for first series only
-
-      if (si === 0) {
-
-        const gradient = ctx.createLinearGradient(0, padding.top, 0, height - padding.bottom);
-
-        gradient.addColorStop(0, color + '30');
-
-        gradient.addColorStop(1, color + '05');
-
-        
-
-        ctx.beginPath();
-
-        ctx.moveTo(padding.left, padding.top + plotHeight);
-
-        for (let i = 0; i < values.length; i++) {
-
-          const x = padding.left + (i / (values.length - 1)) * plotWidth;
-
-          const y = padding.top + plotHeight - ((values[i] - scale.min) / scale.range) * plotHeight;
-
-          ctx.lineTo(x, y);
-
         }
 
-        ctx.lineTo(width - padding.right, padding.top + plotHeight);
+        tooltip.innerHTML = tooltipHtml;
 
-        ctx.closePath();
+        tooltip.classList.add('visible');
 
-        ctx.fillStyle = gradient;
 
-        ctx.fill();
 
-      }
+        // Redraw with hover line
 
-      
+        const instance = chartInstances.get(el.id);
 
-      // Draw dots at data points (subsampled)
+        if (instance) {
 
-      ctx.fillStyle = color;
-
-      for (let i = 0; i < values.length; i += Math.ceil(values.length / 20)) {
-
-        const x = padding.left + (i / (values.length - 1)) * plotWidth;
-
-        const y = padding.top + plotHeight - ((values[i] - scale.min) / scale.range) * plotHeight;
-
-        ctx.beginPath();
-
-        ctx.arc(x, y, 3, 0, Math.PI * 2);
-
-        ctx.fill();
-
-      }
-
-      
-
-      // Draw current value for this series (on left side of plot area)
-
-      if (values.length > 0) {
-
-        const currentValue = values[values.length - 1];
-
-        ctx.fillStyle = color;
-
-        ctx.font = 'bold 11px var(--mono)';
-
-        ctx.textAlign = 'left';
-
-        const labelX = padding.left + 4;
-
-        const labelY = padding.top + 14 + (si * 16);
-
-        ctx.fillText(`${s.name}: ${formatNum(currentValue, 0.01)}`, labelX, labelY);
-
-      }
-
-    }
-
-    
-
-    // Draw hover line
-
-    if (hoverIndex >= 0 && series.length > 0 && series[0].values) {
-
-      const hoverX = padding.left + (hoverIndex / (series[0].values.length - 1)) * plotWidth;
-
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
-
-      ctx.lineWidth = 1;
-
-      ctx.setLineDash([5, 5]);
-
-      ctx.beginPath();
-
-      ctx.moveTo(hoverX, padding.top);
-
-      ctx.lineTo(hoverX, height - padding.bottom);
-
-      ctx.stroke();
-
-      ctx.setLineDash([]);
-
-    }
-
-  }
-
-
-
-  // Clean up all chart instances (call before re-rendering)
-
-  function cleanupCharts() {
-
-    for (const instance of chartInstances.values()) {
-
-      if (instance.canvas) {
-
-        // Remove event listeners to prevent memory leaks
-
-        instance.canvas.onmousemove = null;
-
-        instance.canvas.onmouseleave = null;
-
-      }
-
-    }
-
-    chartInstances.clear();
-
-    initRetryCounts.clear(); // Clear retry counts on cleanup
-
-  }
-
-
-
-  // Periodically clean up old entries from recentlyInteracted to prevent unbounded growth
-
-  function cleanupRecentlyInteracted() {
-
-    const now = Date.now();
-
-    for (const [id, timestamp] of recentlyInteracted.entries()) {
-
-      if (now - timestamp > RECENT_INTERACTION_TTL) {
-
-        recentlyInteracted.delete(id);
-
-      }
-
-    }
-
-  }
-
-  // Run cleanup every 10 seconds
-
-  setInterval(cleanupRecentlyInteracted, 10000);
-
-
-
-  // Handle window resize for charts
-
-  let resizeTimeout = null;
-
-  window.addEventListener('resize', () => {
-
-    // Debounce resize to avoid excessive re-initialization
-
-    if (resizeTimeout) clearTimeout(resizeTimeout);
-
-    resizeTimeout = setTimeout(() => {
-
-      for (const el of elements.values()) {
-
-        if (el.kind.type === 'MiniChart') {
-
-          updateMiniChart(el);
-
-        } else if (el.kind.type === 'Plot') {
-
-          updatePlot(el);
+          drawPlot(el, canvas, instance.ctx, scales, clampedIndex);
 
         }
 
       }
 
-    }, 100);
-
-  });
 
 
+      function updatePlot(el) {
 
-  // ── Scroll-to-top visibility ─────────────────────────
+        let instance = chartInstances.get(el.id);
 
-  window.addEventListener('scroll', () => {
+        if (!instance) {
 
-    const btn = document.getElementById('scroll-top');
+          // Canvas may not exist yet - try to find it first
 
-    if (btn) btn.classList.toggle('visible', window.scrollY > 300);
+          const canvas = document.getElementById(`plot-${el.id}`);
 
-  });
+          if (canvas) {
+
+            initPlot(el);
+
+            instance = chartInstances.get(el.id);
+
+          }
+
+          if (!instance) return; // Still not initialized
+
+        }
+
+        if (instance && instance.type === 'plot') {
+
+          const scales = computePlotScales(el);
+
+          instance.scales = scales;
+
+          drawPlot(el, instance.canvas, instance.ctx, scales);
+
+        }
+
+      }
 
 
 
-  // ── Init ───────────────────────────────────────────
+      function drawPlot(el, canvas, ctx, scales, hoverIndex = -1) {
 
-  connect();
+        const data = el.value.data || {};
 
-  
+        const series = data.series || [];
 
-  // Cleanup on page unload
+        if (series.length === 0) return;
 
-  window.addEventListener('beforeunload', () => {
 
-    cleanupCharts();
 
-    if (ws) ws.close();
+        if (!scales || scales.length !== series.length) {
 
-  });
+          scales = computePlotScales(el);
 
-})();
+        }
 
-</script>
+
+
+        const width = canvas.width / window.devicePixelRatio;
+
+        const height = canvas.height / window.devicePixelRatio;
+
+
+
+        const padding = { top: 10, right: 10, bottom: 10, left: 10 };
+
+        const plotWidth = width - padding.left - padding.right;
+
+        const plotHeight = height - padding.top - padding.bottom;
+
+
+
+        ctx.clearRect(0, 0, width, height);
+
+
+
+        // Draw grid lines
+
+        ctx.strokeStyle = 'rgba(128, 128, 128, 0.15)';
+
+        ctx.lineWidth = 1;
+
+        for (let i = 0; i <= 4; i++) {
+
+          const y = padding.top + (plotHeight) * (i / 4);
+
+          ctx.beginPath();
+
+          ctx.moveTo(padding.left, y);
+
+          ctx.lineTo(width - padding.right, y);
+
+          ctx.stroke();
+
+        }
+
+
+
+        // Draw each series with its own scale
+
+        for (let si = 0; si < series.length; si++) {
+
+          const s = series[si];
+
+          const values = s.values || [];
+
+          if (values.length < 2) continue;
+
+
+
+          const scale = scales[si];
+
+          const color = getComputedStyle(canvas.closest('.plot-container')).getPropertyValue(`--${s.color}`).trim() || '#e06c5c';
+
+
+
+          // Draw line
+
+          ctx.beginPath();
+
+          ctx.strokeStyle = color;
+
+          ctx.lineWidth = 2;
+
+          ctx.lineJoin = 'round';
+
+
+
+          for (let i = 0; i < values.length; i++) {
+
+            const x = padding.left + (i / (values.length - 1)) * plotWidth;
+
+            const y = padding.top + plotHeight - ((values[i] - scale.min) / scale.range) * plotHeight;
+
+            if (i === 0) ctx.moveTo(x, y);
+
+            else ctx.lineTo(x, y);
+
+          }
+
+          ctx.stroke();
+
+
+
+          // Draw area under line for first series only
+
+          if (si === 0) {
+
+            const gradient = ctx.createLinearGradient(0, padding.top, 0, height - padding.bottom);
+
+            gradient.addColorStop(0, color + '30');
+
+            gradient.addColorStop(1, color + '05');
+
+
+
+            ctx.beginPath();
+
+            ctx.moveTo(padding.left, padding.top + plotHeight);
+
+            for (let i = 0; i < values.length; i++) {
+
+              const x = padding.left + (i / (values.length - 1)) * plotWidth;
+
+              const y = padding.top + plotHeight - ((values[i] - scale.min) / scale.range) * plotHeight;
+
+              ctx.lineTo(x, y);
+
+            }
+
+            ctx.lineTo(width - padding.right, padding.top + plotHeight);
+
+            ctx.closePath();
+
+            ctx.fillStyle = gradient;
+
+            ctx.fill();
+
+          }
+
+
+
+          // Draw dots at data points (subsampled)
+
+          ctx.fillStyle = color;
+
+          for (let i = 0; i < values.length; i += Math.ceil(values.length / 20)) {
+
+            const x = padding.left + (i / (values.length - 1)) * plotWidth;
+
+            const y = padding.top + plotHeight - ((values[i] - scale.min) / scale.range) * plotHeight;
+
+            ctx.beginPath();
+
+            ctx.arc(x, y, 3, 0, Math.PI * 2);
+
+            ctx.fill();
+
+          }
+
+
+
+          // Draw current value for this series (on left side of plot area)
+
+          if (values.length > 0) {
+
+            const currentValue = values[values.length - 1];
+
+            ctx.fillStyle = color;
+
+            ctx.font = 'bold 11px var(--mono)';
+
+            ctx.textAlign = 'left';
+
+            const labelX = padding.left + 4;
+
+            const labelY = padding.top + 14 + (si * 16);
+
+            ctx.fillText(`${s.name}: ${formatNum(currentValue, 0.01)}`, labelX, labelY);
+
+          }
+
+        }
+
+
+
+        // Draw hover line
+
+        if (hoverIndex >= 0 && series.length > 0 && series[0].values) {
+
+          const hoverX = padding.left + (hoverIndex / (series[0].values.length - 1)) * plotWidth;
+
+          ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+
+          ctx.lineWidth = 1;
+
+          ctx.setLineDash([5, 5]);
+
+          ctx.beginPath();
+
+          ctx.moveTo(hoverX, padding.top);
+
+          ctx.lineTo(hoverX, height - padding.bottom);
+
+          ctx.stroke();
+
+          ctx.setLineDash([]);
+
+        }
+
+      }
+
+
+
+      // Clean up all chart instances (call before re-rendering)
+
+      function cleanupCharts() {
+
+        for (const instance of chartInstances.values()) {
+
+          if (instance.canvas) {
+
+            // Remove event listeners to prevent memory leaks
+
+            instance.canvas.onmousemove = null;
+
+            instance.canvas.onmouseleave = null;
+
+          }
+
+        }
+
+        chartInstances.clear();
+
+        initRetryCounts.clear(); // Clear retry counts on cleanup
+
+      }
+
+
+
+      // Periodically clean up old entries from recentlyInteracted to prevent unbounded growth
+
+      function cleanupRecentlyInteracted() {
+
+        const now = Date.now();
+
+        for (const [id, timestamp] of recentlyInteracted.entries()) {
+
+          if (now - timestamp > RECENT_INTERACTION_TTL) {
+
+            recentlyInteracted.delete(id);
+
+          }
+
+        }
+
+      }
+
+      // Run cleanup every 10 seconds
+
+      setInterval(cleanupRecentlyInteracted, 10000);
+
+
+
+      // Handle window resize for charts
+
+      let resizeTimeout = null;
+
+      window.addEventListener('resize', () => {
+
+        // Debounce resize to avoid excessive re-initialization
+
+        if (resizeTimeout) clearTimeout(resizeTimeout);
+
+        resizeTimeout = setTimeout(() => {
+
+          for (const el of elements.values()) {
+
+            if (el.kind.type === 'MiniChart') {
+
+              updateMiniChart(el);
+
+            } else if (el.kind.type === 'Plot') {
+
+              updatePlot(el);
+
+            }
+
+          }
+
+        }, 100);
+
+      });
+
+
+
+      // ── Scroll-to-top visibility ─────────────────────────
+
+      window.addEventListener('scroll', () => {
+
+        const btn = document.getElementById('scroll-top');
+
+        if (btn) btn.classList.toggle('visible', window.scrollY > 300);
+
+      });
+
+
+
+      // ── Init ───────────────────────────────────────────
+
+      connect();
+
+
+
+      // Cleanup on page unload
+
+      window.addEventListener('beforeunload', () => {
+
+        cleanupCharts();
+
+        if (ws) ws.close();
+
+      });
+
+    })();
+
+  </script>
 
 </body>
 
 </html>
-

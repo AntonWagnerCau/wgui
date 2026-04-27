@@ -19,6 +19,9 @@ fn main() {
     let modes = ["Easy", "Normal", "Hard", "Nightmare"];
     let mut click_count = 0u32;
 
+    // Tiny 2×2 red PNG as a data URI for demo purposes
+    let red_pixel_png = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAAAXNSR0IArs4c6QAAABxpRE9UAAAAAgAAAAAAAAACAAAAKAAAAAIAAAACAAAARj7k8lwAAAATSURBVAiZY2BgYPgPxAwMjDAAAA9eAQv2bC0PAAAAAElFTkSuQmCC";
+
     println!("Open the URL printed above in your browser.");
     println!("Press Ctrl+C to quit.\n");
 
@@ -63,6 +66,8 @@ fn main() {
                 click_count += 1;
             }
             win.label(&format!("Button pressed {} time(s)", click_count));
+            win.separator();
+            win.image("Demo Image", red_pixel_png);
         }
 
         // -- "Stats" window - demonstrates grid layout --
