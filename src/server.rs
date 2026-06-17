@@ -137,6 +137,7 @@ fn run_ws(
             match listener.accept() {
                 Ok((stream, _addr)) => {
                     stream.set_nonblocking(false).ok();
+                    stream.set_nodelay(true).ok();
                     // Generous timeout for the handshake: the client's HTTP
                     // upgrade request may not have arrived yet when accept()
                     // returns. The 1ms poll timeout is applied after handshake.
@@ -144,6 +145,12 @@ fn run_ws(
                     match tungstenite::accept(stream) {
                         Ok(mut ws) => {
                             log::info!("wgui: new WebSocket client connected (total: {})", clients.len() + 1);
+                            // Bound writes so a slow or half-dead client (e.g. a
+                            // tab being refreshed) can never block this thread —
+                            // which also runs accept() — and stall new clients
+                            // from connecting. On timeout the send errors and the
+                            // client is dropped below.
+                            ws.get_ref().set_write_timeout(Some(Duration::from_secs(2))).ok();
                             // Send snapshot to new client
                             let snapshot = ServerMsg::Snapshot {
                                 elements: mirror.values().cloned().collect(),

@@ -145,11 +145,13 @@
 
     #app {
 
-      column-count: 2;
+      display: flex;
 
-      column-gap: 12px;
+      align-items: flex-start;
 
-      padding: 12px;
+      gap: 12px;
+
+      padding: 46px 12px 12px;
 
       margin: 0 auto;
 
@@ -157,31 +159,23 @@
 
 
 
-    @media (min-width: 1400px) {
-      #app {
-        column-count: 3;
-      }
-    }
+    /* Columns are real DOM containers filled by the JS masonry layout, so the
 
-    @media (min-width: 2200px) {
-      #app {
-        column-count: 4;
-      }
-    }
+       count tracks the actual available width (zoom-robust) and cards never
 
-    @media (max-width: 900px) {
-      #app {
-        column-count: 1;
-      }
-    }
+       split awkwardly the way CSS multi-columns did. */
 
+    .masonry-col {
 
+      flex: 1 1 0;
 
-    #app>.card {
+      min-width: 0;
 
-      break-inside: avoid;
+      display: flex;
 
-      margin-bottom: 12px;
+      flex-direction: column;
+
+      gap: 12px;
 
     }
 
@@ -327,7 +321,7 @@
 
       align-items: center;
 
-      justify-content: space-between;
+      gap: 10px;
 
       padding: 12px 16px;
 
@@ -375,7 +369,95 @@
 
       transition: transform 0.2s;
 
+      margin-left: auto;
+
     }
+
+
+
+    /* Drag-to-reorder grip + drop indicators */
+    .card-grip {
+      flex-shrink: 0;
+      color: var(--text-muted);
+      font-size: 13px;
+      line-height: 1;
+      cursor: grab;
+      padding: 2px;
+      border-radius: 4px;
+      transition: color 0.15s, background 0.15s;
+      user-select: none;
+    }
+    .card-grip:hover { color: var(--text); background: rgba(255, 255, 255, 0.06); }
+    .card-grip { cursor: grab; }
+    body.dragging-active { user-select: none; cursor: grabbing; }
+    /* The lifted tile that follows the cursor. */
+    .card-drag-clone {
+      position: fixed;
+      z-index: 500;
+      margin: 0;
+      pointer-events: none;
+      opacity: 0.95;
+      transform: rotate(1.2deg);
+      box-shadow: 0 18px 44px rgba(0, 0, 0, 0.55);
+    }
+    /* The gap that opens where the tile will land. */
+    .card-placeholder {
+      box-sizing: border-box;
+      border: 2px dashed var(--accent);
+      border-radius: var(--radius-lg);
+      background: var(--accent-glow);
+      opacity: 0.6;
+    }
+    /* While dragging, stretch every column to full height so the whole band is
+       a drop target — including emptied/orphaned columns and the space below a
+       short column. Empty columns are flagged as droppable zones. */
+    body.dragging-active #app { align-items: stretch; }
+    body.dragging-active .masonry-col { min-height: 80px; }
+    body.dragging-active .masonry-col:empty {
+      border: 2px dashed var(--border-light);
+      border-radius: var(--radius-lg);
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    /* Layout toolbar (column pin + reset) */
+    .layout-toolbar {
+      position: fixed;
+      top: 10px;
+      right: 12px;
+      z-index: 200;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 8px;
+      background: rgba(30, 30, 30, 0.85);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+    }
+    .layout-toolbar .lt-label {
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      font-size: 10px;
+      color: var(--text-muted);
+    }
+    .lt-btn {
+      min-width: 22px;
+      padding: 3px 7px;
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      background: var(--surface);
+      color: var(--text-dim);
+      font-family: var(--mono);
+      font-size: 11px;
+      cursor: pointer;
+      transition: border-color 0.15s, color 0.15s, background 0.15s;
+      user-select: none;
+    }
+    .lt-btn:hover { border-color: var(--border-light); color: var(--text); }
+    .lt-btn.active { border-color: var(--accent); color: var(--accent); background: var(--accent-glow); }
+    .lt-sep { width: 1px; height: 16px; background: var(--border); margin: 0 2px; }
 
 
 
@@ -981,7 +1063,7 @@
 
     .widget-label {
 
-      flex: 0 0 180px;
+      flex: 0 1 180px;
 
       font-size: 12px;
 
@@ -1042,6 +1124,8 @@
     input[type="range"] {
 
       flex: 1;
+
+      min-width: 0;
 
       -webkit-appearance: none;
 
@@ -1809,6 +1893,8 @@
 
       flex: 1;
 
+      min-width: 0;
+
       background: var(--bg);
 
       border: 1px solid var(--border);
@@ -1846,6 +1932,8 @@
     select.dropdown {
 
       flex: 1;
+
+      min-width: 0;
 
       background: var(--bg);
 
@@ -2640,6 +2728,8 @@
 
       let reconnectDelay = 250;
 
+      let connectTimer = null;
+
       const recentlyInteracted = new Map(); // id -> timestamp
 
       let chartInstances = new Map();
@@ -2912,9 +3002,25 @@
 
         ws = new WebSocket(wsUrl);
 
+        const socket = ws;
+
+        // Watchdog: if the socket doesn't open promptly (e.g. the server thread
+        // was briefly blocked), abort and let onclose retry fast instead of
+        // hanging on the OS TCP timeout (which can be ~30s).
+
+        clearTimeout(connectTimer);
+
+        connectTimer = setTimeout(() => {
+
+          if (socket.readyState !== WebSocket.OPEN) { try { socket.close(); } catch (e) { } }
+
+        }, 2500);
+
 
 
         ws.onopen = () => {
+
+          clearTimeout(connectTimer);
 
           setStatus('connected');
 
@@ -2925,6 +3031,8 @@
 
 
         ws.onclose = () => {
+
+          clearTimeout(connectTimer);
 
           setStatus('disconnected');
 
@@ -3096,6 +3204,249 @@
 
       // ── Rendering ──────────────────────────────────────
 
+      // ── Card layout: explicit per-column placement + persistence ──
+      // No auto-balancing — each card keeps the exact column + slot you drag it
+      // to. Placement is remembered per column-count, so pinning a count gives a
+      // stable manual arrangement. New/unplaced cards seed into the shortest
+      // column once (by height), then stay put.
+      const LAYOUT_GAP = 12;
+      const LAYOUT_MIN_CARD_W = 440;
+      const LAYOUT_MAX_COLS = 6;
+      const layoutKey = 'wgui:layout:' + (document.title || 'wgui');
+      let cardEls = new Map();   // window name -> card element
+      let lastColCount = 0;
+
+      function loadLayout() {
+        const def = { placements: {}, collapsed: [], colCount: 'auto' };
+        try {
+          const p = JSON.parse(localStorage.getItem(layoutKey) || '{}');
+          return {
+            placements: (p.placements && typeof p.placements === 'object') ? p.placements : {},
+            collapsed: Array.isArray(p.collapsed) ? p.collapsed : [],
+            colCount: (p.colCount === 'auto' || (Number.isInteger(p.colCount) && p.colCount >= 1 && p.colCount <= LAYOUT_MAX_COLS)) ? p.colCount : 'auto',
+          };
+        } catch (e) { return def; }
+      }
+
+      let layout = loadLayout();
+
+      function saveLayout() {
+        try { localStorage.setItem(layoutKey, JSON.stringify(layout)); } catch (e) { }
+      }
+
+      function computeColumns() {
+        if (layout.colCount !== 'auto') return Math.min(layout.colCount, LAYOUT_MAX_COLS);
+        const app = document.getElementById('app');
+        const w = (app && app.clientWidth) || window.innerWidth || 1200;
+        return Math.max(1, Math.min(LAYOUT_MAX_COLS, Math.floor((w + LAYOUT_GAP) / (LAYOUT_MIN_CARD_W + LAYOUT_GAP))));
+      }
+
+      // Placement for n columns: the stored arrangement (pruned to windows that
+      // still exist) plus any unplaced windows seeded into the shortest column.
+      function getPlacement(n, names, heights) {
+        const present = new Set(names);
+        const base = (layout.placements[n] || []).map(col => (col || []).filter(nm => present.has(nm)));
+        while (base.length < n) base.push([]);
+        if (base.length > n) {
+          for (let i = n; i < base.length; i++) base[n - 1].push(...base[i]);
+          base.length = n;
+        }
+        const placed = new Set();
+        for (const col of base) for (const nm of col) placed.add(nm);
+        const colH = base.map(col => col.reduce((s, nm) => s + (heights.get(nm) || 0), 0));
+        for (const nm of names) {
+          if (placed.has(nm)) continue;
+          let mi = 0;
+          for (let i = 1; i < n; i++) if (colH[i] < colH[mi]) mi = i;
+          base[mi].push(nm);
+          colH[mi] += heights.get(nm) || 0;
+        }
+        layout.placements[n] = base;
+        return base;
+      }
+
+      // Build the columns straight from the stored placement (no rebalancing).
+      function layoutColumns() {
+        const app = document.getElementById('app');
+        if (!app || cardEls.size === 0 || drag) return;
+        const n = computeColumns();
+        lastColCount = n;
+        const names = [...cardEls.keys()];
+        const cols = [];
+        for (let i = 0; i < n; i++) {
+          const c = document.createElement('div');
+          c.className = 'masonry-col';
+          cols.push(c);
+        }
+        app.replaceChildren(...cols);
+        // Stage in column 0 to measure heights at real column width (for seeding).
+        for (const nm of names) cols[0].appendChild(cardEls.get(nm));
+        const heights = new Map();
+        for (const nm of names) heights.set(nm, cardEls.get(nm).offsetHeight);
+        const placement = getPlacement(n, names, heights);
+        for (let i = 0; i < n; i++) {
+          for (const nm of placement[i]) cols[i].appendChild(cardEls.get(nm));
+        }
+        saveLayout();
+      }
+
+      // ── Drag-to-reorder (pointer-based, exact placement) ──
+      // The dragged tile lifts as a floating clone; a placeholder marks the exact
+      // slot. We only move the placeholder node within the live columns, so
+      // nothing rebalances (no flicker). On drop the tile lands exactly there.
+      let drag = null;
+
+      function bindCardDrag(card, name) {
+        const grip = card.querySelector('.card-grip');
+        if (!grip) return;
+        grip.addEventListener('click', (e) => e.stopPropagation());
+        grip.addEventListener('pointerdown', (e) => {
+          if (e.button !== 0 || drag) return;
+          beginDrag(card, name, e);
+        });
+      }
+
+      // Arm a drag on grip press; it only activates once the pointer moves past a
+      // small threshold, so a plain click on the grip is a no-op.
+      function beginDrag(card, name, e) {
+        e.preventDefault();
+        drag = { card, name, startX: e.clientX, startY: e.clientY, active: false };
+        window.addEventListener('pointermove', onDragMove);
+        window.addEventListener('pointerup', endDrag);
+        window.addEventListener('pointercancel', endDrag);
+      }
+
+      function activateDrag(e) {
+        const card = drag.card;
+        const rect = card.getBoundingClientRect();
+        const clone = card.cloneNode(true);
+        clone.classList.add('card-drag-clone');
+        clone.style.width = rect.width + 'px';
+        clone.style.left = rect.left + 'px';
+        clone.style.top = rect.top + 'px';
+        document.body.appendChild(clone);
+        const placeholder = document.createElement('div');
+        placeholder.className = 'card-placeholder';
+        placeholder.style.height = rect.height + 'px';
+        card.parentElement.insertBefore(placeholder, card); // take the card's slot
+        card.remove();                                       // detach (keeps canvases/state)
+        document.body.classList.add('dragging-active');
+        Object.assign(drag, {
+          active: true, clone, placeholder,
+          offX: e.clientX - rect.left, offY: e.clientY - rect.top,
+        });
+      }
+
+      // Move the placeholder to the slot under the cursor. Only the target column
+      // shifts; everything else stays put.
+      function movePlaceholder(px, py) {
+        const ph = drag.placeholder;
+        const el = document.elementFromPoint(px, py);
+        if (!el || el.closest('.card-placeholder')) return; // over the gap: keep
+        const col = el.closest('.masonry-col');
+        if (!col) return;
+        let beforeEl = null;
+        const overCard = el.closest('.card');
+        if (overCard && overCard.parentElement === col) {
+          const r = overCard.getBoundingClientRect();
+          beforeEl = (py < r.top + r.height / 2) ? overCard : overCard.nextElementSibling;
+        }
+        if (beforeEl === ph) return;
+        if (ph.parentElement === col && ph.nextElementSibling === beforeEl) return;
+        col.insertBefore(ph, beforeEl); // beforeEl null => append to column end
+      }
+
+      function onDragMove(e) {
+        if (!drag) return;
+        if (!drag.active) {
+          if (Math.hypot(e.clientX - drag.startX, e.clientY - drag.startY) < 4) return;
+          activateDrag(e);
+        }
+        drag.clone.style.left = (e.clientX - drag.offX) + 'px';
+        drag.clone.style.top = (e.clientY - drag.offY) + 'px';
+        movePlaceholder(e.clientX, e.clientY);
+      }
+
+      function endDrag() {
+        if (!drag) return;
+        window.removeEventListener('pointermove', onDragMove);
+        window.removeEventListener('pointerup', endDrag);
+        window.removeEventListener('pointercancel', endDrag);
+        if (drag.active) {
+          const ph = drag.placeholder;
+          ph.parentElement.insertBefore(drag.card, ph); // drop exactly at the gap
+          ph.remove();
+          drag.clone.remove();
+          document.body.classList.remove('dragging-active');
+          // Persist the resulting arrangement straight from the DOM.
+          const app = document.getElementById('app');
+          const cols = [...app.querySelectorAll('.masonry-col')];
+          layout.placements[cols.length] = cols.map(col =>
+            [...col.querySelectorAll(':scope > .card')].map(c => c.dataset.window));
+          lastColCount = cols.length;
+          saveLayout();
+        }
+        drag = null;
+      }
+
+      // ── Layout toolbar (column pin + reset) ─────────────
+      function updateToolbarActive(bar) {
+        bar.querySelectorAll('.lt-btn[data-cols]').forEach(b => {
+          b.classList.toggle('active', b.dataset.cols === String(layout.colCount));
+        });
+      }
+
+      function buildToolbar() {
+        const bar = document.createElement('div');
+        bar.className = 'layout-toolbar';
+        bar.innerHTML = `<span class="lt-label">Cols</span>`;
+        for (const o of ['auto', 1, 2, 3, 4]) {
+          const b = document.createElement('div');
+          b.className = 'lt-btn';
+          b.dataset.cols = String(o);
+          b.textContent = o === 'auto' ? 'Auto' : String(o);
+          b.addEventListener('click', () => {
+            layout.colCount = o;
+            saveLayout();
+            updateToolbarActive(bar);
+            layoutColumns();
+          });
+          bar.appendChild(b);
+        }
+        const sep = document.createElement('div');
+        sep.className = 'lt-sep';
+        bar.appendChild(sep);
+        const reset = document.createElement('div');
+        reset.className = 'lt-btn';
+        reset.textContent = 'Reset';
+        reset.title = 'Clear saved layout, collapse and column settings';
+        reset.addEventListener('click', () => {
+          layout = { placements: {}, collapsed: [], colCount: 'auto' };
+          saveLayout();
+          updateToolbarActive(bar);
+          render();
+        });
+        bar.appendChild(reset);
+        document.body.appendChild(bar);
+        updateToolbarActive(bar);
+      }
+
+      // Rebuild columns when the available width crosses a column threshold
+      // (covers window resize and browser zoom, which change #app.clientWidth).
+      function installLayoutObservers() {
+        const app = document.getElementById('app');
+        if (app && 'ResizeObserver' in window) {
+          let t = null;
+          const ro = new ResizeObserver(() => {
+            clearTimeout(t);
+            t = setTimeout(() => {
+              if (computeColumns() !== lastColCount) layoutColumns();
+            }, 100);
+          });
+          ro.observe(app);
+        }
+      }
+
       function render() {
 
         const app = document.getElementById('app');
@@ -3121,6 +3472,8 @@
           <div>No elements declared</div>
 
         </div>`;
+
+          cardEls = new Map();
 
           return;
 
@@ -3168,39 +3521,28 @@
 
 
 
-        let html = '';
-
+        // Build a card element per window (grip handle + collapse toggle).
+        cardEls = new Map();
         for (const [name, elems] of windows) {
-
-          // Determine accent color from first element if specified
-
           const firstAccent = elems[0]?.meta?.accent || 'coral';
-
-          html += `<div class="card ${firstAccent}" data-window="${esc(name)}">`;
-
-          html += `<div class="card-header" onclick="wgui.toggleCard(this)">`;
-
-          html += `<span class="card-title">${esc(name)}</span>`;
-
-          html += `<span class="card-toggle">&#9660;</span>`;
-
-          html += `</div>`;
-
-          html += `<div class="card-body">`;
-
-          for (const el of elems) {
-
-            html += renderElement(el);
-
-          }
-
-          html += `</div></div>`;
-
+          const card = document.createElement('div');
+          card.className = `card ${firstAccent}`;
+          card.dataset.window = name;
+          let inner = `<div class="card-header" onclick="wgui.toggleCard(this)">`;
+          inner += `<span class="card-grip" title="Drag to reorder">⠿</span>`;
+          inner += `<span class="card-title">${esc(name)}</span>`;
+          inner += `<span class="card-toggle">&#9660;</span>`;
+          inner += `</div><div class="card-body">`;
+          for (const el of elems) inner += renderElement(el);
+          inner += `</div>`;
+          card.innerHTML = inner;
+          if (layout.collapsed.includes(name)) card.classList.add('collapsed');
+          bindCardDrag(card, name);
+          cardEls.set(name, card);
         }
 
-
-
-        app.innerHTML = html;
+        // Place cards into columns by the stored per-column arrangement.
+        layoutColumns();
 
 
 
@@ -4544,7 +4886,23 @@
 
         toggleCard(headerEl) {
 
-          headerEl.parentElement.classList.toggle('collapsed');
+          const card = headerEl.parentElement;
+
+          const collapsed = card.classList.toggle('collapsed');
+
+          const name = card.dataset.window;
+
+          if (name) {
+
+            const set = new Set(layout.collapsed);
+
+            if (collapsed) set.add(name); else set.delete(name);
+
+            layout.collapsed = [...set];
+
+            saveLayout();
+
+          }
 
         },
 
@@ -5609,6 +5967,10 @@
 
 
       // ── Init ───────────────────────────────────────────
+
+      buildToolbar();
+
+      installLayoutObservers();
 
       watchDevicePixelRatio();
 
