@@ -111,6 +111,14 @@
 
       font-size: 13px;
 
+      line-height: 1.5;
+
+      -webkit-font-smoothing: antialiased;
+
+      -moz-osx-font-smoothing: grayscale;
+
+      text-rendering: optimizeLegibility;
+
       background: var(--bg);
 
       color: var(--text);
@@ -890,13 +898,21 @@
 
       font-size: 12px;
 
+      line-height: 1.35;
+
       color: var(--text-dim);
+
+      display: -webkit-box;
+
+      -webkit-line-clamp: 2;
+
+      line-clamp: 2;
+
+      -webkit-box-orient: vertical;
 
       overflow: hidden;
 
-      text-overflow: ellipsis;
-
-      white-space: nowrap;
+      overflow-wrap: anywhere;
 
       padding-right: 8px;
 
@@ -1448,44 +1464,6 @@
 
 
 
-    .plot-legend {
-
-      display: flex;
-
-      gap: 16px;
-
-    }
-
-
-
-    .plot-legend-item {
-
-      display: flex;
-
-      align-items: center;
-
-      gap: 6px;
-
-      font-size: 11px;
-
-      color: var(--text-dim);
-
-    }
-
-
-
-    .plot-legend-color {
-
-      width: 12px;
-
-      height: 3px;
-
-      border-radius: 2px;
-
-    }
-
-
-
     .plot-canvas {
 
       flex: 1;
@@ -1920,7 +1898,37 @@
 
       font-size: 12px;
 
+      line-height: 1.45;
+
       color: var(--text);
+
+      overflow-wrap: anywhere;
+
+      min-width: 0;
+
+    }
+
+
+
+    /* Full-width standalone text label: readable body text with vertical
+
+       rhythm so consecutive labels group cleanly and never cram or overlap. */
+
+    .label-block {
+
+      flex: 1;
+
+      min-width: 0;
+
+      padding: 5px 16px;
+
+      font-size: 12px;
+
+      line-height: 1.5;
+
+      color: var(--text);
+
+      overflow-wrap: anywhere;
 
     }
 
@@ -1981,6 +1989,8 @@
       color: var(--text);
 
       text-align: right;
+
+      flex: 1;
 
       overflow: hidden;
 
@@ -2166,6 +2176,32 @@
       white-space: nowrap;
 
       flex-shrink: 0;
+
+    }
+
+
+
+    /* A standalone text label dropped straight into a card body acts as a
+
+       caption/sub-heading. Give it real vertical rhythm so consecutive labels
+
+       group cleanly instead of cramming, and let long text wrap. Compact inline
+
+       behaviour inside horizontal layouts is preserved by the rule above. */
+
+    .card-body > .label-inline {
+
+      white-space: normal;
+
+      overflow-wrap: anywhere;
+
+      line-height: 1.4;
+
+      font-weight: 600;
+
+      color: var(--text-dim);
+
+      padding: 8px 16px 2px;
 
     }
 
@@ -3763,7 +3799,7 @@
 
           return `<div class="widget-row" data-id="${esc(el.id)}">
 
-        <span class="label-text" style="flex:1;padding:0 16px;">${esc(el.value.data)}</span>
+        <span class="label-block">${esc(el.value.data)}</span>
 
       </div>`;
 
@@ -3977,22 +4013,6 @@
 
 
 
-          // Build legend
-
-          let legendHtml = '';
-
-          if (series.length > 1) {
-
-            legendHtml = '<div class="plot-legend">' +
-
-              series.map(s => `<div class="plot-legend-item"><div class="plot-legend-color" style="background:var(--${s.color})"></div>${esc(s.name)}</div>`).join('') +
-
-              '</div>';
-
-          }
-
-
-
           return `<div class="widget-row" data-id="${esc(el.id)}">
 
         <div class="plot-container ${accent}" style="flex: 1;">
@@ -4000,8 +4020,6 @@
           <div class="plot-header">
 
             <span class="plot-title">${esc(el.label)}</span>
-
-            ${legendHtml}
 
           </div>
 
@@ -4053,6 +4071,130 @@
 
 
 
+      // ── Canvas sizing (HiDPI / zoom robust) ────────────
+
+      // Match the backing store to the current CSS size and live
+
+      // devicePixelRatio, then map drawing units to CSS pixels. Idempotent and
+
+      // meant to run before every draw — this is what keeps charts crisp across
+
+      // browser zoom and container resizes. Returns false if not laid out yet.
+
+      function syncCanvasSize(canvas, ctx) {
+
+        const dpr = window.devicePixelRatio || 1;
+
+        const rect = canvas.getBoundingClientRect();
+
+        if (rect.width === 0 || rect.height === 0) return false;
+
+        const w = Math.round(rect.width * dpr);
+
+        const h = Math.round(rect.height * dpr);
+
+        if (canvas.width !== w || canvas.height !== h) {
+
+          canvas.width = w;
+
+          canvas.height = h;
+
+        }
+
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+        return true;
+
+      }
+
+      // Trace a rounded-rectangle path (caller fills/strokes). Uses the native
+
+      // ctx.roundRect when available, with an arcTo fallback for older engines.
+
+      function roundRectPath(ctx, x, y, w, h, r) {
+
+        ctx.beginPath();
+
+        if (ctx.roundRect) { ctx.roundRect(x, y, w, h, r); return; }
+
+        ctx.moveTo(x + r, y);
+
+        ctx.arcTo(x + w, y, x + w, y + h, r);
+
+        ctx.arcTo(x + w, y + h, x, y + h, r);
+
+        ctx.arcTo(x, y + h, x, y, r);
+
+        ctx.arcTo(x, y, x + w, y, r);
+
+        ctx.closePath();
+
+      }
+
+      // Redraw one instance, preserving its active hover line (if any).
+
+      function redrawChart(inst) {
+
+        if (!inst || !inst.canvas) return;
+
+        if (inst.type === 'plot') {
+
+          drawPlot(inst.el, inst.canvas, inst.ctx, inst.scales, plotHoverState.get(inst.el.id) ?? -1);
+
+        } else {
+
+          drawMiniChart(inst.el, inst.canvas, inst.ctx);
+
+        }
+
+      }
+
+      function redrawAllCharts() {
+
+        for (const inst of chartInstances.values()) redrawChart(inst);
+
+      }
+
+      // Container/layout reflow covers most browser-zoom cases. Canvases
+
+      // register via dataset.chartId on init and are released in cleanupCharts.
+
+      const chartResizeObserver = new ResizeObserver((entries) => {
+
+        for (const entry of entries) {
+
+          const inst = chartInstances.get(entry.target.dataset.chartId);
+
+          if (inst) redrawChart(inst);
+
+        }
+
+      });
+
+      // Pure DPR changes (zoom without reflow, OS scaling) do not fire the
+
+      // ResizeObserver, so watch devicePixelRatio directly and re-arm each time.
+
+      let dprMedia = null;
+
+      function onDprChange() {
+
+        redrawAllCharts();
+
+        watchDevicePixelRatio();
+
+      }
+
+      function watchDevicePixelRatio() {
+
+        if (dprMedia) dprMedia.removeEventListener('change', onDprChange);
+
+        dprMedia = matchMedia(`(resolution: ${window.devicePixelRatio}dppx)`);
+
+        dprMedia.addEventListener('change', onDprChange, { once: true });
+
+      }
+
       // ── Mini Chart Canvas Drawing ──────────────────────
 
       function initMiniChart(el) {
@@ -4103,11 +4245,11 @@
 
 
 
-        canvas.width = rect.width * window.devicePixelRatio;
+        syncCanvasSize(canvas, ctx);
 
-        canvas.height = rect.height * window.devicePixelRatio;
+        canvas.dataset.chartId = el.id;
 
-        ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+        chartResizeObserver.observe(canvas);
 
 
 
@@ -4182,6 +4324,8 @@
         const values = data.values || [];
 
         if (values.length < 2) return;
+
+        if (!syncCanvasSize(canvas, ctx)) return;
 
 
 
@@ -4274,6 +4418,8 @@
         ctx.lineWidth = 2;
 
         ctx.lineJoin = 'round';
+
+        ctx.lineCap = 'round';
 
         for (let i = 0; i < values.length; i++) {
 
@@ -4743,11 +4889,11 @@
 
 
 
-        canvas.width = rect.width * window.devicePixelRatio;
+        syncCanvasSize(canvas, ctx);
 
-        canvas.height = rect.height * window.devicePixelRatio;
+        canvas.dataset.chartId = el.id;
 
-        ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+        chartResizeObserver.observe(canvas);
 
 
 
@@ -4937,6 +5083,10 @@
 
         const clampedIndex = Math.max(0, Math.min(dataIndex, series[0].values.length - 1));
 
+        plotHoverState.set(el.id, clampedIndex);
+
+        let tooltipHtml = `<div class="plot-tooltip-title">Sample ${clampedIndex + 1} / ${series[0].values.length}</div>`;
+
 
 
         // Position tooltip
@@ -4989,7 +5139,7 @@
 
         if (instance) {
 
-          drawPlot(el, canvas, instance.ctx, scales, clampedIndex);
+          drawPlot(el, canvas, instance.ctx, instance.scales || scales, clampedIndex);
 
         }
 
@@ -5040,6 +5190,8 @@
         const series = data.series || [];
 
         if (series.length === 0) return;
+
+        if (!syncCanvasSize(canvas, ctx)) return;
 
 
 
@@ -5115,9 +5267,11 @@
 
           ctx.strokeStyle = color;
 
-          ctx.lineWidth = 2;
+          ctx.lineWidth = 2.25;
 
           ctx.lineJoin = 'round';
+
+          ctx.lineCap = 'round';
 
 
 
@@ -5137,99 +5291,83 @@
 
 
 
-          // Draw area under line for first series only
-
-          if (si === 0) {
-
-            const gradient = ctx.createLinearGradient(0, padding.top, 0, height - padding.bottom);
-
-            gradient.addColorStop(0, color + '30');
-
-            gradient.addColorStop(1, color + '05');
-
-
-
-            ctx.beginPath();
-
-            ctx.moveTo(padding.left, padding.top + plotHeight);
-
-            for (let i = 0; i < values.length; i++) {
-
-              const x = padding.left + (i / (values.length - 1)) * plotWidth;
-
-              const y = padding.top + plotHeight - ((values[i] - scale.min) / scale.range) * plotHeight;
-
-              ctx.lineTo(x, y);
-
-            }
-
-            ctx.lineTo(width - padding.right, padding.top + plotHeight);
-
-            ctx.closePath();
-
-            ctx.fillStyle = gradient;
-
-            ctx.fill();
-
-          }
-
-
-
-          // Draw dots at data points (subsampled)
-
-          ctx.fillStyle = color;
-
-          for (let i = 0; i < values.length; i += Math.ceil(values.length / 20)) {
-
-            const x = padding.left + (i / (values.length - 1)) * plotWidth;
-
-            const y = padding.top + plotHeight - ((values[i] - scale.min) / scale.range) * plotHeight;
-
-            ctx.beginPath();
-
-            ctx.arc(x, y, 3, 0, Math.PI * 2);
-
-            ctx.fill();
-
-          }
-
-
-
-          // Draw current value for this series (on left side of plot area)
-
-          if (values.length > 0) {
-
-            const currentValue = values[values.length - 1];
-
-            ctx.fillStyle = color;
-
-            ctx.font = 'bold 11px var(--mono)';
-
-            ctx.textAlign = 'left';
-
-            const labelX = padding.left + 4;
-
-            const labelY = padding.top + 14 + (si * 16);
-
-            ctx.fillText(`${s.name}: ${formatNum(currentValue, 0.01)}`, labelX, labelY);
-
-          }
-
         }
 
 
 
-        // Draw hover line
+        // Series overlay: name + current value, stacked top-left over one subtle
+
+        // backdrop so the readout stays legible above the lines.
+
+        const overlay = series
+
+          .filter(sr => (sr.values || []).length > 0)
+
+          .map(sr => ({
+
+            color: getComputedStyle(canvas.closest('.plot-container')).getPropertyValue(`--${sr.color}`).trim() || '#e06c5c',
+
+            text: `${sr.name}  ${formatNum(sr.values[sr.values.length - 1], 0.01)}`,
+
+          }));
+
+        if (overlay.length > 0) {
+
+          ctx.font = '600 11px "Cascadia Code", "Fira Code", Consolas, monospace';
+
+          ctx.textBaseline = 'middle';
+
+          const rowH = 16, dotSize = 7, padX = 8, gap = 7;
+
+          let textW = 0;
+
+          for (const o of overlay) textW = Math.max(textW, ctx.measureText(o.text).width);
+
+          const boxW = padX + dotSize + gap + Math.ceil(textW) + padX;
+
+          const boxH = overlay.length * rowH + 6;
+
+          const boxX = padding.left + 4, boxY = padding.top + 4;
+
+          ctx.fillStyle = 'rgba(18, 18, 18, 0.55)';
+
+          roundRectPath(ctx, boxX, boxY, boxW, boxH, 6);
+
+          ctx.fill();
+
+          overlay.forEach((o, i) => {
+
+            const cy = boxY + 3 + rowH * i + rowH / 2;
+
+            ctx.fillStyle = o.color;
+
+            roundRectPath(ctx, boxX + padX, cy - dotSize / 2, dotSize, dotSize, 2);
+
+            ctx.fill();
+
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.92)';
+
+            ctx.textAlign = 'left';
+
+            ctx.fillText(o.text, boxX + padX + dotSize + gap, cy);
+
+          });
+
+          ctx.textBaseline = 'alphabetic';
+
+        }
+
+        // Hover: dashed vertical guide + a marker dot on each series.
 
         if (hoverIndex >= 0 && series.length > 0 && series[0].values) {
 
           const hoverX = padding.left + (hoverIndex / (series[0].values.length - 1)) * plotWidth;
 
-          ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+          ctx.strokeStyle = 'rgba(255, 255, 255, 0.25)';
 
           ctx.lineWidth = 1;
 
-          ctx.setLineDash([5, 5]);
+          ctx.setLineDash([4, 4]);
 
           ctx.beginPath();
 
@@ -5240,6 +5378,34 @@
           ctx.stroke();
 
           ctx.setLineDash([]);
+
+          for (let si = 0; si < series.length; si++) {
+
+            const vals = series[si].values || [];
+
+            if (hoverIndex >= vals.length) continue;
+
+            const scale = scales[si];
+
+            const my = padding.top + plotHeight - ((vals[hoverIndex] - scale.min) / scale.range) * plotHeight;
+
+            const color = getComputedStyle(canvas.closest('.plot-container')).getPropertyValue(`--${series[si].color}`).trim() || '#e06c5c';
+
+            ctx.beginPath();
+
+            ctx.arc(hoverX, my, 4, 0, Math.PI * 2);
+
+            ctx.fillStyle = color;
+
+            ctx.fill();
+
+            ctx.lineWidth = 2;
+
+            ctx.strokeStyle = 'rgba(18, 18, 18, 0.9)';
+
+            ctx.stroke();
+
+          }
 
         }
 
@@ -5260,6 +5426,8 @@
             instance.canvas.onmousemove = null;
 
             instance.canvas.onmouseleave = null;
+
+            chartResizeObserver.unobserve(instance.canvas);
 
           }
 
@@ -5342,6 +5510,8 @@
 
 
       // ── Init ───────────────────────────────────────────
+
+      watchDevicePixelRatio();
 
       connect();
 
