@@ -160,10 +160,10 @@ impl Context {
                 match tx.try_send(outgoing) {
                     Ok(()) => {}
                     Err(mpsc::TrySendError::Full(_)) => {
-                        log::warn!("wgui: WS channel backpressure, skipping frame update");
+                        log::debug!("wgui: WS channel backpressure, skipping frame update");
                     }
                     Err(mpsc::TrySendError::Disconnected(_)) => {
-                        log::warn!("wgui: WS thread disconnected");
+                        log::debug!("wgui: WS thread disconnected");
                     }
                 }
             }
@@ -183,6 +183,17 @@ impl Default for Context {
 impl Drop for Context {
     fn drop(&mut self) {
         self.shutdown.store(true, Ordering::Release);
+        // Join the server threads so their listeners (and the ports) are fully
+        // released before any replacement Context tries to bind. Without this,
+        // a quick in-process restart can drift to the next port pair while an
+        // already-open browser tab keeps pointing at the old port and never
+        // reconnects. Threads observe `shutdown` within ~200ms (HTTP poll).
+        if let Some(handle) = self._http_handle.take() {
+            let _ = handle.join();
+        }
+        if let Some(handle) = self._ws_handle.take() {
+            let _ = handle.join();
+        }
     }
 }
 

@@ -137,7 +137,10 @@ fn run_ws(
             match listener.accept() {
                 Ok((stream, _addr)) => {
                     stream.set_nonblocking(false).ok();
-                    stream.set_read_timeout(Some(Duration::from_millis(1))).ok();
+                    // Generous timeout for the handshake: the client's HTTP
+                    // upgrade request may not have arrived yet when accept()
+                    // returns. The 1ms poll timeout is applied after handshake.
+                    stream.set_read_timeout(Some(Duration::from_secs(5))).ok();
                     match tungstenite::accept(stream) {
                         Ok(mut ws) => {
                             log::info!("wgui: new WebSocket client connected (total: {})", clients.len() + 1);

@@ -2503,7 +2503,7 @@
 
       let ws = null;
 
-      let reconnectDelay = 500;
+      let reconnectDelay = 250;
 
       const recentlyInteracted = new Map(); // id -> timestamp
 
@@ -2811,7 +2811,7 @@
 
           setTimeout(connect, reconnectDelay);
 
-          reconnectDelay = Math.min(reconnectDelay * 1.5, 5000);
+          reconnectDelay = Math.min(reconnectDelay * 1.5, 1000);
 
         };
 
