@@ -176,6 +176,9 @@ pub enum AccentColor {
     Orange,
     Yellow,
     Red,
+    Black,
+    White,
+    Gray,
 }
 
 impl AccentColor {
@@ -189,6 +192,9 @@ impl AccentColor {
             AccentColor::Orange => "orange",
             AccentColor::Yellow => "yellow",
             AccentColor::Red => "red",
+            AccentColor::Black => "black",
+            AccentColor::White => "white",
+            AccentColor::Gray => "gray",
         }
     }
 }
