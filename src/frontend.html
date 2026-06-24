@@ -1179,6 +1179,11 @@
 
 
 
+    /* filled "scrubber" track: accent up to the thumb, dark beyond */
+    .slider-container input[type="range"] {
+      background: linear-gradient(to right, var(--accent) var(--fill, 0%), var(--bg-dark) var(--fill, 0%));
+    }
+
     .slider-value {
 
       font-family: var(--mono);
@@ -3606,7 +3611,15 @@
 
             const isActive = document.activeElement === input || (recent && Date.now() - recent < 500);
 
-            if (input && !isActive) input.value = val;
+            if (input && !isActive) {
+
+              input.value = val;
+
+              const mn = el.meta.min ?? 0, mx = el.meta.max ?? 1;
+
+              input.style.setProperty('--fill', Math.max(0, Math.min(100, ((val - mn) / ((mx - mn) || 1)) * 100)) + '%');
+
+            }
 
             if (display && !isActive) display.textContent = formatNum(val, el.meta.step);
 
@@ -3942,13 +3955,15 @@
 
           const step = el.meta.step ?? 0.01;
 
+          const fill = Math.max(0, Math.min(100, ((val - min) / ((max - min) || 1)) * 100));
+
           return `<div class="widget-row" data-id="${esc(el.id)}">
 
         <span class="widget-label" title="${esc(el.label)}">${esc(el.label)}</span>
 
         <div class="widget-control slider-container">
 
-          <input type="range" min="${min}" max="${max}" step="${step}" value="${val}"
+          <input type="range" min="${min}" max="${max}" step="${step}" value="${val}" style="--fill:${fill}%"
 
             oninput="wgui.onSlider('${escJs(el.id)}', this.value, this)">
 
@@ -4921,6 +4936,9 @@
           const val = isInt ? parseInt(rawVal) : parseFloat(rawVal);
 
           el.value.data = val;
+
+          { const mn = el.meta.min ?? 0, mx = el.meta.max ?? 1;
+            inputEl.style.setProperty('--fill', Math.max(0, Math.min(100, ((val - mn) / ((mx - mn) || 1)) * 100)) + '%'); }
 
           const display = inputEl.parentElement.querySelector('.slider-value');
 
