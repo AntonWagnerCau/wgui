@@ -62,6 +62,14 @@ fn run_http(shutdown: Arc<AtomicBool>, listener: TcpListener, html: String, favi
         match server.recv_timeout(Duration::from_millis(200)) {
             Ok(Some(request)) => {
                 match request.url() {
+                    // Liveness probe: the frontend polls this while
+                    // disconnected and only opens a WebSocket once it
+                    // answers, so connection attempts never hit a dead
+                    // server and never feed the browser's per-endpoint
+                    // reconnect backoff (RFC 6455 §7.2.3).
+                    "/ping" => {
+                        let _ = request.respond(tiny_http::Response::from_string("ok"));
+                    }
                     "/" | "/index.html" => {
                         let response = tiny_http::Response::from_string(&html)
                             .with_header(
@@ -122,6 +130,12 @@ fn run_ws(
     let mut mirror: IndexMap<String, ElementDecl> = IndexMap::new();
     let mut clients: Vec<tungstenite::WebSocket<TcpStream>> = Vec::new();
 
+    // Handshakes run on short-lived threads and deliver finished sockets
+    // here, so a socket that connects but never speaks (browser preconnect,
+    // an aborted tab) can only stall its own thread — the pump loop keeps
+    // accepting and serving clients throughout.
+    let (pending_tx, pending_rx) = mpsc::channel::<tungstenite::WebSocket<TcpStream>>();
+
     loop {
         // Check shutdown signal
         if shutdown.load(Ordering::Acquire) {
@@ -138,30 +152,21 @@ fn run_ws(
                 Ok((stream, _addr)) => {
                     stream.set_nonblocking(false).ok();
                     stream.set_nodelay(true).ok();
-                    // Generous timeout for the handshake: the client's HTTP
-                    // upgrade request may not have arrived yet when accept()
-                    // returns. The 1ms poll timeout is applied after handshake.
+                    // Bounds the handshake: a silent socket errors out after
+                    // 5s and its thread exits. The 1ms poll timeout is applied
+                    // once the client is adopted by the pump loop.
                     stream.set_read_timeout(Some(Duration::from_secs(5))).ok();
-                    match tungstenite::accept(stream) {
-                        Ok(mut ws) => {
-                            log::info!("wgui: new WebSocket client connected (total: {})", clients.len() + 1);
-                            // Bound writes so a slow or half-dead client (e.g. a
-                            // tab being refreshed) can never block this thread —
-                            // which also runs accept() — and stall new clients
-                            // from connecting. On timeout the send errors and the
-                            // client is dropped below.
-                            ws.get_ref().set_write_timeout(Some(Duration::from_secs(2))).ok();
-                            // Send snapshot to new client
-                            let snapshot = ServerMsg::Snapshot {
-                                elements: mirror.values().cloned().collect(),
-                            };
-                            if let Ok(json) = serde_json::to_string(&snapshot) {
-                                let _ = ws.send(tungstenite::Message::Text(json.into()));
+                    let tx = pending_tx.clone();
+                    let spawned = thread::Builder::new()
+                        .name("wgui-ws-handshake".into())
+                        .spawn(move || match tungstenite::accept(stream) {
+                            Ok(ws) => {
+                                let _ = tx.send(ws);
                             }
-                            ws.get_ref().set_read_timeout(Some(Duration::from_millis(1))).ok();
-                            clients.push(ws);
-                        }
-                        Err(e) => log::error!("wgui: WS handshake failed: {e}"),
+                            Err(e) => log::error!("wgui: WS handshake failed: {e}"),
+                        });
+                    if let Err(e) = spawned {
+                        log::error!("wgui: failed to spawn WS handshake thread: {e}");
                     }
                 }
                 Err(ref e) if e.kind() == std::io::ErrorKind::WouldBlock => break,
@@ -170,6 +175,24 @@ fn run_ws(
                     break;
                 }
             }
+        }
+
+        // Adopt clients whose handshake completed
+        while let Ok(mut ws) = pending_rx.try_recv() {
+            log::info!("wgui: new WebSocket client connected (total: {})", clients.len() + 1);
+            // Bound writes so a slow or half-dead client (e.g. a tab being
+            // refreshed) can never block this thread. On timeout the send
+            // errors and the client is dropped below.
+            ws.get_ref().set_write_timeout(Some(Duration::from_secs(2))).ok();
+            // Send snapshot to new client
+            let snapshot = ServerMsg::Snapshot {
+                elements: mirror.values().cloned().collect(),
+            };
+            if let Ok(json) = serde_json::to_string(&snapshot) {
+                let _ = ws.send(tungstenite::Message::Text(json.into()));
+            }
+            ws.get_ref().set_read_timeout(Some(Duration::from_millis(1))).ok();
+            clients.push(ws);
         }
 
         // Drain pending messages from game loop, apply to mirror, broadcast

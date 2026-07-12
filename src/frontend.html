@@ -3001,6 +3001,32 @@
 
       // ── WebSocket ──────────────────────────────────────
 
+      // Reconnects go through an HTTP probe: browsers back off failed
+
+      // WebSocket attempts per host:port (RFC 6455 §7.2.3) with delays that
+
+      // survive page reloads, so the socket is only opened once the server
+
+      // answers /ping and the attempt is near-certain to succeed.
+
+      function scheduleReconnect() {
+
+        setTimeout(probeThenConnect, reconnectDelay);
+
+        reconnectDelay = Math.min(reconnectDelay * 1.5, 1000);
+
+      }
+
+      function probeThenConnect() {
+
+        fetch('/ping', { cache: 'no-store' })
+
+          .then(() => connect())
+
+          .catch(scheduleReconnect);
+
+      }
+
       function connect() {
 
         setStatus('connecting');
@@ -3057,9 +3083,7 @@
 
           messageQueue = [];
 
-          setTimeout(connect, reconnectDelay);
-
-          reconnectDelay = Math.min(reconnectDelay * 1.5, 1000);
+          scheduleReconnect();
 
         };
 
