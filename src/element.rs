@@ -130,6 +130,8 @@ pub enum ElementKind {
     LabelInline,
     /// Image display widget
     Image,
+    /// Clickable image — carries an `ImageValue` but reports clicks like a `Button`.
+    ImageButton,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq)]

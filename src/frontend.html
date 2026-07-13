@@ -2511,6 +2511,54 @@
 
 
 
+    /* Clickable image (thumbnail button) */
+
+    .image-button {
+
+      display: flex;
+
+      flex-direction: column;
+
+      gap: 6px;
+
+      padding: 6px;
+
+      border: 2px solid transparent;
+
+      border-radius: var(--radius);
+
+      cursor: pointer;
+
+      transition: border-color 0.15s, background 0.15s;
+
+    }
+
+    .image-button:hover {
+
+      background: rgba(255, 255, 255, 0.05);
+
+    }
+
+    .image-button img {
+
+      width: 100%;
+
+      height: auto;
+
+      display: block;
+
+      border-radius: var(--radius);
+
+    }
+
+    .image-button-selected {
+
+      border-color: var(--teal, #2dd4bf);
+
+    }
+
+
+
     .section-header::before {
 
       content: '';
@@ -3955,6 +4003,24 @@
 
           }
 
+          case 'ImageButton': {
+
+            const cont = row.querySelector('.image-button');
+
+            if (cont) cont.classList.toggle('image-button-selected', !!el.meta.accent);
+
+            const btnImg = row.querySelector('.image-button img');
+
+            if (btnImg) { const d = el.value.data; if (btnImg.src !== d.data) btnImg.src = d.data; }
+
+            const btnLabel = row.querySelector('.image-button .image-widget-label');
+
+            if (btnLabel) btnLabel.textContent = el.label;
+
+            break;
+
+          }
+
           default:
 
             render();
@@ -4540,6 +4606,28 @@
           ${labelHtml}
 
           <img src="${esc(data.data)}"${styleAttr} alt="${esc(el.label)}">
+
+        </div>
+
+      </div>`;
+
+        },
+
+        ImageButton: (el) => {
+
+          const data = el.value.data;
+
+          const sel = el.meta.accent ? ' image-button-selected' : '';
+
+          const labelHtml = el.label ? `<div class="image-widget-label">${esc(el.label)}</div>` : '';
+
+          return `<div class="widget-row" data-id="${esc(el.id)}">
+
+        <div class="image-button${sel}" onclick="wgui.onButton('${escJs(el.id)}')" title="${esc(el.label)}">
+
+          <img src="${esc(data.data)}" alt="${esc(el.label)}">
+
+          ${labelHtml}
 
         </div>
 

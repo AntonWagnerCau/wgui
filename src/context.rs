@@ -252,28 +252,43 @@ fn reconcile(prev: &[ElementDecl], current: &[ElementDecl]) -> Vec<ServerMsg> {
         }
     }
 
-    // Detect reorder: same set of IDs per window, different order
-    // Only emit if no adds/removes happened (pure reorder)
-    let has_structural = outgoing.iter().any(|m| matches!(m, ServerMsg::Add { .. } | ServerMsg::Remove { .. }));
-    if !has_structural && !prev.is_empty() {
-        // Group by window and check order
-        let mut prev_order: HashMap<&str, Vec<&str>> = HashMap::new();
-        let mut curr_order: HashMap<&str, Vec<&str>> = HashMap::new();
-        for d in prev {
-            prev_order.entry(d.window.as_ref()).or_default().push(&d.id);
+    // Re-assert per-window element order when the client's post-batch order
+    // would differ from the declared order. The client applies `Add` by
+    // appending and `Remove` by deletion, preserving order otherwise — so after
+    // a batch its order is the surviving previous elements followed by the newly
+    // added ones. An element first declared *between* existing ones (e.g. a
+    // table row that only appears once its data exists, landing under a later
+    // section) therefore ends up in the wrong place; a Reorder carrying the
+    // declared order fixes it. Pure reorders fall out of the same comparison,
+    // and a plain append (new element declared last) predicts correctly and
+    // emits nothing.
+    let mut prev_order: HashMap<&str, Vec<&str>> = HashMap::new();
+    for d in prev {
+        prev_order.entry(d.window.as_ref()).or_default().push(&d.id);
+    }
+    let mut curr_windows: Vec<&str> = Vec::new();
+    let mut curr_order: HashMap<&str, Vec<&str>> = HashMap::new();
+    for d in current {
+        let w = d.window.as_ref();
+        if !curr_order.contains_key(w) {
+            curr_windows.push(w);
         }
-        for d in current {
-            curr_order.entry(d.window.as_ref()).or_default().push(&d.id);
-        }
-        for (win, curr_ids) in &curr_order {
-            if let Some(prev_ids) = prev_order.get(win) {
-                if prev_ids.len() == curr_ids.len() && prev_ids != curr_ids {
-                    outgoing.push(ServerMsg::Reorder {
-                        window: win.to_string(),
-                        ids: curr_ids.iter().map(|s| s.to_string()).collect(),
-                    });
-                }
-            }
+        curr_order.entry(w).or_default().push(&d.id);
+    }
+    let empty: Vec<&str> = Vec::new();
+    for win in curr_windows {
+        let desired = &curr_order[win];
+        let prev_ids = prev_order.get(win).unwrap_or(&empty);
+        let curr_set: HashSet<&str> = desired.iter().copied().collect();
+        let prev_set: HashSet<&str> = prev_ids.iter().copied().collect();
+        // Predicted client order: surviving previous ids, then the new ones.
+        let mut predicted: Vec<&str> = prev_ids.iter().copied().filter(|id| curr_set.contains(id)).collect();
+        predicted.extend(desired.iter().copied().filter(|id| !prev_set.contains(id)));
+        if &predicted != desired {
+            outgoing.push(ServerMsg::Reorder {
+                window: win.to_string(),
+                ids: desired.iter().map(|s| s.to_string()).collect(),
+            });
         }
     }
 

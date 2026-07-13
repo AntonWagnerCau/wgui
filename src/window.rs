@@ -413,6 +413,28 @@ fn widget_image(sink: &mut impl WidgetSink, label: &str, data_uri: &str, width: 
     });
 }
 
+fn widget_image_button(sink: &mut impl WidgetSink, label: &str, data_uri: &str, selected: bool) -> Response {
+    let id = sink.make_id(label);
+    let clicked = matches!(sink.consume_edit(&id), Some(Value::Button(true)));
+    sink.record_child(id.clone());
+    sink.declare(ElementDecl {
+        id,
+        kind: ElementKind::ImageButton,
+        label: label.to_string(),
+        value: Value::ImageValue {
+            data: data_uri.to_string(),
+            width: None,
+            height: None,
+        },
+        meta: ElementMeta {
+            accent: if selected { Some(AccentColor::Teal) } else { None },
+            ..Default::default()
+        },
+        window: sink.window_name(),
+    });
+    Response { clicked, changed: clicked }
+}
+
 fn widget_plot(
     sink: &mut impl WidgetSink,
     label: &str,
@@ -705,6 +727,12 @@ impl<'a> Window<'a> {
     /// Display an image with an explicit size hint.
     pub fn image_with_size(&mut self, label: &str, data_uri: &str, width: u32, height: u32) {
         widget_image(self, label, data_uri, Some(width), Some(height));
+    }
+
+    /// Display a clickable image (thumbnail button). `selected` draws a highlight
+    /// border. Returns a `Response` whose `clicked()` is true the frame it is pressed.
+    pub fn image_button(&mut self, label: &str, data_uri: &str, selected: bool) -> Response {
+        widget_image_button(self, label, data_uri, selected)
     }
 }
 
@@ -1028,6 +1056,11 @@ impl<'a, 'ctx> Grid<'a, 'ctx> {
 
     pub fn image(&mut self, label: &str, data_uri: &str) {
         widget_image(self, label, data_uri, None, None);
+    }
+
+    /// Clickable image (thumbnail button); `selected` draws a highlight border.
+    pub fn image_button(&mut self, label: &str, data_uri: &str, selected: bool) -> Response {
+        widget_image_button(self, label, data_uri, selected)
     }
 
     pub fn button_compact(&mut self, label: &str) -> Response {
