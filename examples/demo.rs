@@ -12,6 +12,7 @@ fn main() {
     let mut color = [0.2f32, 0.5, 0.8];
     let mut color4 = [1.0f32, 0.3, 0.6, 1.0];
     let mut speed = 5.0f32;
+    let mut exposure = 1.0f32;
     let mut count = 10i32;
     let mut enabled = true;
     let mut name = String::from("Player1");
@@ -39,6 +40,9 @@ fn main() {
             }
             if win.slider("Speed", &mut speed, 0.0..=20.0).changed() {
                 println!("Speed: {speed:.2}");
+            }
+            if win.number_input("Exposure", &mut exposure).changed() {
+                println!("Exposure: {exposure}");
             }
             if win.slider_int("Ray Count", &mut count, 1..=256).changed() {
                 println!("Ray Count: {count}");

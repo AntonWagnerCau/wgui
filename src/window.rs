@@ -230,6 +230,93 @@ fn widget_text_input(sink: &mut impl WidgetSink, label: &str, value: &mut String
     Response { clicked, changed }
 }
 
+fn widget_number(sink: &mut impl WidgetSink, label: &str, value: &mut f32) -> Response {
+    let id = sink.make_id(label);
+    let (clicked, changed) = if let Some(Value::Float(v)) = sink.consume_edit(&id) {
+        let new = v as f32;
+        let changed = *value != new;
+        *value = new;
+        (true, changed)
+    } else {
+        (false, false)
+    };
+    sink.record_child(id.clone());
+    sink.declare(ElementDecl {
+        id,
+        kind: ElementKind::NumberInput,
+        label: label.to_string(),
+        value: Value::Float(*value as f64),
+        meta: ElementMeta::default(),
+        window: sink.window_name(),
+    });
+    Response { clicked, changed }
+}
+
+fn widget_number_f64(sink: &mut impl WidgetSink, label: &str, value: &mut f64) -> Response {
+    let id = sink.make_id(label);
+    let (clicked, changed) = if let Some(Value::Float(v)) = sink.consume_edit(&id) {
+        let changed = *value != v;
+        *value = v;
+        (true, changed)
+    } else {
+        (false, false)
+    };
+    sink.record_child(id.clone());
+    sink.declare(ElementDecl {
+        id,
+        kind: ElementKind::NumberInput,
+        label: label.to_string(),
+        value: Value::Float(*value),
+        meta: ElementMeta::default(),
+        window: sink.window_name(),
+    });
+    Response { clicked, changed }
+}
+
+fn widget_number_int(sink: &mut impl WidgetSink, label: &str, value: &mut i32) -> Response {
+    let id = sink.make_id(label);
+    let (clicked, changed) = if let Some(Value::Int(v)) = sink.consume_edit(&id) {
+        let new = v as i32;
+        let changed = *value != new;
+        *value = new;
+        (true, changed)
+    } else {
+        (false, false)
+    };
+    sink.record_child(id.clone());
+    sink.declare(ElementDecl {
+        id,
+        kind: ElementKind::NumberInput,
+        label: label.to_string(),
+        value: Value::Int(*value as i64),
+        meta: ElementMeta::default(),
+        window: sink.window_name(),
+    });
+    Response { clicked, changed }
+}
+
+fn widget_number_uint(sink: &mut impl WidgetSink, label: &str, value: &mut u32) -> Response {
+    let id = sink.make_id(label);
+    let (clicked, changed) = if let Some(Value::Int(v)) = sink.consume_edit(&id) {
+        let new = v.max(0) as u32;
+        let changed = *value != new;
+        *value = new;
+        (true, changed)
+    } else {
+        (false, false)
+    };
+    sink.record_child(id.clone());
+    sink.declare(ElementDecl {
+        id,
+        kind: ElementKind::NumberInput,
+        label: label.to_string(),
+        value: Value::Int(*value as i64),
+        meta: ElementMeta::default(),
+        window: sink.window_name(),
+    });
+    Response { clicked, changed }
+}
+
 fn widget_dropdown(sink: &mut impl WidgetSink, label: &str, selected: &mut usize, options: &[&str]) -> Response {
     let id = sink.make_id(label);
     let (clicked, changed) = if let Some(Value::Enum { selected: s, .. }) = sink.consume_edit(&id) {
@@ -534,6 +621,23 @@ impl<'a> Window<'a> {
 
     pub fn slider_uint(&mut self, label: &str, value: &mut u32, range: RangeInclusive<u32>) -> Response {
         widget_slider_uint(self, label, value, &range)
+    }
+
+    /// A free-typed numeric field with no slider or range clamp.
+    pub fn number_input(&mut self, label: &str, value: &mut f32) -> Response {
+        widget_number(self, label, value)
+    }
+
+    pub fn number_input_f64(&mut self, label: &str, value: &mut f64) -> Response {
+        widget_number_f64(self, label, value)
+    }
+
+    pub fn number_input_int(&mut self, label: &str, value: &mut i32) -> Response {
+        widget_number_int(self, label, value)
+    }
+
+    pub fn number_input_uint(&mut self, label: &str, value: &mut u32) -> Response {
+        widget_number_uint(self, label, value)
     }
 
     pub fn checkbox(&mut self, label: &str, value: &mut bool) -> Response {
@@ -876,6 +980,23 @@ impl<'a, 'ctx> Horizontal<'a, 'ctx> {
         widget_slider_uint(self, label, value, &range)
     }
 
+    /// A free-typed numeric field with no slider or range clamp.
+    pub fn number_input(&mut self, label: &str, value: &mut f32) -> Response {
+        widget_number(self, label, value)
+    }
+
+    pub fn number_input_f64(&mut self, label: &str, value: &mut f64) -> Response {
+        widget_number_f64(self, label, value)
+    }
+
+    pub fn number_input_int(&mut self, label: &str, value: &mut i32) -> Response {
+        widget_number_int(self, label, value)
+    }
+
+    pub fn number_input_uint(&mut self, label: &str, value: &mut u32) -> Response {
+        widget_number_uint(self, label, value)
+    }
+
     pub fn checkbox(&mut self, label: &str, value: &mut bool) -> Response {
         widget_checkbox(self, label, value)
     }
@@ -969,6 +1090,23 @@ impl<'a, 'ctx> Grid<'a, 'ctx> {
 
     pub fn slider_uint(&mut self, label: &str, value: &mut u32, range: RangeInclusive<u32>) -> Response {
         widget_slider_uint(self, label, value, &range)
+    }
+
+    /// A free-typed numeric field with no slider or range clamp.
+    pub fn number_input(&mut self, label: &str, value: &mut f32) -> Response {
+        widget_number(self, label, value)
+    }
+
+    pub fn number_input_f64(&mut self, label: &str, value: &mut f64) -> Response {
+        widget_number_f64(self, label, value)
+    }
+
+    pub fn number_input_int(&mut self, label: &str, value: &mut i32) -> Response {
+        widget_number_int(self, label, value)
+    }
+
+    pub fn number_input_uint(&mut self, label: &str, value: &mut u32) -> Response {
+        widget_number_uint(self, label, value)
     }
 
     pub fn checkbox(&mut self, label: &str, value: &mut bool) -> Response {

@@ -3771,6 +3771,16 @@
 
           }
 
+          case 'NumberInput': {
+
+            const input = row.querySelector('.number-input');
+
+            if (input && document.activeElement !== input) input.value = el.value.data;
+
+            break;
+
+          }
+
           case 'TextInputInline': {
 
             const input = document.querySelector(`[data-id="${CSS.escape(el.id)}"].text-input`);
@@ -4168,6 +4178,26 @@
           <input type="text" class="text-input" value="${esc(el.value.data)}"
 
             oninput="wgui.onText('${escJs(el.id)}', this.value)">
+
+        </div>
+
+      </div>`;
+
+        },
+
+
+
+        NumberInput: (el) => {
+
+          return `<div class="widget-row" data-id="${esc(el.id)}">
+
+        <span class="widget-label" title="${esc(el.label)}">${esc(el.label)}</span>
+
+        <div class="widget-control">
+
+          <input type="text" inputmode="decimal" class="text-input number-input" value="${esc(el.value.data)}"
+
+            oninput="wgui.onNumber('${escJs(el.id)}', this.value, this)">
 
         </div>
 
@@ -5160,6 +5190,50 @@
 
 
 
+        onNumber(id, rawVal, inputEl) {
+
+          const el = elements.get(id);
+
+          if (!el) return;
+
+          const isInt = el.value.type === 'Int';
+
+          // Strip anything that isn't part of a well-formed number, so junk
+
+          // like "i2u %!" can never land in the field.
+
+          const cleaned = cleanNumeric(rawVal, isInt);
+
+          if (inputEl && cleaned !== rawVal) {
+
+            const caret = inputEl.selectionStart ?? cleaned.length;
+
+            const removed = caret - cleanNumeric(rawVal.slice(0, caret), isInt).length;
+
+            inputEl.value = cleaned;
+
+            const pos = Math.max(0, caret - removed);
+
+            try { inputEl.setSelectionRange(pos, pos); } catch (_) {}
+
+          }
+
+          // Transient in-progress states carry no committable value yet.
+
+          if (cleaned === '' || cleaned === '-' || cleaned === '.' || cleaned === '-.') return;
+
+          const val = isInt ? parseInt(cleaned, 10) : parseFloat(cleaned);
+
+          if (!Number.isFinite(val)) return;
+
+          el.value.data = val;
+
+          send({ type: 'set', id, value: isInt ? { type: 'Int', data: val } : { type: 'Float', data: val } });
+
+        },
+
+
+
         onDropdown(id, selectedStr, selectEl) {
 
           const selected = parseInt(selectedStr);
@@ -5315,6 +5389,42 @@
       function escJs(s) {
 
         return String(s).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+
+      }
+
+
+
+      // Keep only characters that form a well-formed number: a single leading
+
+      // sign, digits, one '.', and (floats only) an 'e' exponent with its sign.
+
+      function cleanNumeric(raw, isInt) {
+
+        let out = '';
+
+        let seenDot = false, seenExp = false;
+
+        for (const c of String(raw)) {
+
+          if (c >= '0' && c <= '9') { out += c; continue; }
+
+          if (c === '-' || c === '+') {
+
+            const prev = out[out.length - 1];
+
+            if (out.length === 0 || prev === 'e' || prev === 'E') out += c;
+
+            continue;
+
+          }
+
+          if (!isInt && c === '.' && !seenDot && !seenExp) { seenDot = true; out += c; continue; }
+
+          if (!isInt && (c === 'e' || c === 'E') && !seenExp && out.length > 0) { seenExp = true; out += c; continue; }
+
+        }
+
+        return out;
 
       }
 

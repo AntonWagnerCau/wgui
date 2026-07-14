@@ -98,6 +98,8 @@ pub enum ElementKind {
     ColorPicker3,
     ColorPicker4,
     TextInput,
+    /// Numeric text field — free-typed number, no slider or range clamp.
+    NumberInput,
     Dropdown,
     Button,
     Label,
