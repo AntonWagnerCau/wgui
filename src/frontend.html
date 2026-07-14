@@ -2741,6 +2741,96 @@
     ::-webkit-scrollbar-thumb:hover {
       background: var(--text-dim);
     }
+
+    /* ============================================
+     SEARCH / FILTER BAR - press "S" to focus
+     ============================================ */
+    .wgui-search {
+      position: fixed;
+      top: 8px;
+      left: 12px;
+      z-index: 200;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      width: 260px;
+      max-width: calc(100vw - 220px);
+      padding: 5px 10px;
+      background: rgba(30, 30, 30, 0.85);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+      opacity: 0.55;
+      transition: opacity 0.15s, border-color 0.15s, box-shadow 0.15s;
+    }
+    .wgui-search:hover { opacity: 0.9; }
+    .wgui-search:focus-within,
+    .wgui-search.has-query {
+      opacity: 1;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px var(--accent-glow), 0 6px 20px rgba(0, 0, 0, 0.35);
+    }
+    .wgui-search-icon {
+      font-size: 14px;
+      line-height: 1;
+      color: var(--text-dim);
+      flex-shrink: 0;
+    }
+    .wgui-search-input {
+      flex: 1;
+      min-width: 0;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: var(--text);
+      font-family: var(--font);
+      font-size: 12px;
+      padding: 2px 0;
+    }
+    .wgui-search-input::placeholder { color: var(--text-muted); }
+    .wgui-search-count {
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--text-dim);
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .wgui-search-count.no-matches { color: var(--red); }
+    .wgui-search-kbd {
+      font-family: var(--mono);
+      font-size: 9px;
+      color: var(--text-muted);
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      padding: 0 4px;
+      line-height: 14px;
+      flex-shrink: 0;
+    }
+    .wgui-search:focus-within .wgui-search-kbd,
+    .wgui-search.has-query .wgui-search-kbd { display: none; }
+    .wgui-search-clear {
+      display: none;
+      flex-shrink: 0;
+      color: var(--text-muted);
+      font-size: 12px;
+      line-height: 1;
+      cursor: pointer;
+      padding: 1px 3px;
+      border-radius: 4px;
+      user-select: none;
+    }
+    .wgui-search-clear:hover { color: var(--text); background: rgba(255, 255, 255, 0.08); }
+    .wgui-search.has-query .wgui-search-clear { display: block; }
+
+    /* View-only filter classes (toggled while a search is active). The !important
+       hide wins over everything, and while searching we ignore collapse so
+       matches buried in a collapsed card/section still surface. */
+    .wgui-search-hidden { display: none !important; }
+    body.wgui-searching .card.collapsed .card-body { display: flex; }
+    body.wgui-searching .section-child.section-hidden { display: block; }
+    body.wgui-searching .separator { display: none; }
   </style>
 
 </head>
@@ -3620,6 +3710,9 @@
 
         // Place cards into columns by the stored per-column arrangement.
         layoutColumns();
+
+        // Re-apply the active search filter to the freshly built DOM.
+        applySearchFilter();
 
 
 
@@ -6206,9 +6299,238 @@
 
 
 
+      // ── Search / filter ────────────────────────────────
+      // Press "S" (while no text field is focused) to jump to the filter box;
+      // typing fuzzily filters every card, widget label and section by
+      // title/text. Matching is typo-tolerant — the same approximate-substring
+      // family used by agrep / Fuse, so swapped letters and small typos still
+      // hit.
+      let searchQuery = '';
+
+      function isEditableTarget(el) {
+        if (!el) return false;
+        const tag = el.tagName;
+        return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || el.isContentEditable;
+      }
+
+      // Minimum Damerau-Levenshtein distance between `pat` and the best-matching
+      // substring of `txt` (Sellers' approximate substring matching: row 0 is all
+      // zeros so the match may begin at any offset, and the answer is the min of
+      // the final row). Transpositions cost 1, so swapped letters stay cheap.
+      function approxSubstringDistance(pat, txt) {
+        const m = pat.length, n = txt.length;
+        if (m === 0) return 0;
+        if (n === 0) return m;
+        let prev2 = null;
+        let prev = new Array(n + 1).fill(0);
+        for (let i = 1; i <= m; i++) {
+          const cur = new Array(n + 1);
+          cur[0] = i;
+          const pc = pat.charCodeAt(i - 1);
+          for (let j = 1; j <= n; j++) {
+            const cost = pc === txt.charCodeAt(j - 1) ? 0 : 1;
+            let v = prev[j - 1] + cost;   // substitute / match
+            const del = prev[j] + 1;      // skip a pattern char
+            const ins = cur[j - 1] + 1;   // skip a text char
+            if (del < v) v = del;
+            if (ins < v) v = ins;
+            if (i > 1 && j > 1 &&
+                pc === txt.charCodeAt(j - 2) &&
+                pat.charCodeAt(i - 2) === txt.charCodeAt(j - 1)) {
+              const tr = prev2[j - 2] + 1; // transpose two adjacent chars
+              if (tr < v) v = tr;
+            }
+            cur[j] = v;
+          }
+          prev2 = prev;
+          prev = cur;
+        }
+        let best = prev[0];
+        for (let j = 1; j <= n; j++) if (prev[j] < best) best = prev[j];
+        return best;
+      }
+
+      // Error budget grows with token length: short tokens stay strict (so the
+      // filter doesn't match half the page), longer ones tolerate more typos.
+      function errorBudget(len) {
+        if (len <= 2) return 0;
+        if (len <= 4) return 1;
+        if (len <= 7) return 2;
+        return Math.floor(len / 4);
+      }
+
+      // A token fuzzily occurs in `text` (lowercased) when it is a substring or an
+      // approximate substring within the token's error budget.
+      function tokenMatches(token, text) {
+        if (text.indexOf(token) !== -1) return true;
+        const k = errorBudget(token.length);
+        if (k === 0) return false;
+        return approxSubstringDistance(token, text) <= k;
+      }
+
+      // Whitespace-separated tokens are ANDed (fzf-style): all must match.
+      function matchesQuery(tokens, text) {
+        const t = text.toLowerCase();
+        for (const tok of tokens) if (!tokenMatches(tok, t)) return false;
+        return true;
+      }
+
+      function setBlockHidden(el, hidden) {
+        el.classList.toggle('wgui-search-hidden', hidden);
+      }
+
+      function clearSearchFilter() {
+        document.body.classList.remove('wgui-searching');
+        document.querySelectorAll('.wgui-search-hidden')
+          .forEach(e => e.classList.remove('wgui-search-hidden'));
+      }
+
+      // Walk every card and hide the blocks/cards that don't match the query. A
+      // card whose title matches is shown whole; otherwise only matching widgets
+      // show. Section headers keep their context: a header shows when its own
+      // name matches or any of its member widgets do, and a name-matched section
+      // reveals all its members.
+      function applySearchFilter() {
+        const q = searchQuery.trim();
+        const box = document.getElementById('wgui-search');
+        const countEl = document.getElementById('wgui-search-count');
+        if (!q) {
+          clearSearchFilter();
+          if (box) box.classList.remove('has-query');
+          if (countEl) { countEl.textContent = ''; countEl.classList.remove('no-matches'); }
+          return;
+        }
+        if (box) box.classList.add('has-query');
+        document.body.classList.add('wgui-searching');
+        const tokens = q.toLowerCase().split(/\s+/).filter(Boolean);
+
+        let matchCount = 0;
+        const isSection = (e) => e.classList.contains('section-header');
+        const isSeparator = (e) => e.classList.contains('separator');
+
+        for (const card of document.querySelectorAll('#app .card')) {
+          const titleEl = card.querySelector('.card-title');
+          const titleMatch = titleEl ? matchesQuery(tokens, titleEl.textContent) : false;
+          const body = card.querySelector('.card-body');
+          let anyVisible = false;
+
+          if (body) {
+            const children = [...body.children];
+            const visible = new Map();
+
+            // Decide every non-section, non-separator block on its own text.
+            for (const child of children) {
+              if (isSection(child) || isSeparator(child)) continue;
+              visible.set(child, titleMatch || matchesQuery(tokens, child.textContent));
+            }
+
+            // Sections: a name match reveals the whole section; a header shows if
+            // its name matches or any member is visible.
+            let i = 0;
+            while (i < children.length) {
+              const child = children[i];
+              if (!isSection(child)) { i++; continue; }
+              const headerMatch = titleMatch || matchesQuery(tokens, child.textContent);
+              let j = i + 1, memberVisible = false;
+              for (; j < children.length && !isSection(children[j]); j++) {
+                const m = children[j];
+                if (isSeparator(m)) continue;
+                if (headerMatch) visible.set(m, true);
+                if (visible.get(m)) memberVisible = true;
+              }
+              const showHeader = headerMatch || memberVisible;
+              setBlockHidden(child, !showHeader);
+              if (showHeader) anyVisible = true;
+              i = j;
+            }
+
+            // Apply visibility to the leaf blocks and tally matches.
+            for (const child of children) {
+              if (isSection(child) || isSeparator(child)) continue;
+              const show = visible.get(child);
+              setBlockHidden(child, !show);
+              if (show) { anyVisible = true; matchCount++; }
+            }
+          }
+
+          setBlockHidden(card, !(titleMatch || anyVisible));
+        }
+
+        if (countEl) {
+          if (matchCount === 0) {
+            countEl.textContent = 'no matches';
+            countEl.classList.add('no-matches');
+          } else {
+            countEl.textContent = matchCount + (matchCount === 1 ? ' match' : ' matches');
+            countEl.classList.remove('no-matches');
+          }
+        }
+      }
+
+      // Coalesce rapid keystrokes into one filter pass per frame.
+      let searchApplyScheduled = false;
+      function scheduleSearchFilter() {
+        if (searchApplyScheduled) return;
+        searchApplyScheduled = true;
+        requestAnimationFrame(() => { searchApplyScheduled = false; applySearchFilter(); });
+      }
+
+      function buildSearch() {
+        const box = document.createElement('div');
+        box.className = 'wgui-search';
+        box.id = 'wgui-search';
+        box.innerHTML =
+          '<span class="wgui-search-icon">⌕</span>' +
+          '<input type="text" id="wgui-search-input" class="wgui-search-input" ' +
+            'placeholder="Search…" autocomplete="off" autocapitalize="off" ' +
+            'autocorrect="off" spellcheck="false" aria-label="Filter widgets">' +
+          '<span class="wgui-search-count" id="wgui-search-count"></span>' +
+          '<span class="wgui-search-kbd">S</span>' +
+          '<span class="wgui-search-clear" id="wgui-search-clear" title="Clear (Esc)">✕</span>';
+        document.body.appendChild(box);
+
+        const input = box.querySelector('#wgui-search-input');
+        const reset = () => {
+          input.value = '';
+          searchQuery = '';
+          box.classList.remove('has-query');
+          applySearchFilter();
+        };
+        input.addEventListener('input', () => {
+          searchQuery = input.value;
+          box.classList.toggle('has-query', searchQuery.trim().length > 0);
+          scheduleSearchFilter();
+        });
+        input.addEventListener('keydown', (e) => {
+          if (e.key === 'Escape') {
+            e.preventDefault();
+            if (input.value) reset();
+            input.blur();
+          }
+        });
+        box.querySelector('#wgui-search-clear').addEventListener('click', () => {
+          reset();
+          input.focus();
+        });
+      }
+
+      // "S" outside any text field jumps to (and selects) the filter box.
+      window.addEventListener('keydown', (e) => {
+        if (e.defaultPrevented || e.ctrlKey || e.metaKey || e.altKey) return;
+        if ((e.key === 's' || e.key === 'S') && !isEditableTarget(document.activeElement)) {
+          const input = document.getElementById('wgui-search-input');
+          if (!input) return;
+          e.preventDefault();
+          input.focus();
+          input.select();
+        }
+      });
+
       // ── Init ───────────────────────────────────────────
 
       buildToolbar();
+
+      buildSearch();
 
       installLayoutObservers();
 
