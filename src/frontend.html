@@ -3778,9 +3778,15 @@
 
             if (input && !isActive) {
 
-              input.value = val;
+              const mn = el.meta.min ?? 0, mx = el.meta.max ?? 1, st = el.meta.step ?? 0.01;
 
-              const mn = el.meta.min ?? 0, mx = el.meta.max ?? 1;
+              input.min = mn;
+
+              input.max = mx;
+
+              input.step = st;
+
+              input.value = val;
 
               input.style.setProperty('--fill', Math.max(0, Math.min(100, ((val - mn) / ((mx - mn) || 1)) * 100)) + '%');
 
