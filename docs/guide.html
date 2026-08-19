@@ -146,8 +146,11 @@ std::thread::sleep(std::time::Duration::from_millis(33)); // ~30 Hz</code></pre>
 }</code></pre>
       <p>
         The tab bar appears at the top center once any tab is declared, and the active tab is
-        remembered per browser. Windows created directly with <code>ctx.window()</code> are not
-        bound to a tab and show on every page. The tab name is part of the element ids inside it,
+        remembered per browser. The top-row digit keys <code>1</code>–<code>9</code> and
+        <code>0</code> jump to the nth tab. Windows created directly with <code>ctx.window()</code>
+        are not bound to a tab and show on every page. The search box spans every tab: while a
+        query is active, matching windows from other pages appear too, marked with a tab badge,
+        and a tab's name matches all of its windows. The tab name is part of the element ids inside it,
         so two tabs can each have a window named <code>"Settings"</code> without colliding, and
         each tab keeps its own drag-arranged card layout.
       </p>

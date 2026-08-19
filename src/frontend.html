@@ -513,6 +513,20 @@
     .tab-btn:hover { color: var(--text); background: rgba(255, 255, 255, 0.05); }
     .tab-btn.active { border-color: var(--accent); color: var(--accent); background: var(--accent-glow); }
 
+    /* Tab origin badge on cards surfaced from other tabs during a search */
+    .card-tab-badge {
+      font-family: var(--mono);
+      font-size: 9px;
+      color: var(--text-muted);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 1px 5px;
+      margin-right: 6px;
+      flex-shrink: 0;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
 
 
     .card.collapsed .card-toggle {
@@ -2981,6 +2995,7 @@
     body.wgui-searching .card.collapsed .card-body { display: flex; }
     body.wgui-searching .section-child.section-hidden { display: block; }
     body.wgui-searching .separator { display: none; }
+    body.wgui-searching .tab-bar { opacity: 0.55; }
   </style>
 
 </head>
@@ -3596,10 +3611,11 @@
         const tabs = tabList();
         bar.classList.toggle('visible', tabs.length > 0);
         const active = activeTabName();
-        bar.replaceChildren(...tabs.map(name => {
+        bar.replaceChildren(...tabs.map((name, i) => {
           const b = document.createElement('div');
           b.className = 'tab-btn' + (name === active ? ' active' : '');
           b.textContent = name;
+          if (i < 10) b.title = String((i + 1) % 10);
           b.addEventListener('click', () => {
             if (activeTabName() === name) return;
             layout.activeTab = name;
@@ -3638,7 +3654,9 @@
           base[mi].push(nm);
           colH[mi] += heights.get(nm) || 0;
         }
-        store[n] = base;
+        // A search shows foreign-tab cards; don't let their transient
+        // seeding leak into the stored arrangement.
+        if (!isSearching()) store[n] = base;
         return base;
       }
 
@@ -3664,7 +3682,7 @@
         for (let i = 0; i < n; i++) {
           for (const nm of placement[i]) cols[i].appendChild(cardEls.get(nm));
         }
-        saveLayout();
+        if (!isSearching()) saveLayout();
       }
 
       // ── Drag-to-reorder (pointer-based, exact placement) ──
@@ -3758,10 +3776,12 @@
           // Persist the resulting arrangement straight from the DOM.
           const app = document.getElementById('app');
           const cols = [...app.querySelectorAll('.masonry-col')];
-          placementStore()[cols.length] = cols.map(col =>
-            [...col.querySelectorAll(':scope > .card')].map(c => c.dataset.window));
           lastColCount = cols.length;
-          saveLayout();
+          if (!isSearching()) {
+            placementStore()[cols.length] = cols.map(col =>
+              [...col.querySelectorAll(':scope > .card')].map(c => c.dataset.window));
+            saveLayout();
+          }
         }
         drag = null;
       }
@@ -3881,9 +3901,13 @@
 
 
         // Group by window, skipping container children (they're rendered inside
-        // their containers) and elements on inactive tabs
+        // their containers) and elements on inactive tabs. An active search
+        // widens the scope to every tab; foreign cards get a composite key so
+        // same-named windows from two tabs stay separate.
 
         const activeTab = activeTabName();
+
+        const searching = isSearching();
 
         const windows = new Map();
 
@@ -3891,13 +3915,17 @@
 
           if (containerChildIds.has(el.id)) continue;
 
-          if (el.tab && el.tab !== activeTab) continue;
+          const foreign = !!el.tab && el.tab !== activeTab;
+
+          if (foreign && !searching) continue;
 
           const win = el.window || 'Default';
 
-          if (!windows.has(win)) windows.set(win, []);
+          const key = foreign ? el.tab + '\u0001' + win : win;
 
-          windows.get(win).push(el);
+          if (!windows.has(key)) windows.set(key, { name: win, tab: el.tab || null, foreign, elems: [] });
+
+          windows.get(key).elems.push(el);
 
         }
 
@@ -3905,22 +3933,25 @@
 
         // Build a card element per window (grip handle + collapse toggle).
         cardEls = new Map();
-        for (const [name, elems] of windows) {
+        for (const [key, group] of windows) {
+          const { name, elems } = group;
           const firstAccent = elems[0]?.meta?.accent || 'coral';
           const card = document.createElement('div');
           card.className = `card ${firstAccent}`;
-          card.dataset.window = name;
+          card.dataset.window = key;
+          if (group.tab) card.dataset.tab = group.tab;
           let inner = `<div class="card-header" onclick="wgui.toggleCard(this)">`;
           inner += `<span class="card-grip" title="Drag to reorder">⠿</span>`;
+          if (group.foreign) inner += `<span class="card-tab-badge">${esc(group.tab)}</span>`;
           inner += `<span class="card-title">${esc(name)}</span>`;
           inner += `<span class="card-toggle">&#9660;</span>`;
           inner += `</div><div class="card-body">`;
           for (const el of elems) inner += renderElement(el);
           inner += `</div>`;
           card.innerHTML = inner;
-          if (layout.collapsed.includes(name)) card.classList.add('collapsed');
-          bindCardDrag(card, name);
-          cardEls.set(name, card);
+          if (layout.collapsed.includes(key)) card.classList.add('collapsed');
+          bindCardDrag(card, key);
+          cardEls.set(key, card);
         }
 
         // Place cards into columns by the stored per-column arrangement.
@@ -6553,6 +6584,8 @@
       // hit.
       let searchQuery = '';
 
+      function isSearching() { return searchQuery.trim().length > 0; }
+
       function isEditableTarget(el) {
         if (!el) return false;
         const tag = el.tagName;
@@ -6656,7 +6689,8 @@
 
         for (const card of document.querySelectorAll('#app .card')) {
           const titleEl = card.querySelector('.card-title');
-          const titleMatch = titleEl ? matchesQuery(tokens, titleEl.textContent) : false;
+          const titleText = (titleEl ? titleEl.textContent : '') + (card.dataset.tab ? ' ' + card.dataset.tab : '');
+          const titleMatch = titleText.trim() ? matchesQuery(tokens, titleText) : false;
           const body = card.querySelector('.card-body');
           let anyVisible = false;
 
@@ -6736,16 +6770,23 @@
         document.body.appendChild(box);
 
         const input = box.querySelector('#wgui-search-input');
+        // Entering/leaving search mode changes which tabs' cards are rendered,
+        // so those transitions need a full render; keystrokes within a search
+        // only re-filter.
+        let wasSearching = false;
         const reset = () => {
           input.value = '';
           searchQuery = '';
           box.classList.remove('has-query');
-          applySearchFilter();
+          if (wasSearching) { wasSearching = false; render(); }
+          else applySearchFilter();
         };
         input.addEventListener('input', () => {
           searchQuery = input.value;
-          box.classList.toggle('has-query', searchQuery.trim().length > 0);
-          scheduleSearchFilter();
+          const now = isSearching();
+          box.classList.toggle('has-query', now);
+          if (now !== wasSearching) { wasSearching = now; render(); }
+          else scheduleSearchFilter();
         });
         input.addEventListener('keydown', (e) => {
           if (e.key === 'Escape') {
@@ -6761,6 +6802,7 @@
       }
 
       // "S" outside any text field jumps to (and selects) the filter box.
+      // Top-row digits 1–9 and 0 switch to the nth tab (0 = tenth).
       window.addEventListener('keydown', (e) => {
         if (e.defaultPrevented || e.ctrlKey || e.metaKey || e.altKey) return;
         if ((e.key === 's' || e.key === 'S') && !isEditableTarget(document.activeElement)) {
@@ -6769,6 +6811,16 @@
           e.preventDefault();
           input.focus();
           input.select();
+          return;
+        }
+        if (/^Digit[0-9]$/.test(e.code) && !isEditableTarget(document.activeElement)) {
+          const tabs = tabList();
+          const idx = e.code === 'Digit0' ? 9 : parseInt(e.code[5], 10) - 1;
+          if (idx >= tabs.length || tabs[idx] === activeTabName()) return;
+          e.preventDefault();
+          layout.activeTab = tabs[idx];
+          saveLayout();
+          render();
         }
       });
 
