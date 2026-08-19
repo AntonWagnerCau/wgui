@@ -2,7 +2,7 @@
 
 [package]
 name = "w-gui"
-version = "0.23.1"
+version = "0.23.2"
 edition = "2021"
 description = "A lightweight immediate-mode debug GUI served over localhost"
 repository = "https://github.com/AntonWagnerCau/wgui"

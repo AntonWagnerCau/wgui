@@ -3551,7 +3551,7 @@
       let lastColCount = 0;
 
       function loadLayout() {
-        const def = { placements: {}, collapsed: [], colCount: 'auto', activeTab: null };
+        const def = { placements: {}, collapsed: [], colCount: 'auto', activeTab: null, tabOrder: [] };
         try {
           const p = JSON.parse(localStorage.getItem(layoutKey) || '{}');
           return {
@@ -3559,6 +3559,7 @@
             collapsed: Array.isArray(p.collapsed) ? p.collapsed : [],
             colCount: (p.colCount === 'auto' || (Number.isInteger(p.colCount) && p.colCount >= 1 && p.colCount <= LAYOUT_MAX_COLS)) ? p.colCount : 'auto',
             activeTab: (typeof p.activeTab === 'string') ? p.activeTab : null,
+            tabOrder: Array.isArray(p.tabOrder) ? p.tabOrder.filter(t => typeof t === 'string') : [],
           };
         } catch (e) { return def; }
       }
@@ -3572,13 +3573,23 @@
       // ── Tabs (pages) ──
       // Tabs come from the elements themselves; the bar only shows when at
       // least one element declares one. Untabbed windows show on every tab.
+      // Bar order is append-only: a tab keeps its slot for as long as the
+      // browser remembers the layout, and tabs appearing later join at the
+      // end — nothing ever re-sorts. Reset clears the remembered order.
       function tabList() {
-        const tabs = [];
+        const live = new Set();
         for (const el of elements.values()) {
-          const t = el.tab;
-          if (t && !tabs.includes(t)) tabs.push(t);
+          if (el.tab) live.add(el.tab);
         }
-        return tabs;
+        let added = false;
+        for (const t of live) {
+          if (!layout.tabOrder.includes(t)) {
+            layout.tabOrder.push(t);
+            added = true;
+          }
+        }
+        if (added) saveLayout();
+        return layout.tabOrder.filter(t => live.has(t));
       }
 
       function activeTabName() {
@@ -3818,7 +3829,7 @@
         reset.textContent = 'Reset';
         reset.title = 'Clear saved layout, collapse and column settings';
         reset.addEventListener('click', () => {
-          layout = { placements: {}, collapsed: [], colCount: 'auto', activeTab: layout.activeTab };
+          layout = { placements: {}, collapsed: [], colCount: 'auto', activeTab: layout.activeTab, tabOrder: [] };
           saveLayout();
           updateToolbarActive(bar);
           render();
