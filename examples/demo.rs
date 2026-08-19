@@ -20,16 +20,17 @@ fn main() {
     let modes = ["Easy", "Normal", "Hard", "Nightmare"];
     let mut click_count = 0u32;
 
-    // Tiny 2×2 red PNG as a data URI for demo purposes
-    let red_pixel_png = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAAAXNSR0IArs4c6QAAABxpRE9UAAAAAgAAAAAAAAACAAAAKAAAAAIAAAACAAAARj7k8lwAAAATSURBVAiZY2BgYPgPxAwMjDAAAA9eAQv2bC0PAAAAAElFTkSuQmCC";
+    // Tiny 2×2 coral PNG as a data URI for demo purposes
+    let coral_pixel_png = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAAEElEQVR42mN4kBMDRAwQCgAwfgah6rmAigAAAABJRU5ErkJggg==";
 
     println!("Open the URL printed above in your browser.");
     println!("Press Ctrl+C to quit.\n");
 
     loop {
-        // -- "Rendering" window --
+        // -- "Controls" tab: Rendering + Game windows --
         {
-            let mut win = ctx.window("Rendering");
+            let mut tab = ctx.tab("Controls");
+            let mut win = tab.window("Rendering");
             win.label("Render settings");
             win.separator();
             if win.color_picker("Sky Color", &mut color).changed() {
@@ -52,9 +53,10 @@ fn main() {
             }
         }
 
-        // -- "Game" window --
+        // -- "Game" window, same tab --
         {
-            let mut win = ctx.window("Game");
+            let mut tab = ctx.tab("Controls");
+            let mut win = tab.window("Game");
             if win.text_input("Player Name", &mut name).changed() {
                 println!("Player Name: {name}");
             }
@@ -71,12 +73,13 @@ fn main() {
             }
             win.label(&format!("Button pressed {} time(s)", click_count));
             win.separator();
-            win.image("Demo Image", red_pixel_png);
+            win.image("Demo Image", coral_pixel_png);
         }
 
-        // -- "Stats" window - demonstrates grid layout --
+        // -- "Stats" window on its own tab - demonstrates grid layout --
         {
-            let mut win = ctx.window("Stats");
+            let mut tab = ctx.tab("Stats");
+            let mut win = tab.window("Stats");
             win.set_accent(AccentColor::Coral);
             
             // Stats arranged in a grid instead of stacked

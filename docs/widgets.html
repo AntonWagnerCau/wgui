@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Widget reference — w-gui</title>
+  <meta name="description"
+    content="Every w-gui widget: signatures, behaviour, and which containers accept them.">
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+  <header id="topbar">
+    <a class="brand" href="index.html">
+      <span class="dot"></span>
+      w-gui
+      <span class="ver">0.22</span>
+    </a>
+    <nav>
+      <a href="index.html">Overview</a>
+      <a href="guide.html">Guide</a>
+      <a href="widgets.html" class="active">Widgets</a>
+      <a href="api/w_gui/index.html">API</a>
+      <a href="https://github.com/AntonWagnerCau/wgui">GitHub</a>
+      <a href="https://crates.io/crates/w-gui">crates.io</a>
+    </nav>
+  </header>
+
+  <div id="shell">
+    <aside id="sidebar">
+      <h4>Reference</h4>
+      <a href="#matrix">Availability matrix</a>
+
+      <h4>Input</h4>
+      <a href="#sliders">Sliders</a>
+      <a href="#numbers">Number inputs</a>
+      <a href="#checkbox">Checkbox</a>
+      <a href="#text">Text inputs</a>
+      <a href="#dropdown">Dropdown</a>
+      <a href="#buttons">Buttons</a>
+      <a href="#color">Color pickers</a>
+
+      <h4>Display</h4>
+      <a href="#labels">Labels and key/value</a>
+      <a href="#stat">Stat cards</a>
+      <a href="#status">Status indicators</a>
+      <a href="#progress">Progress bars</a>
+      <a href="#charts">Charts and plots</a>
+      <a href="#images">Images</a>
+
+      <h4>Layout</h4>
+      <a href="#containers">Grid and horizontal</a>
+      <a href="#structure">Sections, separators, accent</a>
+
+      <h4>Types</h4>
+      <a href="#types">Response, AccentColor</a>
+    </aside>
+
+    <main>
+      <h1>Widget reference</h1>
+      <p class="lead">
+        Every method available on <code>Window</code>, <code>Grid</code> and
+        <code>Horizontal</code>. Widgets that accept user input take a <code>&amp;mut</code>
+        reference and return a <a href="#types"><code>Response</code></a>; display widgets return
+        nothing.
+      </p>
+
+      <h2 id="matrix">Availability matrix</h2>
+      <p>
+        The three containers overlap but are not identical. <code>Horizontal</code> in particular is
+        limited to widgets that read well in a single row.
+      </p>
+      <table>
+        <thead>
+          <tr>
+            <th>Method</th>
+            <th class="ctr">Window</th>
+            <th class="ctr">Grid</th>
+            <th class="ctr">Horizontal</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td class="sig">slider / _f64 / _int / _uint</td><td class="yes">yes</td><td class="yes">yes</td><td class="yes">yes</td></tr>
+          <tr><td class="sig">number_input / _f64 / _int / _uint</td><td class="yes">yes</td><td class="yes">yes</td><td class="yes">yes</td></tr>
+          <tr><td class="sig">checkbox</td><td class="yes">yes</td><td class="yes">yes</td><td class="yes">yes</td></tr>
+          <tr><td class="sig">color_picker / color_picker4</td><td class="yes">yes</td><td class="yes">yes</td><td class="yes">yes</td></tr>
+          <tr><td class="sig">text_input</td><td class="yes">yes</td><td class="yes">yes</td><td class="yes">yes</td></tr>
+          <tr><td class="sig">text_input_inline</td><td class="no">–</td><td class="no">–</td><td class="yes">yes</td></tr>
+          <tr><td class="sig">dropdown</td><td class="yes">yes</td><td class="yes">yes</td><td class="yes">yes</td></tr>
+          <tr><td class="sig">button</td><td class="yes">yes</td><td class="yes">yes</td><td class="yes">yes</td></tr>
+          <tr><td class="sig">button_accent</td><td class="no">–</td><td class="no">–</td><td class="yes">yes</td></tr>
+          <tr><td class="sig">button_compact / _accent</td><td class="yes">yes</td><td class="yes">yes</td><td class="no">–</td></tr>
+          <tr><td class="sig">label</td><td class="yes">yes</td><td class="yes">yes</td><td class="yes">yes</td></tr>
+          <tr><td class="sig">kv</td><td class="yes">yes</td><td class="yes">yes</td><td class="yes">yes</td></tr>
+          <tr><td class="sig">kv_value</td><td class="yes">yes</td><td class="no">–</td><td class="no">–</td></tr>
+          <tr><td class="sig">stat</td><td class="yes">yes</td><td class="yes">yes</td><td class="no">–</td></tr>
+          <tr><td class="sig">status</td><td class="yes">yes</td><td class="yes">yes</td><td class="no">–</td></tr>
+          <tr><td class="sig">progress_bar / _with_subtitle</td><td class="yes">yes</td><td class="yes">yes</td><td class="no">–</td></tr>
+          <tr><td class="sig">mini_chart</td><td class="yes">yes</td><td class="yes">yes</td><td class="no">–</td></tr>
+          <tr><td class="sig">plot / plot_with_autoscale</td><td class="yes">yes</td><td class="yes">yes</td><td class="no">–</td></tr>
+          <tr><td class="sig">image</td><td class="yes">yes</td><td class="yes">yes</td><td class="yes">yes</td></tr>
+          <tr><td class="sig">image_with_size</td><td class="yes">yes</td><td class="no">–</td><td class="no">–</td></tr>
+          <tr><td class="sig">image_button</td><td class="yes">yes</td><td class="yes">yes</td><td class="no">–</td></tr>
+          <tr><td class="sig">separator</td><td class="yes">yes</td><td class="yes">yes</td><td class="no">–</td></tr>
+          <tr><td class="sig">section</td><td class="yes">yes</td><td class="no">–</td><td class="no">–</td></tr>
+          <tr><td class="sig">set_accent</td><td class="yes">yes</td><td class="no">–</td><td class="no">–</td></tr>
+          <tr><td class="sig">grid</td><td class="yes">yes</td><td class="yes">yes</td><td class="no">–</td></tr>
+          <tr><td class="sig">horizontal</td><td class="yes">yes</td><td class="no">–</td><td class="no">–</td></tr>
+        </tbody>
+      </table>
+
+      <h2 id="sliders">Sliders</h2>
+      <div class="api">
+        <div class="name">
+          <span class="id">slider</span>
+          <span class="pill window">Window</span>
+          <span class="pill grid">Grid</span>
+          <span class="pill horizontal">Horizontal</span>
+          <span class="pill reads">Response</span>
+        </div>
+        <pre><code>fn slider(&amp;mut self, label: &amp;str, value: &amp;mut f32, range: RangeInclusive&lt;f32&gt;) -&gt; Response
+fn slider_f64(&amp;mut self, label: &amp;str, value: &amp;mut f64, range: RangeInclusive&lt;f64&gt;) -&gt; Response
+fn slider_int(&amp;mut self, label: &amp;str, value: &amp;mut i32, range: RangeInclusive&lt;i32&gt;) -&gt; Response
+fn slider_uint(&amp;mut self, label: &amp;str, value: &amp;mut u32, range: RangeInclusive&lt;u32&gt;) -&gt; Response</code></pre>
+        <p>
+          A draggable track with a numeric readout. Floating point sliders use a step of
+          <code>(max - min) / 10000</code>; integer sliders step by 1. The value is clamped to the
+          range by the frontend.
+        </p>
+      </div>
+      <pre><code>win.slider("Exposure", &amp;mut exposure, 0.0..=8.0);
+win.slider_int("Bounces", &amp;mut bounces, 1..=32);
+win.slider_uint("Sample Count", &amp;mut samples, 1..=4096);
+
+if win.slider_f64("Time Scale", &amp;mut time_scale, 0.0..=4.0).changed() {
+    resync_clock(time_scale);
+}</code></pre>
+
+      <h2 id="numbers">Number inputs</h2>
+      <div class="api">
+        <div class="name">
+          <span class="id">number_input</span>
+          <span class="pill window">Window</span>
+          <span class="pill grid">Grid</span>
+          <span class="pill horizontal">Horizontal</span>
+          <span class="pill reads">Response</span>
+        </div>
+        <pre><code>fn number_input(&amp;mut self, label: &amp;str, value: &amp;mut f32) -&gt; Response
+fn number_input_f64(&amp;mut self, label: &amp;str, value: &amp;mut f64) -&gt; Response
+fn number_input_int(&amp;mut self, label: &amp;str, value: &amp;mut i32) -&gt; Response
+fn number_input_uint(&amp;mut self, label: &amp;str, value: &amp;mut u32) -&gt; Response</code></pre>
+        <p>
+          A free-typed numeric field with no track and no range clamp. Use it when the sensible
+          range is unbounded or when exact values matter more than dragging. The
+          <code>_uint</code> variant floors incoming negatives at zero.
+        </p>
+      </div>
+      <pre><code>win.number_input("Emitter Radius", &amp;mut radius);
+win.number_input_int("Seed", &amp;mut seed);</code></pre>
+
+      <h2 id="checkbox">Checkbox</h2>
+      <div class="api">
+        <div class="name">
+          <span class="id">checkbox</span>
+          <span class="pill window">Window</span>
+          <span class="pill grid">Grid</span>
+          <span class="pill horizontal">Horizontal</span>
+          <span class="pill reads">Response</span>
+        </div>
+        <pre><code>fn checkbox(&amp;mut self, label: &amp;str, value: &amp;mut bool) -&gt; Response</code></pre>
+        <p>A labelled toggle.</p>
+      </div>
+      <pre><code>if win.checkbox("Enable Denoiser", &amp;mut denoise).changed() {
+    rebuild_pipeline(denoise);
+}</code></pre>
+
+      <h2 id="text">Text inputs</h2>
+      <div class="api">
+        <div class="name">
+          <span class="id">text_input</span>
+          <span class="pill window">Window</span>
+          <span class="pill grid">Grid</span>
+          <span class="pill horizontal">Horizontal</span>
+          <span class="pill reads">Response</span>
+        </div>
+        <pre><code>fn text_input(&amp;mut self, label: &amp;str, value: &amp;mut String) -&gt; Response</code></pre>
+        <p>A single-line field with a label column.</p>
+      </div>
+      <div class="api">
+        <div class="name">
+          <span class="id">text_input_inline</span>
+          <span class="pill horizontal">Horizontal</span>
+          <span class="pill reads">Response</span>
+        </div>
+        <pre><code>fn text_input_inline(&amp;mut self, placeholder: &amp;str, value: &amp;mut String) -&gt; Response</code></pre>
+        <p>
+          The same field without the label column, for use inside a row. The first argument is the
+          placeholder text shown while the field is empty, and it also determines the element id, so
+          keep it stable.
+        </p>
+      </div>
+      <div class="api">
+        <div class="name">
+          <span class="id">kv_value</span>
+          <span class="pill window">Window</span>
+          <span class="pill reads">Response</span>
+        </div>
+        <pre><code>fn kv_value(&amp;mut self, label: &amp;str, value: &amp;mut String) -&gt; Response</code></pre>
+        <p>
+          An editable key/value row: renders like <a href="#labels"><code>kv</code></a> but writes
+          browser edits back into the string.
+        </p>
+      </div>
+
+      <h2 id="dropdown">Dropdown</h2>
+      <div class="api">
+        <div class="name">
+          <span class="id">dropdown</span>
+          <span class="pill window">Window</span>
+          <span class="pill grid">Grid</span>
+          <span class="pill horizontal">Horizontal</span>
+          <span class="pill reads">Response</span>
+        </div>
+        <pre><code>fn dropdown(&amp;mut self, label: &amp;str, selected: &amp;mut usize, options: &amp;[&amp;str]) -&gt; Response</code></pre>
+        <p>
+          A select box. <code>selected</code> is an index into <code>options</code>, written back
+          when the user picks another entry. Changing the option list is allowed; keep the index
+          meaningful when you do.
+        </p>
+      </div>
+      <pre><code>const MODES: [&amp;str; 4] = ["Albedo", "Normals", "Depth", "Beauty"];
+
+if win.dropdown("Debug View", &amp;mut mode, &amp;MODES).changed() {
+    set_debug_mode(mode);
+}</code></pre>
+
+      <h2 id="buttons">Buttons</h2>
+      <div class="api">
+        <div class="name">
+          <span class="id">button</span>
+          <span class="pill window">Window</span>
+          <span class="pill grid">Grid</span>
+          <span class="pill horizontal">Horizontal</span>
+          <span class="pill reads">Response</span>
+        </div>
+        <pre><code>fn button(&amp;mut self, label: &amp;str) -&gt; Response</code></pre>
+        <p>
+          A full-width push button. <code>clicked()</code> is true for the single frame in which the
+          press is consumed. On a <code>Horizontal</code> it renders as an inline button without a
+          label column.
+        </p>
+      </div>
+      <div class="api">
+        <div class="name">
+          <span class="id">button_accent</span>
+          <span class="pill horizontal">Horizontal</span>
+          <span class="pill reads">Response</span>
+        </div>
+        <pre><code>fn button_accent(&amp;mut self, label: &amp;str, accent: AccentColor) -&gt; Response</code></pre>
+        <p>An inline button tinted with an explicit accent, for destructive or primary actions.</p>
+      </div>
+      <div class="api">
+        <div class="name">
+          <span class="id">button_compact</span>
+          <span class="pill window">Window</span>
+          <span class="pill grid">Grid</span>
+          <span class="pill reads">Response</span>
+        </div>
+        <pre><code>fn button_compact(&amp;mut self, label: &amp;str) -&gt; Response
+fn button_compact_accent(&amp;mut self, label: &amp;str, accent: AccentColor) -&gt; Response</code></pre>
+        <p>A smaller button for dense panels, optionally accented.</p>
+      </div>
+      <pre><code>if win.button("Reload Shaders").clicked() {
+    reload_shaders();
+}
+
+win.horizontal(|h| {
+    if h.button_accent("Start", AccentColor::Green).clicked() { start(); }
+    if h.button_accent("Stop", AccentColor::Red).clicked() { stop(); }
+    h.label("running");
+});</code></pre>
+
+      <h2 id="color">Color pickers</h2>
+      <div class="api">
+        <div class="name">
+          <span class="id">color_picker</span>
+          <span class="pill window">Window</span>
+          <span class="pill grid">Grid</span>
+          <span class="pill horizontal">Horizontal</span>
+          <span class="pill reads">Response</span>
+        </div>
+        <pre><code>fn color_picker(&amp;mut self, label: &amp;str, value: &amp;mut [f32; 3]) -&gt; Response
+fn color_picker4(&amp;mut self, label: &amp;str, value: &amp;mut [f32; 4]) -&gt; Response</code></pre>
+        <p>
+          RGB and RGBA pickers over normalized <code>0.0..=1.0</code> components. The fourth
+          component of <code>color_picker4</code> is alpha.
+        </p>
+      </div>
+      <pre><code>let mut tint = [1.0f32, 0.42, 0.13];
+win.color_picker("Flame Tint", &amp;mut tint);
+
+let mut overlay = [0.0f32, 0.0, 0.0, 0.35];
+win.color_picker4("Overlay", &amp;mut overlay);</code></pre>
+
+      <h2 id="labels">Labels and key/value</h2>
+      <div class="api">
+        <div class="name">
+          <span class="id">label</span>
+          <span class="pill window">Window</span>
+          <span class="pill grid">Grid</span>
+          <span class="pill horizontal">Horizontal</span>
+        </div>
+        <pre><code>fn label(&amp;mut self, text: &amp;str)</code></pre>
+        <p>
+          Free text. Unlike every other widget the text is the value, not the id, so a label's
+          content can change every frame without churning element identity.
+        </p>
+      </div>
+      <div class="api">
+        <div class="name">
+          <span class="id">kv</span>
+          <span class="pill window">Window</span>
+          <span class="pill grid">Grid</span>
+          <span class="pill horizontal">Horizontal</span>
+        </div>
+        <pre><code>fn kv(&amp;mut self, label: &amp;str, value: &amp;str)</code></pre>
+        <p>
+          A compact read-only key/value row. This is the right widget for live numbers: the key is
+          stable and only the value updates.
+        </p>
+      </div>
+      <pre><code>win.kv("Frame", &amp;format!("{frame_ms:.2} ms"));
+win.kv("Rays", &amp;format!("{ray_count}"));
+win.label("Press R to reload the scene.");</code></pre>
+
+      <h2 id="stat">Stat cards</h2>
+      <div class="api">
+        <div class="name">
+          <span class="id">stat</span>
+          <span class="pill window">Window</span>
+          <span class="pill grid">Grid</span>
+        </div>
+        <pre><code>fn stat(&amp;mut self, label: &amp;str, value: &amp;str, subvalue: Option&lt;&amp;str&gt;, accent: AccentColor)</code></pre>
+        <p>
+          A large accented number with a caption and an optional smaller secondary line. Built for
+          grids: three or four across reads like a dashboard header.
+        </p>
+      </div>
+      <pre><code>win.grid(3, |grid| {
+    grid.stat("FPS", &amp;fps.to_string(), Some(&amp;format!("{frame_ms:.1} ms")), AccentColor::Green);
+    grid.stat("Particles", &amp;count.to_string(), Some("active"), AccentColor::Coral);
+    grid.stat("VRAM", &amp;format!("{vram_mb} MB"), None, AccentColor::Blue);
+});</code></pre>
+
+      <h2 id="status">Status indicators</h2>
+      <div class="api">
+        <div class="name">
+          <span class="id">status</span>
+          <span class="pill window">Window</span>
+          <span class="pill grid">Grid</span>
+        </div>
+        <pre><code>fn status(
+    &amp;mut self,
+    label: &amp;str,
+    active: bool,
+    active_text: Option&lt;&amp;str&gt;,
+    inactive_text: Option&lt;&amp;str&gt;,
+    active_color: AccentColor,
+    inactive_color: AccentColor,
+)</code></pre>
+        <p>
+          A colored dot with a caption that switches text and color on a boolean. Pass
+          <code>None</code> for either text to fall back to the frontend's default wording.
+        </p>
+      </div>
+      <pre><code>win.status(
+    "GPU Capture",
+    capturing,
+    Some("Recording"),
+    Some("Idle"),
+    AccentColor::Red,
+    AccentColor::Gray,
+);</code></pre>
+
+      <h2 id="progress">Progress bars</h2>
+      <div class="api">
+        <div class="name">
+          <span class="id">progress_bar</span>
+          <span class="pill window">Window</span>
+          <span class="pill grid">Grid</span>
+        </div>
+        <pre><code>fn progress_bar(&amp;mut self, label: &amp;str, value: f64, accent: AccentColor)
+fn progress_bar_with_subtitle(&amp;mut self, label: &amp;str, value: f64, accent: AccentColor, subtitle: &amp;str)</code></pre>
+        <p>
+          A filled track. <code>value</code> is a fraction and is clamped to
+          <code>0.0..=1.0</code>, so pass ratios rather than percentages. The subtitle variant adds
+          a line of context under the bar.
+        </p>
+      </div>
+      <pre><code>win.progress_bar("Bake", baked as f64 / total as f64, AccentColor::Teal);
+
+win.progress_bar_with_subtitle(
+    "Convergence",
+    samples as f64 / target as f64,
+    AccentColor::Green,
+    &amp;format!("{samples} / {target} spp"),
+);</code></pre>
+
+      <h2 id="charts">Charts and plots</h2>
+      <div class="api">
+        <div class="name">
+          <span class="id">mini_chart</span>
+          <span class="pill window">Window</span>
+          <span class="pill grid">Grid</span>
+        </div>
+        <pre><code>fn mini_chart(&amp;mut self, label: &amp;str, values: &amp;[f32], unit: Option&lt;&amp;str&gt;, accent: AccentColor)</code></pre>
+        <p>
+          A sparkline over the slice, with the last value shown as the current reading. The
+          <code>unit</code> string is appended to that reading verbatim, so include any leading
+          space you want.
+        </p>
+      </div>
+      <div class="api">
+        <div class="name">
+          <span class="id">plot</span>
+          <span class="pill window">Window</span>
+          <span class="pill grid">Grid</span>
+        </div>
+        <pre><code>fn plot(
+    &amp;mut self,
+    label: &amp;str,
+    series: &amp;[(&amp;str, &amp;[f32], AccentColor)],
+    x_label: Option&lt;&amp;str&gt;,
+    y_label: Option&lt;&amp;str&gt;,
+)
+
+fn plot_with_autoscale(
+    &amp;mut self,
+    label: &amp;str,
+    series: &amp;[(&amp;str, &amp;[f32], AccentColor, bool)],
+    x_label: Option&lt;&amp;str&gt;,
+    y_label: Option&lt;&amp;str&gt;,
+)</code></pre>
+        <p>
+          A larger multi-series chart with a legend and optional axis captions. Each tuple is
+          <em>(name, values, color)</em>, plus an autoscale flag in the
+          <code>plot_with_autoscale</code> form: <code>true</code> normalizes that series
+          independently, <code>false</code> puts it on the plot's shared scale. Plain
+          <code>plot</code> autoscales every series.
+        </p>
+      </div>
+      <pre><code>win.mini_chart("Frame Time", &amp;frame_ms, Some(" ms"), AccentColor::Coral);
+
+win.plot(
+    "Performance History",
+    &amp;[
+        ("FPS", &amp;fps_history, AccentColor::Green),
+        ("Memory", &amp;memory_history, AccentColor::Blue),
+    ],
+    Some("Time"),
+    Some("Value"),
+);</code></pre>
+
+      <h2 id="images">Images</h2>
+      <div class="api">
+        <div class="name">
+          <span class="id">image</span>
+          <span class="pill window">Window</span>
+          <span class="pill grid">Grid</span>
+          <span class="pill horizontal">Horizontal</span>
+        </div>
+        <pre><code>fn image(&amp;mut self, label: &amp;str, data_uri: &amp;str)
+fn image_with_size(&amp;mut self, label: &amp;str, data_uri: &amp;str, width: u32, height: u32)  // Window only</code></pre>
+        <p>
+          Displays a base64 data URI such as <code>"data:image/png;base64,…"</code>. The size
+          variant supplies an explicit size hint so the layout does not jump while the image
+          decodes.
+        </p>
+      </div>
+      <div class="api">
+        <div class="name">
+          <span class="id">image_button</span>
+          <span class="pill window">Window</span>
+          <span class="pill grid">Grid</span>
+          <span class="pill reads">Response</span>
+        </div>
+        <pre><code>fn image_button(&amp;mut self, label: &amp;str, data_uri: &amp;str, selected: bool) -&gt; Response</code></pre>
+        <p>
+          A clickable thumbnail that reports presses like a button. <code>selected</code> draws a
+          highlight border, which makes a grid of these a workable picker.
+        </p>
+      </div>
+      <pre><code>win.grid(4, |grid| {
+    for (i, thumb) in thumbnails.iter().enumerate() {
+        if grid.image_button(&amp;thumb.name, &amp;thumb.uri, i == active).clicked() {
+            active = i;
+        }
+    }
+});</code></pre>
+
+      <h2 id="containers">Grid and horizontal</h2>
+      <div class="api">
+        <div class="name">
+          <span class="id">grid</span>
+          <span class="pill window">Window</span>
+          <span class="pill grid">Grid</span>
+        </div>
+        <pre><code>fn grid&lt;F&gt;(&amp;mut self, cols: usize, f: F)
+where
+    F: FnOnce(&amp;mut Grid&lt;'_, '_&gt;)</code></pre>
+        <p>
+          Lays its children out in <code>cols</code> equal columns, filling row by row in
+          declaration order. Grids nest to arbitrary depth.
+        </p>
+      </div>
+      <div class="api">
+        <div class="name">
+          <span class="id">horizontal</span>
+          <span class="pill window">Window</span>
+        </div>
+        <pre><code>fn horizontal&lt;F&gt;(&amp;mut self, f: F)
+where
+    F: FnOnce(&amp;mut Horizontal&lt;'_, '_&gt;)</code></pre>
+        <p>
+          Packs its children into one row that the frontend never splits across layout columns.
+          Rows do not nest and cannot contain grids.
+        </p>
+      </div>
+      <pre><code>win.grid(2, |grid| {
+    grid.stat("Solid", &amp;solid.to_string(), None, AccentColor::Blue);
+    grid.stat("Fluid", &amp;fluid.to_string(), None, AccentColor::Teal);
+
+    grid.grid(2, |inner| {
+        inner.checkbox("Wireframe", &amp;mut wireframe);
+        inner.checkbox("Bounds", &amp;mut bounds);
+    });
+});
+
+win.horizontal(|h| {
+    h.label("Scene");
+    h.text_input_inline("path…", &amp;mut scene_path);
+    if h.button("Load").clicked() {
+        load_scene(&amp;scene_path);
+    }
+});</code></pre>
+
+      <h2 id="structure">Sections, separators, accent</h2>
+      <div class="api">
+        <div class="name">
+          <span class="id">section</span>
+          <span class="pill window">Window</span>
+        </div>
+        <pre><code>fn section(&amp;mut self, title: &amp;str)</code></pre>
+        <p>A group header inside a window.</p>
+      </div>
+      <div class="api">
+        <div class="name">
+          <span class="id">separator</span>
+          <span class="pill window">Window</span>
+          <span class="pill grid">Grid</span>
+        </div>
+        <pre><code>fn separator(&amp;mut self)</code></pre>
+        <p>A horizontal divider.</p>
+      </div>
+      <div class="api">
+        <div class="name">
+          <span class="id">set_accent</span>
+          <span class="pill window">Window</span>
+        </div>
+        <pre><code>fn set_accent(&amp;mut self, accent: AccentColor)</code></pre>
+        <p>
+          Sets the accent color of the window it is called on. Call it once, near the top of the
+          window. Widgets that take an explicit accent argument still win for themselves.
+        </p>
+      </div>
+
+      <h2 id="types">Types</h2>
+
+      <h3>Response</h3>
+      <pre><code>pub struct Response { /* … */ }
+
+impl Response {
+    pub fn clicked(&amp;self) -&gt; bool;
+    pub fn changed(&amp;self) -&gt; bool;
+}</code></pre>
+      <p>
+        <code>clicked()</code> reports that an edit for this element arrived from the browser and
+        was consumed this frame. <code>changed()</code> additionally requires the value to differ
+        from what it was. Both are false on frames with no interaction, and the result is not
+        sticky: read it in the frame it is returned.
+      </p>
+
+      <h3>AccentColor</h3>
+      <pre><code>pub enum AccentColor {
+    Coral, Teal, Blue, Green, Purple, Orange, Yellow, Red, Black, White, Gray,
+}
+
+impl AccentColor {
+    pub fn as_str(&amp;self) -&gt; &amp;'static str;
+}</code></pre>
+      <div class="accents">
+        <div><span style="background: var(--coral)"></span>Coral</div>
+        <div><span style="background: var(--teal)"></span>Teal</div>
+        <div><span style="background: var(--blue)"></span>Blue</div>
+        <div><span style="background: var(--green)"></span>Green</div>
+        <div><span style="background: var(--purple)"></span>Purple</div>
+        <div><span style="background: var(--orange)"></span>Orange</div>
+        <div><span style="background: var(--yellow)"></span>Yellow</div>
+        <div><span style="background: var(--red)"></span>Red</div>
+        <div><span style="background: #000"></span>Black</div>
+        <div><span style="background: #fff"></span>White</div>
+        <div><span style="background: var(--gray)"></span>Gray</div>
+      </div>
+      <p>
+        <code>AccentColor</code> is <code>Copy</code>, so it can be stored in configuration structs
+        and passed around freely. Conventionally: green for healthy, red for stopped or
+        destructive, orange or yellow for warnings, and the rest for grouping.
+      </p>
+
+      <footer>
+        <span>w-gui, Apache-2.0</span>
+        <a href="index.html">Overview</a>
+        <a href="guide.html">Guide</a>
+        <a href="api/w_gui/index.html">API docs</a>
+      </footer>
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+
+</html>

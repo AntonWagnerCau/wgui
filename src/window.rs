@@ -32,6 +32,7 @@ pub(crate) trait WidgetSink {
     fn declare(&mut self, decl: ElementDecl);
     fn consume_edit(&mut self, id: &str) -> Option<Value>;
     fn window_name(&self) -> Arc<str>;
+    fn tab_name(&self) -> Option<Arc<str>>;
     fn record_child(&mut self, id: String);
 }
 
@@ -61,6 +62,7 @@ fn widget_slider(sink: &mut impl WidgetSink, label: &str, value: &mut f32, range
             ..Default::default()
         },
         window: sink.window_name(),
+        tab: sink.tab_name(),
     });
     Response { clicked, changed }
 }
@@ -88,6 +90,7 @@ fn widget_slider_f64(sink: &mut impl WidgetSink, label: &str, value: &mut f64, r
             ..Default::default()
         },
         window: sink.window_name(),
+        tab: sink.tab_name(),
     });
     Response { clicked, changed }
 }
@@ -115,6 +118,7 @@ fn widget_slider_int(sink: &mut impl WidgetSink, label: &str, value: &mut i32, r
             ..Default::default()
         },
         window: sink.window_name(),
+        tab: sink.tab_name(),
     });
     Response { clicked, changed }
 }
@@ -142,6 +146,7 @@ fn widget_slider_uint(sink: &mut impl WidgetSink, label: &str, value: &mut u32, 
             ..Default::default()
         },
         window: sink.window_name(),
+        tab: sink.tab_name(),
     });
     Response { clicked, changed }
 }
@@ -163,6 +168,7 @@ fn widget_checkbox(sink: &mut impl WidgetSink, label: &str, value: &mut bool) ->
         value: Value::Bool(*value),
         meta: ElementMeta::default(),
         window: sink.window_name(),
+        tab: sink.tab_name(),
     });
     Response { clicked, changed }
 }
@@ -184,6 +190,7 @@ fn widget_color3(sink: &mut impl WidgetSink, label: &str, value: &mut [f32; 3]) 
         value: Value::Color3(*value),
         meta: ElementMeta::default(),
         window: sink.window_name(),
+        tab: sink.tab_name(),
     });
     Response { clicked, changed }
 }
@@ -205,6 +212,7 @@ fn widget_color4(sink: &mut impl WidgetSink, label: &str, value: &mut [f32; 4]) 
         value: Value::Color4(*value),
         meta: ElementMeta::default(),
         window: sink.window_name(),
+        tab: sink.tab_name(),
     });
     Response { clicked, changed }
 }
@@ -226,6 +234,7 @@ fn widget_text_input(sink: &mut impl WidgetSink, label: &str, value: &mut String
         value: Value::String(value.clone()),
         meta: ElementMeta::default(),
         window: sink.window_name(),
+        tab: sink.tab_name(),
     });
     Response { clicked, changed }
 }
@@ -248,6 +257,7 @@ fn widget_number(sink: &mut impl WidgetSink, label: &str, value: &mut f32) -> Re
         value: Value::Float(*value as f64),
         meta: ElementMeta::default(),
         window: sink.window_name(),
+        tab: sink.tab_name(),
     });
     Response { clicked, changed }
 }
@@ -269,6 +279,7 @@ fn widget_number_f64(sink: &mut impl WidgetSink, label: &str, value: &mut f64) -
         value: Value::Float(*value),
         meta: ElementMeta::default(),
         window: sink.window_name(),
+        tab: sink.tab_name(),
     });
     Response { clicked, changed }
 }
@@ -291,6 +302,7 @@ fn widget_number_int(sink: &mut impl WidgetSink, label: &str, value: &mut i32) -
         value: Value::Int(*value as i64),
         meta: ElementMeta::default(),
         window: sink.window_name(),
+        tab: sink.tab_name(),
     });
     Response { clicked, changed }
 }
@@ -313,6 +325,7 @@ fn widget_number_uint(sink: &mut impl WidgetSink, label: &str, value: &mut u32) 
         value: Value::Int(*value as i64),
         meta: ElementMeta::default(),
         window: sink.window_name(),
+        tab: sink.tab_name(),
     });
     Response { clicked, changed }
 }
@@ -337,6 +350,7 @@ fn widget_dropdown(sink: &mut impl WidgetSink, label: &str, selected: &mut usize
         },
         meta: ElementMeta::default(),
         window: sink.window_name(),
+        tab: sink.tab_name(),
     });
     Response { clicked, changed }
 }
@@ -352,6 +366,7 @@ fn widget_button(sink: &mut impl WidgetSink, label: &str) -> Response {
         value: Value::Button(false),
         meta: ElementMeta::default(),
         window: sink.window_name(),
+        tab: sink.tab_name(),
     });
     Response { clicked, changed: clicked }
 }
@@ -370,6 +385,7 @@ fn widget_button_compact(sink: &mut impl WidgetSink, label: &str, accent: Option
             ..Default::default()
         },
         window: sink.window_name(),
+        tab: sink.tab_name(),
     });
     Response { clicked, changed: clicked }
 }
@@ -384,6 +400,7 @@ fn widget_label(sink: &mut impl WidgetSink, text: &str) {
         value: Value::String(text.to_string()),
         meta: ElementMeta::default(),
         window: sink.window_name(),
+        tab: sink.tab_name(),
     });
 }
 
@@ -397,6 +414,7 @@ fn widget_kv(sink: &mut impl WidgetSink, label: &str, value: &str) {
         value: Value::String(value.to_string()),
         meta: ElementMeta::default(),
         window: sink.window_name(),
+        tab: sink.tab_name(),
     });
 }
 
@@ -414,6 +432,7 @@ fn widget_progress_bar(sink: &mut impl WidgetSink, label: &str, value: f64, acce
             ..Default::default()
         },
         window: sink.window_name(),
+        tab: sink.tab_name(),
     });
 }
 
@@ -433,6 +452,7 @@ fn widget_stat(sink: &mut impl WidgetSink, label: &str, value: &str, subvalue: O
             ..Default::default()
         },
         window: sink.window_name(),
+        tab: sink.tab_name(),
     });
 }
 
@@ -460,6 +480,7 @@ fn widget_status(
         },
         meta: ElementMeta::default(),
         window: sink.window_name(),
+        tab: sink.tab_name(),
     });
 }
 
@@ -480,6 +501,7 @@ fn widget_mini_chart(sink: &mut impl WidgetSink, label: &str, values: &[f32], un
             ..Default::default()
         },
         window: sink.window_name(),
+        tab: sink.tab_name(),
     });
 }
 
@@ -497,6 +519,7 @@ fn widget_image(sink: &mut impl WidgetSink, label: &str, data_uri: &str, width: 
         },
         meta: ElementMeta::default(),
         window: sink.window_name(),
+        tab: sink.tab_name(),
     });
 }
 
@@ -518,6 +541,7 @@ fn widget_image_button(sink: &mut impl WidgetSink, label: &str, data_uri: &str, 
             ..Default::default()
         },
         window: sink.window_name(),
+        tab: sink.tab_name(),
     });
     Response { clicked, changed: clicked }
 }
@@ -551,6 +575,7 @@ fn widget_plot(
         },
         meta: ElementMeta::default(),
         window: sink.window_name(),
+        tab: sink.tab_name(),
     });
 }
 
@@ -569,16 +594,19 @@ fn make_label_id(prefix: &str, label: &str, label_counts: &mut HashMap<String, u
 
 // ── Window ─────────────────────────────────────────────────────────--
 
-/// A named window containing UI elements. Created via `Context::window()`.
+/// A named window containing UI elements. Created via `Context::window()`
+/// or `Tab::window()`.
 pub struct Window<'a> {
     name: Arc<str>,
+    tab: Option<Arc<str>>,
+    prefix: String,
     ctx: &'a mut Context,
     label_counts: HashMap<String, usize>,
 }
 
 impl<'a> WidgetSink for Window<'a> {
     fn make_id(&mut self, label: &str) -> String {
-        make_label_id(&self.name, label, &mut self.label_counts)
+        make_label_id(&self.prefix, label, &mut self.label_counts)
     }
 
     fn declare(&mut self, decl: ElementDecl) {
@@ -593,15 +621,25 @@ impl<'a> WidgetSink for Window<'a> {
         self.name.clone()
     }
 
+    fn tab_name(&self) -> Option<Arc<str>> {
+        self.tab.clone()
+    }
+
     fn record_child(&mut self, _id: String) {
         // Window is top-level — no parent to record into
     }
 }
 
 impl<'a> Window<'a> {
-    pub(crate) fn new(name: String, ctx: &'a mut Context) -> Self {
+    pub(crate) fn new(name: String, tab: Option<Arc<str>>, ctx: &'a mut Context) -> Self {
+        let prefix = match &tab {
+            Some(t) => format!("{t}::{name}"),
+            None => name.clone(),
+        };
         Self {
             name: Arc::from(name.as_str()),
+            tab,
+            prefix,
             ctx,
             label_counts: HashMap::new(),
         }
@@ -674,6 +712,7 @@ impl<'a> Window<'a> {
             value: Value::String(text.to_string()),
             meta: ElementMeta::default(),
             window: self.window_name(),
+            tab: self.tab.clone(),
         });
     }
 
@@ -697,6 +736,7 @@ impl<'a> Window<'a> {
             value: Value::String(value.clone()),
             meta: ElementMeta::default(),
             window: self.name.clone(),
+            tab: self.tab.clone(),
         });
         Response { clicked, changed }
     }
@@ -728,6 +768,7 @@ impl<'a> Window<'a> {
             value: Value::Bool(false),
             meta: ElementMeta::default(),
             window: self.name.clone(),
+            tab: self.tab.clone(),
         });
     }
 
@@ -740,6 +781,7 @@ impl<'a> Window<'a> {
             value: Value::String(title.to_string()),
             meta: ElementMeta::default(),
             window: self.name.clone(),
+            tab: self.tab.clone(),
         });
     }
 
@@ -783,6 +825,7 @@ impl<'a> Window<'a> {
                 ..Default::default()
             },
             window: self.name.clone(),
+            tab: self.tab.clone(),
         });
     }
 
@@ -867,6 +910,10 @@ impl<'a, 'ctx> WidgetSink for Horizontal<'a, 'ctx> {
         self.window.name.clone()
     }
 
+    fn tab_name(&self) -> Option<Arc<str>> {
+        self.window.tab.clone()
+    }
+
     fn record_child(&mut self, id: String) {
         self.children.push(id);
     }
@@ -893,6 +940,7 @@ impl<'a, 'ctx> Horizontal<'a, 'ctx> {
             },
             meta: ElementMeta::default(),
             window: self.window.name.clone(),
+            tab: self.window.tab.clone(),
         });
     }
 
@@ -918,6 +966,7 @@ impl<'a, 'ctx> Horizontal<'a, 'ctx> {
                 ..Default::default()
             },
             window: self.window.name.clone(),
+            tab: self.window.tab.clone(),
         });
         Response { clicked, changed: clicked }
     }
@@ -932,6 +981,7 @@ impl<'a, 'ctx> Horizontal<'a, 'ctx> {
             value: Value::String(text.to_string()),
             meta: ElementMeta::default(),
             window: self.window.name.clone(),
+            tab: self.window.tab.clone(),
         });
     }
 
@@ -960,6 +1010,7 @@ impl<'a, 'ctx> Horizontal<'a, 'ctx> {
             value: Value::String(value.clone()),
             meta: ElementMeta::default(),
             window: self.window.name.clone(),
+            tab: self.window.tab.clone(),
         });
         Response { clicked, changed }
     }
@@ -1046,6 +1097,10 @@ impl<'a, 'ctx> WidgetSink for Grid<'a, 'ctx> {
         self.window.name.clone()
     }
 
+    fn tab_name(&self) -> Option<Arc<str>> {
+        self.window.tab.clone()
+    }
+
     fn record_child(&mut self, id: String) {
         self.children.push(id);
     }
@@ -1073,6 +1128,7 @@ impl<'a, 'ctx> Grid<'a, 'ctx> {
             },
             meta: ElementMeta::default(),
             window: self.window.name.clone(),
+            tab: self.window.tab.clone(),
         });
     }
 
@@ -1223,6 +1279,7 @@ impl<'a, 'ctx> Grid<'a, 'ctx> {
             value: Value::Bool(false),
             meta: ElementMeta::default(),
             window: self.window.name.clone(),
+            tab: self.window.tab.clone(),
         });
     }
 
@@ -1235,5 +1292,29 @@ impl<'a, 'ctx> Grid<'a, 'ctx> {
         f(&mut child_grid);
         child_grid.finish();
         self.children.push(grid_id);
+    }
+}
+
+// ── Tab ──────────────────────────────────────────────────────────────
+
+/// A named tab (page) grouping windows. Created via `Context::tab()`.
+/// Windows declared through a tab only show while that tab is active;
+/// windows declared directly on the context show on every tab.
+pub struct Tab<'a> {
+    name: Arc<str>,
+    ctx: &'a mut Context,
+}
+
+impl<'a> Tab<'a> {
+    pub(crate) fn new(name: String, ctx: &'a mut Context) -> Self {
+        Self {
+            name: Arc::from(name.as_str()),
+            ctx,
+        }
+    }
+
+    /// Get or create a named window on this tab.
+    pub fn window(&mut self, name: &str) -> Window<'_> {
+        Window::new(name.to_string(), Some(self.name.clone()), self.ctx)
     }
 }

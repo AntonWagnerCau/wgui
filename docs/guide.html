@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Guide — w-gui</title>
+  <meta name="description"
+    content="How w-gui works: the frame loop, element identity, containers, configuration, threading, and the wire protocol.">
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+  <header id="topbar">
+    <a class="brand" href="index.html">
+      <span class="dot"></span>
+      w-gui
+      <span class="ver">0.22</span>
+    </a>
+    <nav>
+      <a href="index.html">Overview</a>
+      <a href="guide.html" class="active">Guide</a>
+      <a href="widgets.html">Widgets</a>
+      <a href="api/w_gui/index.html">API</a>
+      <a href="https://github.com/AntonWagnerCau/wgui">GitHub</a>
+      <a href="https://crates.io/crates/w-gui">crates.io</a>
+    </nav>
+  </header>
+
+  <div id="shell">
+    <aside id="sidebar">
+      <h4>Core model</h4>
+      <a href="#loop">The frame loop</a>
+      <a href="#windows">Windows</a>
+      <a href="#tabs">Tabs</a>
+      <a href="#identity">Element identity</a>
+      <a href="#response">Reading interaction</a>
+
+      <h4>Layout</h4>
+      <a href="#grid">Grids</a>
+      <a href="#horizontal">Horizontal rows</a>
+      <a href="#structure">Sections and accents</a>
+
+      <h4>Runtime</h4>
+      <a href="#options">Configuration</a>
+      <a href="#headless">Headless mode</a>
+      <a href="#threads">Threads and lifetime</a>
+      <a href="#protocol">Wire protocol</a>
+
+      <h4>Practice</h4>
+      <a href="#patterns">Patterns</a>
+      <a href="#pitfalls">Pitfalls</a>
+
+      <h4>Next</h4>
+      <a href="widgets.html">Widget reference</a>
+    </aside>
+
+    <main>
+      <h1>Guide</h1>
+      <p class="lead">
+        The whole library is three ideas: you redeclare the UI every frame, elements are identified
+        by their labels, and only the differences are sent to the browser. Everything below follows
+        from those.
+      </p>
+
+      <h2 id="loop">The frame loop</h2>
+      <p>
+        A <code>Context</code> owns the servers and the frame buffers. Create one at startup and
+        keep it alive for as long as you want the UI.
+      </p>
+      <pre><code>let mut ctx = w_gui::Context::new();
+
+loop {
+    {
+        let mut win = ctx.window("Controls");
+        win.slider("Speed", &amp;mut speed, 0.0..=10.0);
+    } // `win` dropped here, releasing the borrow on `ctx`
+
+    ctx.end_frame();
+}</code></pre>
+      <p>
+        <code>ctx.window(name)</code> returns a <code>Window</code> that mutably borrows the
+        context, so only one window can be open at a time. Scope it with a block or
+        <code>drop(win)</code> before opening the next one. Calling
+        <code>ctx.window("Controls")</code> again later in the same frame simply appends more
+        elements to that window.
+      </p>
+      <p>
+        <code>end_frame</code> closes the frame: it diffs the declarations you just made against the
+        previous frame and hands the resulting messages to the WebSocket thread. <strong>An element
+          you stop declaring disappears from the UI.</strong> That is what makes conditional UI
+        work without any teardown code.
+      </p>
+
+      <div class="note warn">
+        <span class="tag">Required</span>
+        <p>
+          <code>end_frame</code> must be called once per frame. Without it nothing is ever sent, and
+          the previous frame is never swapped in, so every element looks new forever.
+        </p>
+      </div>
+
+      <p>
+        There is no fixed tick rate inside the library. It updates as fast as you call
+        <code>end_frame</code>. For a UI attached to a non-realtime program, a small sleep is
+        usually right:
+      </p>
+      <pre><code>ctx.end_frame();
+std::thread::sleep(std::time::Duration::from_millis(33)); // ~30 Hz</code></pre>
+
+      <h2 id="windows">Windows</h2>
+      <p>
+        Every element belongs to a window, named by the string you pass to
+        <code>ctx.window()</code>. Windows are laid out by the frontend into a responsive masonry
+        of cards; their order follows the order in which you first declare them each frame.
+      </p>
+      <pre><code>{
+    let mut win = ctx.window("Simulation");
+    win.slider("Gravity", &amp;mut gravity, -20.0..=20.0);
+}
+{
+    let mut win = ctx.window("Rendering");
+    win.checkbox("Shadows", &amp;mut shadows);
+    win.slider("Exposure", &amp;mut exposure, 0.0..=8.0);
+}</code></pre>
+      <p>
+        Windows are cheap. Grouping by subsystem is usually clearer than one long panel, and the
+        window name is part of every element id inside it, so two windows can both have a slider
+        labelled <code>"Scale"</code> without colliding.
+      </p>
+
+      <h2 id="tabs">Tabs</h2>
+      <p>
+        Windows can be grouped into tabs — whole pages you switch between in the browser. A tab
+        is named like a window, and hands out windows that belong to it:
+      </p>
+      <pre><code>{
+    let mut tab = ctx.tab("Simulation");
+    let mut win = tab.window("Fire");
+    win.slider("Heat", &amp;mut heat, 0.0..=10.0);
+}
+{
+    let mut tab = ctx.tab("Diagnostics");
+    let mut win = tab.window("Timings");
+    win.kv("Frame", "16.7 ms");
+}</code></pre>
+      <p>
+        The tab bar appears at the top center once any tab is declared, and the active tab is
+        remembered per browser. Windows created directly with <code>ctx.window()</code> are not
+        bound to a tab and show on every page. The tab name is part of the element ids inside it,
+        so two tabs can each have a window named <code>"Settings"</code> without colliding, and
+        each tab keeps its own drag-arranged card layout.
+      </p>
+
+      <h2 id="identity">Element identity</h2>
+      <p>
+        You never allocate widget handles. An element's id is derived from its container and its
+        label:
+      </p>
+      <pre><code class="plain">"Rendering::Exposure"        // window "Rendering", label "Exposure"
+"Rendering::Exposure#1"     // second widget with the same label
+"Rendering::__grid::Speed"  // inside a grid inside that window</code></pre>
+      <p>
+        Duplicate labels within the same container are disambiguated by an occurrence counter, so
+        repeating a label is legal, but the counter is positional: it depends on how many widgets
+        with that label came before it <em>this frame</em>. Two rules follow.
+      </p>
+      <ul>
+        <li>
+          <strong>Renaming a label replaces the element.</strong> The old id is no longer declared,
+          so it is removed, and a new one is added. This is harmless for values you own, but it
+          resets nothing on the Rust side and does move the element to the end of its window until
+          the next reorder message corrects it.
+        </li>
+        <li>
+          <strong>Keep duplicate-label sets stable.</strong> If you emit <code>"Item"</code> once
+          under one condition and three times under another, the <code>#1</code> and
+          <code>#2</code> ids come and go. Prefer labels that carry the distinguishing information
+          (<code>&amp;format!("Item {i}")</code>).
+        </li>
+      </ul>
+
+      <div class="note tip">
+        <span class="tag">Tip</span>
+        <p>
+          Labels are also what the user reads. Making them unique and descriptive satisfies both
+          the identity model and the person looking at the panel.
+        </p>
+      </div>
+
+      <h2 id="response">Reading interaction</h2>
+      <p>
+        Input widgets write through the <code>&amp;mut</code> reference you pass and return a
+        <code>Response</code>:
+      </p>
+      <pre><code>let r = win.slider("Speed", &amp;mut speed, 0.0..=10.0);
+
+if r.changed() {
+    // the value is different from what it was before this frame
+    rebuild_something(speed);
+}
+
+if win.button("Reset").clicked() {
+    speed = 5.0;
+}</code></pre>
+      <table>
+        <thead>
+          <tr>
+            <th>Method</th>
+            <th>Meaning</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="sig">clicked()</td>
+            <td>An edit arrived from the browser this frame, whether or not it altered the value.
+              For buttons this is the press itself, true for exactly one frame.</td>
+          </tr>
+          <tr>
+            <td class="sig">changed()</td>
+            <td>An edit arrived <em>and</em> the value actually differs from the old one. This is
+              the one to gate expensive work on.</td>
+          </tr>
+        </tbody>
+      </table>
+      <p>
+        Edits are queued on a channel and drained on demand, keyed by element id, so only the latest
+        value per element survives a burst. A fast slider drag produces one edit per frame, not one
+        per pixel of movement. An edit for an element you did not declare this frame stays queued
+        and is applied whenever that element is declared again.
+      </p>
+      <p>
+        Display-only widgets (<code>label</code>, <code>stat</code>, <code>progress_bar</code>,
+        <code>mini_chart</code>, <code>plot</code>, <code>kv</code>, <code>image</code>,
+        <code>section</code>, <code>separator</code>) return nothing. They are pure output.
+      </p>
+
+      <h2 id="grid">Grids</h2>
+      <p>
+        <code>win.grid(cols, |grid| { … })</code> lays its children out in a fixed number of
+        columns. Grids nest.
+      </p>
+      <pre><code>win.grid(3, |grid| {
+    grid.stat("Generation", &amp;generation.to_string(), None, AccentColor::Coral);
+    grid.stat("Fitness", &amp;format!("{fitness:.2}"), Some("max 0.95"), AccentColor::Green);
+    grid.stat("Iterations", &amp;iterations.to_string(), None, AccentColor::Blue);
+});
+
+win.grid(2, |grid| {
+    grid.progress_bar("Solution A", 0.26, AccentColor::Green);
+    grid.progress_bar("Solution B", 0.25, AccentColor::Purple);
+
+    grid.grid(2, |inner| {
+        inner.checkbox("Loop", &amp;mut looping);
+        inner.checkbox("Trace", &amp;mut trace);
+    });
+});</code></pre>
+      <p>
+        A grid supports most of the widget set, including nested grids, but not
+        <code>horizontal</code>, <code>section</code> or <code>set_accent</code>. See the
+        <a href="widgets.html#matrix">availability matrix</a>.
+      </p>
+
+      <h2 id="horizontal">Horizontal rows</h2>
+      <p>
+        <code>win.horizontal(|h| { … })</code> packs its children into a single row that the
+        frontend never splits across columns. It is meant for toolbars and compact input pairs.
+      </p>
+      <pre><code>win.horizontal(|h| {
+    h.label("Preset");
+    h.text_input_inline("name…", &amp;mut preset_name);
+    if h.button_accent("Save", AccentColor::Green).clicked() {
+        save_preset(&amp;preset_name);
+    }
+    if h.button_accent("Delete", AccentColor::Red).clicked() {
+        delete_preset(&amp;preset_name);
+    }
+});</code></pre>
+      <p>
+        Buttons and text inputs created on a <code>Horizontal</code> use inline variants that drop
+        the label column, which is why <code>text_input_inline</code> takes a placeholder rather
+        than a label. A horizontal row cannot contain a grid or another row.
+      </p>
+
+      <h2 id="structure">Sections and accents</h2>
+      <p>
+        <code>win.section("Title")</code> emits a header, <code>win.separator()</code> a divider,
+        and <code>win.set_accent(color)</code> sets the accent color for the window it is called on,
+        which tints the window's header dot and its default widget highlights.
+      </p>
+      <pre><code>let mut win = ctx.window("Renderer");
+win.set_accent(AccentColor::Purple);
+
+win.section("Exposure");
+win.slider("EV", &amp;mut ev, -8.0..=8.0);
+
+win.separator();
+
+win.section("Denoiser");
+win.checkbox("Enabled", &amp;mut denoise);</code></pre>
+      <p>
+        Widgets that take an explicit <code>AccentColor</code> argument (stats, progress bars,
+        charts, status indicators, accent buttons) override the window accent for themselves.
+      </p>
+
+      <h2 id="options">Configuration</h2>
+      <p>Three constructors:</p>
+      <pre><code>use w_gui::{Context, ContextOptions, Glow};
+
+// Defaults: localhost, port 9080, title "wgui", no favicon, subtle glow.
+let ctx = Context::new();
+
+// Same, but start the port search somewhere else.
+let ctx = Context::with_port(7000);
+
+// Everything explicit.
+let ctx = Context::with_options(ContextOptions {
+    start_port: 9080,
+    title: "Pyromancer Debug".to_string(),
+    favicon: Some(std::fs::read("icon.png").unwrap()),
+    public: false,
+    glow: Glow::Strong,
+});</code></pre>
+      <table>
+        <thead>
+          <tr>
+            <th>Field</th>
+            <th>Default</th>
+            <th>Effect</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="sig">start_port</td>
+            <td class="sig">9080</td>
+            <td>First port tried. HTTP takes the port, the WebSocket takes the next one, and the
+              search advances in steps of two until a free pair is found (up to 1000 ports).</td>
+          </tr>
+          <tr>
+            <td class="sig">title</td>
+            <td class="sig">"wgui"</td>
+            <td>Browser tab title. HTML-escaped before it is substituted into the page.</td>
+          </tr>
+          <tr>
+            <td class="sig">favicon</td>
+            <td class="sig">None</td>
+            <td>PNG bytes served at <code>/favicon.png</code>. When <code>None</code>, that path
+              returns 404.</td>
+          </tr>
+          <tr>
+            <td class="sig">public</td>
+            <td class="sig">false</td>
+            <td><code>false</code> binds <code>127.0.0.1</code>; <code>true</code> binds
+              <code>0.0.0.0</code> so other machines on the network can connect.</td>
+          </tr>
+          <tr>
+            <td class="sig">glow</td>
+            <td class="sig">Glow::Subtle</td>
+            <td>Strength of the accent glow on slider fills and thumbs, progress bars, status dots,
+              stat values and chart lines. <code>Glow::Off</code> removes it entirely,
+              <code>Glow::Strong</code> roughly doubles the blur radius. Focus rings and card
+              shadows are unaffected.</td>
+          </tr>
+        </tbody>
+      </table>
+      <p>
+        The chosen ports are readable at runtime with <code>ctx.http_port()</code> and
+        <code>ctx.ws_port()</code>, which is how you print a correct URL when the default port was
+        taken.
+      </p>
+
+      <div class="note warn">
+        <span class="tag">Security</span>
+        <p>
+          <code>public: true</code> exposes an unauthenticated page that can write into your
+          program's state to everyone who can reach the port. Use it on trusted networks only.
+        </p>
+      </div>
+
+      <h2 id="headless">Headless mode</h2>
+      <p>
+        If no free port pair is found, construction does not fail and does not panic. The context
+        logs a warning and runs degraded: windows and widgets still work, values still round-trip
+        through your own variables, and <code>end_frame</code> becomes a no-op.
+        <code>http_port()</code> and <code>ws_port()</code> both return <code>0</code>.
+      </p>
+      <p>
+        This is deliberate: a debug UI should never take down the program it is attached to, and
+        code paths that read <code>Response::changed()</code> keep compiling and running unchanged
+        in CI or on a machine with the ports occupied.
+      </p>
+
+      <h2 id="threads">Threads and lifetime</h2>
+      <p>
+        A live context owns two named threads, <code>wgui-http</code> and <code>wgui-ws</code>, plus
+        one short-lived thread per WebSocket handshake. Your frame loop only ever touches channels,
+        so it is never blocked by a slow or half-dead browser tab: reads, writes and handshakes all
+        have timeouts, and clients that break them are dropped.
+      </p>
+      <p>
+        <code>Context</code> is <code>Send + Sync</code>, so it can be stored in an ECS resource, a
+        <code>Mutex</code>, or a struct that moves between threads.
+      </p>
+      <h3>Backpressure</h3>
+      <p>
+        The channel to the WebSocket thread holds two batches. If your frame loop outruns the
+        network, <code>end_frame</code> logs at debug level and skips that frame's update rather
+        than blocking. Since each frame's diff is computed against the previous <em>declared</em>
+        frame and the server keeps its own mirror, a skipped batch is not lost state: the next
+        frame in which a value changes re-sends it.
+      </p>
+      <h3>Shutdown</h3>
+      <p>
+        Dropping the context signals both threads and joins them, so the ports are fully released
+        before the drop returns (roughly a 200 ms HTTP poll interval in the worst case). That wait
+        is what makes an in-process restart land on the same ports again, which matters because an
+        already-open browser tab keeps pointing at the old URL.
+      </p>
+      <pre><code>drop(ctx);                    // ports released here
+let ctx = Context::new();     // binds the same pair again</code></pre>
+
+      <h2 id="protocol">Wire protocol</h2>
+      <p>
+        Not something you need for normal use, but useful when debugging with the browser's network
+        inspector. Both directions are JSON, tagged by a <code>type</code> field.
+      </p>
+      <h3>Server to browser</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Message</th>
+            <th>Sent when</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="sig">snapshot</td>
+            <td>A client connects. Carries every element currently in the server's mirror.</td>
+          </tr>
+          <tr>
+            <td class="sig">add</td>
+            <td>An element id appears that was not declared last frame.</td>
+          </tr>
+          <tr>
+            <td class="sig">update</td>
+            <td>An element's value, label or metadata changed. Label and metadata are omitted when
+              unchanged.</td>
+          </tr>
+          <tr>
+            <td class="sig">remove</td>
+            <td>An element declared last frame was not declared this frame.</td>
+          </tr>
+          <tr>
+            <td class="sig">reorder</td>
+            <td>The declared order of a window's elements differs from what the client would have
+              after applying the batch (adds append, removes delete).</td>
+          </tr>
+        </tbody>
+      </table>
+      <p>All messages produced by one <code>end_frame</code> are sent as a single JSON array in one
+        WebSocket frame.</p>
+      <h3>Browser to server</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Message</th>
+            <th>Sent when</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="sig">set</td>
+            <td>The user edited a widget. Carries the element id and the new typed value.</td>
+          </tr>
+          <tr>
+            <td class="sig">reorder_window</td>
+            <td>The user dragged a window card. Window order is not persisted across restarts.</td>
+          </tr>
+        </tbody>
+      </table>
+      <p>
+        The HTTP server serves exactly four paths: <code>/</code> and <code>/index.html</code> (the
+        embedded frontend), <code>/favicon.png</code>, and <code>/ping</code>. The frontend polls
+        <code>/ping</code> while disconnected and only opens a WebSocket once it answers, which
+        keeps failed attempts out of the browser's reconnect backoff.
+      </p>
+
+      <h2 id="patterns">Patterns</h2>
+
+      <h3>Conditional UI</h3>
+      <p>Just do not declare it. Nothing else is needed.</p>
+      <pre><code>win.checkbox("Advanced", &amp;mut show_advanced);
+
+if show_advanced {
+    win.slider("Bounces", &amp;mut bounces, 1..=32);
+    win.slider("Roulette Depth", &amp;mut roulette, 1..=16);
+}</code></pre>
+
+      <h3>Rolling history for charts</h3>
+      <p>
+        <code>mini_chart</code> and <code>plot</code> take a slice, so keep a fixed-length buffer and
+        push into it once per frame.</p>
+      <pre><code>const HISTORY: usize = 120;
+
+frame_times.push(dt_ms);
+if frame_times.len() &gt; HISTORY {
+    frame_times.remove(0);
+}
+
+win.mini_chart("Frame Time", &amp;frame_times, Some(" ms"), AccentColor::Teal);</code></pre>
+
+      <h3>Multi-series plots</h3>
+      <p>
+        Each series carries its own color and an autoscale flag. With
+        <code>autoscale = true</code> a series is normalized independently, which is what you want
+        for values in different units; with <code>false</code> it shares the plot's scale, which is
+        what you want when magnitudes are comparable.
+      </p>
+      <pre><code>win.plot_with_autoscale(
+    "Timings",
+    &amp;[
+        ("GPU ms", &amp;gpu_ms, AccentColor::Green, false),
+        ("CPU ms", &amp;cpu_ms, AccentColor::Blue, false),
+        ("VRAM MB", &amp;vram, AccentColor::Orange, true),
+    ],
+    Some("Frame"),
+    Some("Value"),
+);</code></pre>
+
+      <h3>Images</h3>
+      <p>
+        <code>image</code> and <code>image_button</code> take a base64 data URI, so any encoder that
+        produces PNG or JPEG bytes works. Build the URI yourself and hand it over:
+      </p>
+      <pre><code>let uri = format!("data:image/png;base64,{}", base64_encode(&amp;png_bytes));
+win.image_with_size("Preview", &amp;uri, 256, 256);</code></pre>
+      <p>
+        The full URI is re-sent whenever it changes, so update thumbnails at a rate you would be
+        comfortable pushing over a socket rather than every frame.
+      </p>
+
+      <h3>Attaching to an existing engine</h3>
+      <p>
+        Store the context wherever your per-frame state lives and call <code>end_frame</code> at one
+        fixed point in the frame, after everything that wants to contribute widgets has run.
+      </p>
+      <pre><code>struct Engine {
+    gui: w_gui::Context,
+    // …
+}
+
+impl Engine {
+    fn frame(&amp;mut self) {
+        self.simulate();
+        self.render();
+        self.debug_ui();       // every subsystem declares its windows
+        self.gui.end_frame();  // exactly one call per frame
+    }
+}</code></pre>
+
+      <h2 id="pitfalls">Pitfalls</h2>
+      <ul>
+        <li>
+          <strong>Forgetting <code>end_frame</code>.</strong> The UI stays empty and the previous
+          frame never advances. One call per frame, no more, no less.
+        </li>
+        <li>
+          <strong>Holding a <code>Window</code> across <code>end_frame</code>.</strong> It will not
+          compile, since the window borrows the context. Scope it.
+        </li>
+        <li>
+          <strong>Building labels from changing values.</strong>
+          <code>&amp;format!("Speed {speed:.2}")</code> changes the id every time the value moves,
+          so the element is destroyed and recreated each frame. Put the value in the widget, not the
+          label, or use <code>kv</code> for read-only pairs.
+        </li>
+        <li>
+          <strong>Expecting <code>clicked()</code> to persist.</strong> It is true for the single
+          frame in which the edit is consumed.
+        </li>
+        <li>
+          <strong>Assuming the port.</strong> If 9080 is taken the context moves to the next free
+          pair. Print <code>ctx.http_port()</code> instead of hardcoding the URL.
+        </li>
+        <li>
+          <strong>Re-encoding large images every frame.</strong> The data URI travels over the
+          WebSocket in full on every change.
+        </li>
+      </ul>
+
+      <footer>
+        <span>w-gui, Apache-2.0</span>
+        <a href="index.html">Overview</a>
+        <a href="widgets.html">Widget reference</a>
+        <a href="https://github.com/AntonWagnerCau/wgui">Repository</a>
+      </footer>
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+
+</html>

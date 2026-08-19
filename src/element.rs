@@ -166,6 +166,9 @@ pub struct ElementDecl {
     pub value: Value,
     pub meta: ElementMeta,
     pub window: Arc<str>,
+    /// Tab (page) this element's window belongs to; `None` shows on every tab.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tab: Option<Arc<str>>,
 }
 
 /// Accent colors available for UI elements

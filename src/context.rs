@@ -7,7 +7,32 @@ use std::thread::JoinHandle;
 use crate::element::{ElementDecl, ElementId, Value};
 use crate::protocol::ServerMsg;
 use crate::server;
-use crate::window::Window;
+use crate::window::{Tab, Window};
+
+/// Strength of the accent glow on sliders, progress bars, status dots,
+/// stat values and chart lines.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Glow {
+    Off,
+    Subtle,
+    Strong,
+}
+
+impl Default for Glow {
+    fn default() -> Self {
+        Glow::Off
+    }
+}
+
+impl Glow {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Glow::Off => "off",
+            Glow::Subtle => "subtle",
+            Glow::Strong => "strong",
+        }
+    }
+}
 
 /// Options for creating a wgui [`Context`].
 pub struct ContextOptions {
@@ -20,6 +45,8 @@ pub struct ContextOptions {
     /// When `true`, bind to `0.0.0.0` (accessible on the network).
     /// When `false`, bind to `127.0.0.1` (localhost only).
     pub public: bool,
+    /// Strength of the accent glow throughout the UI.
+    pub glow: Glow,
 }
 
 impl Default for ContextOptions {
@@ -29,6 +56,7 @@ impl Default for ContextOptions {
             title: "wgui".to_string(),
             favicon: None,
             public: false,
+            glow: Glow::default(),
         }
     }
 }
@@ -83,7 +111,7 @@ impl Context {
             let shutdown = Arc::new(AtomicBool::new(false));
 
             let http_handle =
-                server::spawn_http(shutdown.clone(), http_listener, &opts.title, opts.favicon);
+                server::spawn_http(shutdown.clone(), http_listener, &opts.title, opts.favicon, opts.glow);
             let ws_handle = server::spawn_ws(ws_rx, edit_tx, ws_listener, shutdown.clone());
 
             println!("wgui: UI available at http://{bind_addr}:{http_port}");
@@ -128,8 +156,15 @@ impl Context {
     }
 
     /// Get or create a named window. Call widget methods on the returned `Window`.
+    /// Windows created here show on every tab.
     pub fn window(&mut self, name: &str) -> Window<'_> {
-        Window::new(name.to_string(), self)
+        Window::new(name.to_string(), None, self)
+    }
+
+    /// Get or create a named tab (page). Windows created via `Tab::window()`
+    /// only show while that tab is active in the browser.
+    pub fn tab(&mut self, name: &str) -> Tab<'_> {
+        Tab::new(name.to_string(), self)
     }
 
     /// Consume a pending browser edit for the given element id, if any.
@@ -209,6 +244,10 @@ fn reconcile(prev: &[ElementDecl], current: &[ElementDecl]) -> Vec<ServerMsg> {
         .map(|(i, d)| (d.id.as_str(), i))
         .collect();
 
+    // Elements whose tab changed are reissued as Remove + Add; the client
+    // appends them like fresh adds, so order prediction treats them as new.
+    let mut tab_moved: HashSet<&str> = HashSet::new();
+
     // Detect added and updated elements
     for decl in current {
         match prev_index.get(decl.id.as_str()) {
@@ -219,6 +258,14 @@ fn reconcile(prev: &[ElementDecl], current: &[ElementDecl]) -> Vec<ServerMsg> {
             }
             Some(&idx) => {
                 let prev_decl = &prev[idx];
+                if prev_decl.tab != decl.tab {
+                    tab_moved.insert(decl.id.as_str());
+                    outgoing.push(ServerMsg::Remove { id: decl.id.clone() });
+                    outgoing.push(ServerMsg::Add {
+                        element: decl.clone(),
+                    });
+                    continue;
+                }
                 let value_changed = prev_decl.value != decl.value || prev_decl.kind != decl.kind || prev_decl.label != decl.label;
                 let meta_changed = prev_decl.meta != decl.meta;
                 let label_changed = prev_decl.label != decl.label;
@@ -282,8 +329,17 @@ fn reconcile(prev: &[ElementDecl], current: &[ElementDecl]) -> Vec<ServerMsg> {
         let curr_set: HashSet<&str> = desired.iter().copied().collect();
         let prev_set: HashSet<&str> = prev_ids.iter().copied().collect();
         // Predicted client order: surviving previous ids, then the new ones.
-        let mut predicted: Vec<&str> = prev_ids.iter().copied().filter(|id| curr_set.contains(id)).collect();
-        predicted.extend(desired.iter().copied().filter(|id| !prev_set.contains(id)));
+        let mut predicted: Vec<&str> = prev_ids
+            .iter()
+            .copied()
+            .filter(|id| curr_set.contains(id) && !tab_moved.contains(id))
+            .collect();
+        predicted.extend(
+            desired
+                .iter()
+                .copied()
+                .filter(|id| !prev_set.contains(id) || tab_moved.contains(id)),
+        );
         if &predicted != desired {
             outgoing.push(ServerMsg::Reorder {
                 window: win.to_string(),
@@ -314,6 +370,7 @@ mod tests {
             value,
             meta: ElementMeta::default(),
             window: Arc::from("test"),
+            tab: None,
         }
     }
 
@@ -345,6 +402,16 @@ mod tests {
         let prev = vec![make_decl("a", Value::Bool(true))];
         let current = vec![make_decl("a", Value::Bool(true))];
         assert!(reconcile(&prev, &current).is_empty());
+    }
+
+    #[test]
+    fn reconcile_tab_move_reissues_element() {
+        let prev = vec![make_decl("a", Value::Bool(true))];
+        let mut moved = make_decl("a", Value::Bool(true));
+        moved.tab = Some(Arc::from("Settings"));
+        let msgs = reconcile(&prev, &[moved]);
+        assert!(matches!(&msgs[0], ServerMsg::Remove { id } if id == "a"));
+        assert!(matches!(&msgs[1], ServerMsg::Add { element } if element.tab.as_deref() == Some("Settings")));
     }
 
     #[test]

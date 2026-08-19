@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>w-gui — a lightweight debug GUI served over localhost</title>
+  <meta name="description"
+    content="w-gui is a lightweight immediate-mode debug GUI for Rust. Declare widgets in your frame loop, open a browser tab, tweak parameters live.">
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+  <header id="topbar">
+    <a class="brand" href="index.html">
+      <span class="dot"></span>
+      w-gui
+      <span class="ver">0.22</span>
+    </a>
+    <nav>
+      <a href="index.html" class="active">Overview</a>
+      <a href="guide.html">Guide</a>
+      <a href="widgets.html">Widgets</a>
+      <a href="api/w_gui/index.html">API</a>
+      <a href="https://github.com/AntonWagnerCau/wgui">GitHub</a>
+      <a href="https://crates.io/crates/w-gui">crates.io</a>
+    </nav>
+  </header>
+
+  <div id="shell">
+    <aside id="sidebar">
+      <h4>Overview</h4>
+      <a href="#what">What it is</a>
+      <a href="#install">Install</a>
+      <a href="#quickstart">Quickstart</a>
+      <a href="#how">How it works</a>
+      <a href="#capabilities">What you get</a>
+      <a href="#examples">Examples</a>
+      <a href="#compare">When to use it</a>
+
+      <h4>Next</h4>
+      <a href="guide.html">Guide</a>
+      <a href="widgets.html">Widget reference</a>
+      <a href="api/w_gui/index.html">API docs</a>
+    </aside>
+
+    <main>
+      <section class="hero">
+        <h1>w-gui</h1>
+        <p class="tagline">
+          A lightweight immediate-mode debug GUI for Rust, served over localhost. Declare widgets
+          inside your frame loop, open a browser tab, and tweak live values while your program runs.
+        </p>
+        <div class="cta">
+          <a class="btn primary" href="#quickstart">Quickstart</a>
+          <a class="btn" href="widgets.html">Widget reference</a>
+          <a class="btn" href="api/w_gui/index.html">API docs</a>
+        </div>
+      </section>
+
+      <div class="mock" aria-hidden="true">
+        <div class="mock-win" style="--wa: var(--coral)">
+          <header>Training Status</header>
+          <div class="mock-body">
+            <div class="tiles">
+              <div class="stat-tile">
+                <div class="k">Generation</div>
+                <div class="v">154</div>
+              </div>
+              <div class="stat-tile" style="--wa: var(--green)">
+                <div class="k">Fitness</div>
+                <div class="v">0.62</div>
+              </div>
+            </div>
+            <div class="mock-row"><span>AI State</span><span class="chip"
+                style="color: var(--green); border-color: var(--green)">Enabled</span></div>
+            <div class="mock-row"><span>Disturbance</span><span class="chip"
+                style="color: var(--red); border-color: var(--red)">Inactive</span></div>
+          </div>
+        </div>
+
+        <div class="mock-win" style="--wa: var(--teal)">
+          <header>Controls</header>
+          <div class="mock-body">
+            <div class="mock-row"><span>Sim Speed</span><span class="val">1.00</span></div>
+            <div class="track"><i style="width: 22%"></i><b style="left: 22%"></b></div>
+            <div class="mock-row"><span>Exposure</span><span class="val">2.40</span></div>
+            <div class="track"><i style="width: 61%"></i><b style="left: 61%"></b></div>
+            <div class="mock-row"><span>Fire Color</span>
+              <div class="swatch" style="background: linear-gradient(90deg, #ff9800, #e06c5c)"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="mock-win" style="--wa: var(--purple)">
+          <header>Performance</header>
+          <div class="mock-body">
+            <div class="mock-row"><span>Frame</span><span class="val">14.8 ms</span></div>
+            <div class="spark" style="--wa: var(--purple)">
+              <i style="height: 40%"></i><i style="height: 62%"></i><i style="height: 48%"></i>
+              <i style="height: 75%"></i><i style="height: 55%"></i><i style="height: 88%"></i>
+              <i style="height: 64%"></i><i style="height: 71%"></i><i style="height: 52%"></i>
+              <i style="height: 80%"></i><i style="height: 44%"></i><i style="height: 68%"></i>
+            </div>
+            <div class="mock-row"><span>GPU</span><span class="val">73 %</span></div>
+            <div class="track" style="--wa: var(--blue)"><i style="width: 73%"></i></div>
+          </div>
+        </div>
+      </div>
+
+      <h2 id="what">What it is</h2>
+      <p>
+        w-gui runs an HTTP server and a WebSocket server on two threads inside your process. Your
+        program describes the UI every frame with plain method calls; the library diffs that
+        description against the previous frame and pushes only the changes to any connected browser
+        tab. Edits made in the browser travel back and land in your variables on the next frame.
+      </p>
+      <p>
+        There is no windowing library, no GPU context, no event loop to integrate with, and no
+        native dependency. The entire dependency set is <code>tiny_http</code>,
+        <code>tungstenite</code>, <code>serde</code>, <code>serde_json</code>, <code>log</code>, and
+        <code>indexmap</code>. The frontend is a single HTML file compiled into the binary.
+      </p>
+
+      <div class="grid-2">
+        <div class="feature">
+          <h4>Immediate mode</h4>
+          <p>No retained widget tree to keep in sync. Declare what you want this frame; it appears.</p>
+        </div>
+        <div class="feature">
+          <h4>In-process</h4>
+          <p>Two background threads, no separate binary, no IPC to set up.</p>
+        </div>
+        <div class="feature">
+          <h4>Remote-friendly</h4>
+          <p>It is a web page. Tune a headless render job from a laptop on the same network.</p>
+        </div>
+        <div class="feature">
+          <h4>Diff-based</h4>
+          <p>Only changed elements go over the wire, batched into one WebSocket frame per tick.</p>
+        </div>
+        <div class="feature">
+          <h4>Never fatal</h4>
+          <p>If no port is free, the context degrades to headless and your widget calls still work.</p>
+        </div>
+        <div class="feature">
+          <h4>Send + Sync</h4>
+          <p><code>Context</code> is both, so it can live in a resource container or behind a lock.</p>
+        </div>
+      </div>
+
+      <h2 id="install">Install</h2>
+      <p>The crate is published as <strong>w-gui</strong> and imported as <strong>w_gui</strong>.</p>
+      <pre><code class="plain">cargo add w-gui</code></pre>
+      <p>Or by hand:</p>
+      <pre><code class="plain">[dependencies]
+w-gui = "0.22"</code></pre>
+
+      <h2 id="quickstart">Quickstart</h2>
+      <p>
+        Create one <code>Context</code> at startup, then rebuild the UI every frame. Widgets take
+        <code>&amp;mut</code> references to your own state: they read it to draw and write to it when
+        the browser sends an edit.
+      </p>
+      <pre><code>use w_gui::{AccentColor, Context};
+
+fn main() {
+    let mut ctx = Context::new();
+
+    let mut color = [1.0f32, 0.4, 0.1];
+    let mut speed = 5.0f32;
+    let mut enabled = true;
+    let mut frame_times: Vec&lt;f32&gt; = Vec::new();
+
+    loop {
+        {
+            let mut win = ctx.window("Simulation");
+            win.set_accent(AccentColor::Coral);
+
+            win.checkbox("Enabled", &amp;mut enabled);
+            win.slider("Speed", &amp;mut speed, 0.0..=10.0);
+            win.color_picker("Fire Color", &amp;mut color);
+
+            win.separator();
+            win.section("Stats");
+            win.mini_chart("Frame Time", &amp;frame_times, Some(" ms"), AccentColor::Teal);
+
+            if win.button("Reset").clicked() {
+                speed = 5.0;
+            }
+        }
+
+        ctx.end_frame();
+
+        // ... your engine / simulation frame ...
+    }
+}</code></pre>
+
+      <p>
+        The context prints its URL on startup. Open it in a browser:
+      </p>
+      <pre><code class="plain">wgui: UI available at http://127.0.0.1:9080</code></pre>
+
+      <div class="note tip">
+        <span class="tag">Tip</span>
+        <p>
+          The <code>Window</code> borrows the context, so scope it (or <code>drop</code> it) before
+          calling <code>end_frame</code>. Multiple windows are just multiple
+          <code>ctx.window("…")</code> calls.
+        </p>
+      </div>
+
+      <h2 id="how">How it works</h2>
+      <p>
+        Every widget call pushes an <em>element declaration</em> (id, kind, label, value, metadata,
+        owning window) into a per-frame buffer. Element ids are derived from the window name and the
+        widget label, so the same widget keeps its identity across frames without you managing
+        handles.
+      </p>
+      <p>
+        <code>end_frame</code> compares this frame's declarations against the previous frame's and
+        emits the minimal set of add / update / remove / reorder messages, which are sent to the
+        WebSocket thread as a single batch. That thread keeps a mirror of the current UI state so a
+        tab opened at any moment receives a full snapshot and is immediately in sync.
+      </p>
+      <p>
+        In the other direction, the browser sends a <code>set</code> message when the user drags a
+        slider or types in a field. It is queued on a channel and consumed by the matching widget
+        call on your next frame, which writes the new value through the <code>&amp;mut</code>
+        reference and reports it via <a href="guide.html#response"><code>Response</code></a>.
+      </p>
+      <p>
+        The <a href="guide.html">guide</a> covers the frame lifecycle, ids and duplicate labels,
+        containers, ports and options, and the threading model in detail.
+      </p>
+
+      <h2 id="capabilities">What you get</h2>
+      <p>Input widgets, read-only displays, and layout containers. Full signatures live in the
+        <a href="widgets.html">widget reference</a>.</p>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Group</th>
+            <th>Widgets</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Input</strong></td>
+            <td>slider (f32 / f64 / i32 / u32), number input (f32 / f64 / i32 / u32), checkbox,
+              text input, dropdown, button, compact button, RGB and RGBA color pickers, image
+              button</td>
+          </tr>
+          <tr>
+            <td><strong>Display</strong></td>
+            <td>label, key/value row, section header, separator, progress bar, stat card, status
+              indicator, mini sparkline chart, multi-series plot, image</td>
+          </tr>
+          <tr>
+            <td><strong>Layout</strong></td>
+            <td>window, n-column grid (nestable), horizontal row</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <p>Eleven accent colors are available through <code>AccentColor</code>:</p>
+      <div class="accents">
+        <div><span style="background: var(--coral)"></span>Coral</div>
+        <div><span style="background: var(--teal)"></span>Teal</div>
+        <div><span style="background: var(--blue)"></span>Blue</div>
+        <div><span style="background: var(--green)"></span>Green</div>
+        <div><span style="background: var(--purple)"></span>Purple</div>
+        <div><span style="background: var(--orange)"></span>Orange</div>
+        <div><span style="background: var(--yellow)"></span>Yellow</div>
+        <div><span style="background: var(--red)"></span>Red</div>
+        <div><span style="background: #000"></span>Black</div>
+        <div><span style="background: #fff"></span>White</div>
+        <div><span style="background: var(--gray)"></span>Gray</div>
+      </div>
+
+      <h2 id="examples">Examples</h2>
+      <p>Two runnable examples ship with the crate:</p>
+      <pre><code class="plain">git clone https://github.com/AntonWagnerCau/wgui
+cd wgui
+cargo run --example demo
+cargo run --example dashboard</code></pre>
+      <ul>
+        <li><strong>demo</strong> — a tour of the individual widgets and their interactions.</li>
+        <li><strong>dashboard</strong> — grids of stat cards, progress bars, sparklines and plots
+          driven by a fake simulation, i.e. what a real monitoring panel looks like.</li>
+      </ul>
+
+      <h2 id="compare">When to use it</h2>
+      <p>
+        w-gui is built for debug and tuning panels attached to long-running programs: renderers,
+        simulations, trainers, servers. It is a good fit when you want to change a parameter without
+        recompiling, watch a value evolve, or drive a headless process from another machine.
+      </p>
+      <p>
+        It is not a general application UI toolkit. There is no layout engine beyond grids and rows,
+        no text editing beyond single-line fields, no theming API, and rendering latency is bounded
+        by your frame rate and the WebSocket round trip. For an in-window immediate-mode UI drawn by
+        your own renderer, reach for <a href="https://github.com/emilk/egui">egui</a> instead.
+      </p>
+
+      <div class="note">
+        <span class="tag">Credit</span>
+        <p>
+          The visual design is heavily inspired by
+          <a href="https://www.youtube.com/@PezzzasWork">Pezzza's Work</a>.
+        </p>
+      </div>
+
+      <footer>
+        <span>w-gui, Apache-2.0</span>
+        <a href="https://github.com/AntonWagnerCau/wgui">Repository</a>
+        <a href="https://crates.io/crates/w-gui">crates.io</a>
+        <a href="api/w_gui/index.html">API docs</a>
+      </footer>
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+
+</html>

@@ -25,8 +25,11 @@ pub fn spawn_http(
     listener: TcpListener,
     title: &str,
     favicon: Option<Vec<u8>>,
+    glow: crate::context::Glow,
 ) -> thread::JoinHandle<()> {
-    let html = HTML_TEMPLATE.replace("__WGUI_TITLE__", &html_escape(title));
+    let html = HTML_TEMPLATE
+        .replace("__WGUI_TITLE__", &html_escape(title))
+        .replace("__WGUI_GLOW__", glow.as_str());
     thread::Builder::new()
         .name("wgui-http".into())
         .spawn(move || run_http(shutdown, listener, html, favicon))
@@ -375,6 +378,7 @@ mod tests {
             value,
             meta: ElementMeta::default(),
             window: Arc::from("test"),
+            tab: None,
         }
     }
 

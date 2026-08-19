@@ -113,6 +113,21 @@
 
       --mono: 'Cascadia Code', 'Fira Code', 'Consolas', 'Courier New', monospace;
 
+      /* Blur radius of every decorative accent glow; 0 disables them. */
+      --glow: 10px;
+
+    }
+
+
+
+    body[data-glow="off"] {
+      --glow: 0px;
+    }
+
+
+
+    body[data-glow="strong"] {
+      --glow: 20px;
     }
 
 
@@ -459,6 +474,45 @@
     .lt-btn.active { border-color: var(--accent); color: var(--accent); background: var(--accent-glow); }
     .lt-sep { width: 1px; height: 16px; background: var(--border); margin: 0 2px; }
 
+    /* Tab bar (pages) */
+    .tab-bar {
+      position: fixed;
+      top: 8px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 200;
+      display: none;
+      align-items: center;
+      gap: 4px;
+      padding: 4px;
+      background: rgba(30, 30, 30, 0.85);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+      max-width: calc(100vw - 620px);
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .tab-bar::-webkit-scrollbar { display: none; }
+    .tab-bar.visible { display: flex; }
+    .tab-btn {
+      padding: 4px 12px;
+      border: 1px solid transparent;
+      border-radius: 5px;
+      color: var(--text-dim);
+      font-family: var(--mono);
+      font-size: 11px;
+      letter-spacing: 0.3px;
+      white-space: nowrap;
+      cursor: pointer;
+      transition: border-color 0.15s, color 0.15s, background 0.15s;
+      user-select: none;
+    }
+    .tab-btn:hover { color: var(--text); background: rgba(255, 255, 255, 0.05); }
+    .tab-btn.active { border-color: var(--accent); color: var(--accent); background: var(--accent-glow); }
+
 
 
     .card.collapsed .card-toggle {
@@ -521,46 +575,68 @@
 
     .stat-card.coral {
       border-color: var(--coral);
+      --accent: var(--coral);
+      --accent-glow: var(--coral-glow);
     }
 
     .stat-card.teal {
       border-color: var(--teal);
+      --accent: var(--teal);
+      --accent-glow: var(--teal-glow);
     }
 
     .stat-card.blue {
       border-color: var(--blue);
+      --accent: var(--blue);
+      --accent-glow: var(--blue-glow);
     }
 
     .stat-card.green {
       border-color: var(--green);
+      --accent: var(--green);
+      --accent-glow: var(--green-glow);
     }
 
     .stat-card.purple {
       border-color: var(--purple);
+      --accent: var(--purple);
+      --accent-glow: var(--purple-glow);
     }
 
     .stat-card.orange {
       border-color: var(--orange);
+      --accent: var(--orange);
+      --accent-glow: var(--orange-glow);
     }
 
     .stat-card.yellow {
       border-color: var(--yellow);
+      --accent: var(--yellow);
+      --accent-glow: var(--yellow-glow);
     }
 
     .stat-card.red {
       border-color: var(--red);
+      --accent: var(--red);
+      --accent-glow: var(--red-glow);
     }
 
     .stat-card.black {
       border-color: var(--black);
+      --accent: var(--black);
+      --accent-glow: var(--black-glow);
     }
 
     .stat-card.white {
       border-color: var(--white);
+      --accent: var(--white);
+      --accent-glow: var(--white-glow);
     }
 
     .stat-card.gray {
       border-color: var(--gray);
+      --accent: var(--gray);
+      --accent-glow: var(--gray-glow);
     }
 
 
@@ -574,6 +650,8 @@
       font-weight: 600;
 
       color: var(--text);
+
+      text-shadow: 0 0 var(--glow) var(--accent-glow);
 
       line-height: 1;
 
@@ -779,7 +857,7 @@
 
       transition: width 0.3s ease;
 
-      box-shadow: 0 0 10px var(--accent-glow);
+      box-shadow: 0 0 var(--glow) var(--accent-glow);
 
     }
 
@@ -827,7 +905,7 @@
 
       background: var(--text-muted);
 
-      box-shadow: 0 0 6px currentColor;
+      box-shadow: 0 0 var(--glow) currentColor;
 
       transition: background 0.2s;
 
@@ -1131,7 +1209,7 @@
 
       appearance: none;
 
-      height: 6px;
+      height: 4px;
 
       border-radius: 3px;
 
@@ -1139,7 +1217,7 @@
 
       outline: none;
 
-      border: 1px solid var(--border);
+      border: none;
 
     }
 
@@ -1149,19 +1227,19 @@
 
       -webkit-appearance: none;
 
-      width: 16px;
+      width: 12px;
 
-      height: 16px;
+      height: 12px;
 
       border-radius: 50%;
 
-      background: var(--accent);
+      background: var(--text);
 
       cursor: pointer;
 
-      border: 2px solid var(--surface);
+      border: none;
 
-      box-shadow: 0 0 8px var(--accent-glow);
+      box-shadow: 0 0 var(--glow) var(--accent-glow);
 
       transition: background 0.15s, transform 0.15s;
 
@@ -1171,9 +1249,9 @@
 
     input[type="range"]::-webkit-slider-thumb:hover {
 
-      background: var(--accent);
+      background: var(--white);
 
-      transform: scale(1.1);
+      transform: scale(1.15);
 
     }
 
@@ -1182,6 +1260,60 @@
     /* filled "scrubber" track: accent up to the thumb, dark beyond */
     .slider-container input[type="range"] {
       background: linear-gradient(to right, var(--accent) var(--fill, 0%), var(--bg-dark) var(--fill, 0%));
+    }
+
+    /* Label and readout share the first line, the track spans the row below. */
+    .widget-row:has(.slider-container) {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      align-items: center;
+      row-gap: 7px;
+      column-gap: 10px;
+    }
+
+    /* Unfilled track, painted behind the input so the fill can glow on its own. */
+    .widget-row:has(.slider-container)::before {
+      content: '';
+      grid-area: 2 / 1 / 2 / 3;
+      height: 4px;
+      border-radius: 3px;
+      background: var(--bg-dark);
+    }
+
+    .widget-row:has(.slider-container) > .widget-label {
+      grid-area: 1 / 1;
+      flex: none;
+    }
+
+    .widget-row:has(.slider-container) .slider-container {
+      display: contents;
+    }
+
+    .grid > .widget-row:has(.slider-container) {
+      display: grid;
+    }
+
+    .widget-row:has(.slider-container) .slider-value {
+      grid-area: 1 / 2;
+      min-width: 56px;
+      padding: 2px 6px;
+      background: transparent;
+      border-color: transparent;
+      box-shadow: none;
+    }
+
+    .widget-row:has(.slider-container):hover .slider-value {
+      border-color: var(--border);
+    }
+
+    .widget-row:has(.slider-container) .slider-value-input {
+      grid-area: 1 / 2;
+    }
+
+    .widget-row:has(.slider-container) input[type="range"] {
+      grid-area: 2 / 1 / 2 / 3;
+      background: linear-gradient(to right, var(--accent) var(--fill, 0%), transparent var(--fill, 0%));
+      filter: drop-shadow(0 0 calc(var(--glow) / 2) var(--accent-glow));
     }
 
     .slider-value {
@@ -1290,7 +1422,7 @@
 
       border-color: var(--accent);
 
-      box-shadow: 0 0 10px var(--accent-glow);
+      box-shadow: 0 0 var(--glow) var(--accent-glow);
 
     }
 
@@ -2283,6 +2415,8 @@
 
     .horizontal-layout .slider-container {
 
+      display: flex;
+
       min-width: 80px;
 
       flex: 1 1 150px;
@@ -2297,11 +2431,23 @@
 
 
 
-    .horizontal-layout input[type="range"] {
+    .horizontal-layout .widget-row::before {
+
+      display: none;
+
+    }
+
+
+
+    .horizontal-layout .widget-row:has(.slider-container) input[type="range"] {
 
       flex: 1;
 
       min-width: 50px;
+
+      background: linear-gradient(to right, var(--accent) var(--fill, 0%), var(--bg-dark) var(--fill, 0%));
+
+      filter: none;
 
     }
 
@@ -2318,6 +2464,10 @@
       padding: 2px 4px;
 
       font-size: 10px;
+
+      background: var(--bg-dark);
+
+      border-color: var(--border-light);
 
     }
 
@@ -2835,7 +2985,7 @@
 
 </head>
 
-<body>
+<body data-glow="__WGUI_GLOW__">
 
   <div id="status-bar" class="connecting"></div>
 
@@ -2876,6 +3026,8 @@
       const recentlyInteracted = new Map(); // id -> timestamp
 
       let chartInstances = new Map();
+
+      const GLOW_BLUR = parseFloat(getComputedStyle(document.body).getPropertyValue('--glow')) || 0;
 
       const initRetryCounts = new Map(); // Track retry attempts for chart initialization
 
@@ -3384,13 +3536,14 @@
       let lastColCount = 0;
 
       function loadLayout() {
-        const def = { placements: {}, collapsed: [], colCount: 'auto' };
+        const def = { placements: {}, collapsed: [], colCount: 'auto', activeTab: null };
         try {
           const p = JSON.parse(localStorage.getItem(layoutKey) || '{}');
           return {
             placements: (p.placements && typeof p.placements === 'object') ? p.placements : {},
             collapsed: Array.isArray(p.collapsed) ? p.collapsed : [],
             colCount: (p.colCount === 'auto' || (Number.isInteger(p.colCount) && p.colCount >= 1 && p.colCount <= LAYOUT_MAX_COLS)) ? p.colCount : 'auto',
+            activeTab: (typeof p.activeTab === 'string') ? p.activeTab : null,
           };
         } catch (e) { return def; }
       }
@@ -3399,6 +3552,62 @@
 
       function saveLayout() {
         try { localStorage.setItem(layoutKey, JSON.stringify(layout)); } catch (e) { }
+      }
+
+      // ── Tabs (pages) ──
+      // Tabs come from the elements themselves; the bar only shows when at
+      // least one element declares one. Untabbed windows show on every tab.
+      function tabList() {
+        const tabs = [];
+        for (const el of elements.values()) {
+          const t = el.tab;
+          if (t && !tabs.includes(t)) tabs.push(t);
+        }
+        return tabs;
+      }
+
+      function activeTabName() {
+        const tabs = tabList();
+        if (tabs.length === 0) return null;
+        return tabs.includes(layout.activeTab) ? layout.activeTab : tabs[0];
+      }
+
+      // Card placements are stored per tab so each page keeps its own arrangement.
+      function placementStore() {
+        const key = activeTabName() || '__main';
+        let store = layout.placements[key];
+        if (!store || typeof store !== 'object' || Array.isArray(store)) {
+          store = {};
+          layout.placements[key] = store;
+        }
+        return store;
+      }
+
+      function buildTabBar() {
+        const bar = document.createElement('div');
+        bar.className = 'tab-bar';
+        bar.id = 'wgui-tabs';
+        document.body.appendChild(bar);
+      }
+
+      function renderTabBar() {
+        const bar = document.getElementById('wgui-tabs');
+        if (!bar) return;
+        const tabs = tabList();
+        bar.classList.toggle('visible', tabs.length > 0);
+        const active = activeTabName();
+        bar.replaceChildren(...tabs.map(name => {
+          const b = document.createElement('div');
+          b.className = 'tab-btn' + (name === active ? ' active' : '');
+          b.textContent = name;
+          b.addEventListener('click', () => {
+            if (activeTabName() === name) return;
+            layout.activeTab = name;
+            saveLayout();
+            render();
+          });
+          return b;
+        }));
       }
 
       function computeColumns() {
@@ -3411,8 +3620,9 @@
       // Placement for n columns: the stored arrangement (pruned to windows that
       // still exist) plus any unplaced windows seeded into the shortest column.
       function getPlacement(n, names, heights) {
+        const store = placementStore();
         const present = new Set(names);
-        const base = (layout.placements[n] || []).map(col => (col || []).filter(nm => present.has(nm)));
+        const base = (store[n] || []).map(col => (col || []).filter(nm => present.has(nm)));
         while (base.length < n) base.push([]);
         if (base.length > n) {
           for (let i = n; i < base.length; i++) base[n - 1].push(...base[i]);
@@ -3428,7 +3638,7 @@
           base[mi].push(nm);
           colH[mi] += heights.get(nm) || 0;
         }
-        layout.placements[n] = base;
+        store[n] = base;
         return base;
       }
 
@@ -3548,7 +3758,7 @@
           // Persist the resulting arrangement straight from the DOM.
           const app = document.getElementById('app');
           const cols = [...app.querySelectorAll('.masonry-col')];
-          layout.placements[cols.length] = cols.map(col =>
+          placementStore()[cols.length] = cols.map(col =>
             [...col.querySelectorAll(':scope > .card')].map(c => c.dataset.window));
           lastColCount = cols.length;
           saveLayout();
@@ -3588,7 +3798,7 @@
         reset.textContent = 'Reset';
         reset.title = 'Clear saved layout, collapse and column settings';
         reset.addEventListener('click', () => {
-          layout = { placements: {}, collapsed: [], colCount: 'auto' };
+          layout = { placements: {}, collapsed: [], colCount: 'auto', activeTab: layout.activeTab };
           saveLayout();
           updateToolbarActive(bar);
           render();
@@ -3618,7 +3828,7 @@
 
         const app = document.getElementById('app');
 
-
+        renderTabBar();
 
         // Clean up old chart instances and tooltips before re-rendering
 
@@ -3670,13 +3880,18 @@
 
 
 
-        // Group by window, skipping container children (they're rendered inside their containers)
+        // Group by window, skipping container children (they're rendered inside
+        // their containers) and elements on inactive tabs
+
+        const activeTab = activeTabName();
 
         const windows = new Map();
 
         for (const el of elements.values()) {
 
           if (containerChildIds.has(el.id)) continue;
+
+          if (el.tab && el.tab !== activeTab) continue;
 
           const win = el.window || 'Default';
 
@@ -3709,7 +3924,11 @@
         }
 
         // Place cards into columns by the stored per-column arrangement.
-        layoutColumns();
+        if (cardEls.size === 0) {
+          app.replaceChildren();
+        } else {
+          layoutColumns();
+        }
 
         // Re-apply the active search filter to the freshly built DOM.
         applySearchFilter();
@@ -3758,7 +3977,16 @@
 
         const row = document.querySelector(`[data-id="${CSS.escape(el.id)}"]`);
 
-        if (!row) { console.warn('wgui: no DOM for', el.id, '→ full render'); render(); return; }
+        if (!row) {
+
+          // Elements on inactive tabs have no DOM; the data is already
+          // updated and renders on tab switch.
+
+          if (el.tab && el.tab !== activeTabName()) return;
+
+          console.warn('wgui: no DOM for', el.id, '→ full render'); render(); return;
+
+        }
 
 
 
@@ -5130,7 +5358,13 @@
 
         }
 
+        ctx.shadowBlur = GLOW_BLUR;
+
+        ctx.shadowColor = accent;
+
         ctx.stroke();
+
+        ctx.shadowBlur = 0;
 
       }
 
@@ -6083,7 +6317,13 @@
 
           }
 
+          ctx.shadowBlur = GLOW_BLUR;
+
+          ctx.shadowColor = color;
+
           ctx.stroke();
+
+          ctx.shadowBlur = 0;
 
 
 
@@ -6535,6 +6775,8 @@
       // ── Init ───────────────────────────────────────────
 
       buildToolbar();
+
+      buildTabBar();
 
       buildSearch();
 
