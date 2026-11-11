@@ -1213,67 +1213,90 @@
 
 
 
+    /* The input is a tall transparent grab band; the visible track and thumb
+       are drawn by its pseudo-elements. --fill is the value as 0..1. */
     input[type="range"] {
-
+      --thumb: 14px;
+      --track: 5px;
+      --track-rest: var(--bg-dark);
+      --fill-end: calc(var(--thumb) / 2 + (100% - var(--thumb)) * var(--fill, 0));
       flex: 1;
-
       min-width: 0;
-
+      height: 18px;
+      margin: 0;
+      padding: 0;
       -webkit-appearance: none;
-
       appearance: none;
-
-      height: 4px;
-
-      border-radius: 3px;
-
-      background: var(--bg-dark);
-
+      background: transparent;
       outline: none;
-
       border: none;
-
+      cursor: pointer;
+      touch-action: none;
     }
 
+    input[type="range"]::-webkit-slider-runnable-track {
+      height: var(--track);
+      border-radius: calc(var(--track) / 2);
+      background: var(--track-rest);
+    }
 
+    input[type="range"]::-moz-range-track {
+      height: var(--track);
+      border-radius: calc(var(--track) / 2);
+      background: var(--track-rest);
+    }
+
+    /* filled "scrubber" track: accent up to the thumb, --track-rest beyond */
+    .slider-container input[type="range"]::-webkit-slider-runnable-track {
+      background: linear-gradient(to right, var(--accent) var(--fill-end), var(--track-rest) var(--fill-end));
+    }
+
+    .slider-container input[type="range"]::-moz-range-track {
+      background: linear-gradient(to right, var(--accent) var(--fill-end), var(--track-rest) var(--fill-end));
+    }
 
     input[type="range"]::-webkit-slider-thumb {
-
       -webkit-appearance: none;
-
-      width: 12px;
-
-      height: 12px;
-
+      width: var(--thumb);
+      height: var(--thumb);
+      margin-top: calc((var(--track) - var(--thumb)) / 2);
       border-radius: 50%;
-
       background: var(--text);
-
-      cursor: pointer;
-
       border: none;
-
-      box-shadow: 0 0 var(--glow) var(--accent-glow);
-
-      transition: background 0.15s, transform 0.15s;
-
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.45), 0 0 var(--glow) var(--accent-glow);
+      transition: background 0.15s, box-shadow 0.15s;
     }
 
+    input[type="range"]::-moz-range-thumb {
+      width: var(--thumb);
+      height: var(--thumb);
+      border-radius: 50%;
+      background: var(--text);
+      border: none;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.45), 0 0 var(--glow) var(--accent-glow);
+      transition: background 0.15s, box-shadow 0.15s;
+    }
 
-
-    input[type="range"]::-webkit-slider-thumb:hover {
-
+    input[type="range"]:hover::-webkit-slider-thumb,
+    input[type="range"]:focus-visible::-webkit-slider-thumb {
       background: var(--white);
-
-      transform: scale(1.15);
-
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.45), 0 0 0 4px var(--accent-glow);
     }
 
+    input[type="range"]:hover::-moz-range-thumb,
+    input[type="range"]:focus-visible::-moz-range-thumb {
+      background: var(--white);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.45), 0 0 0 4px var(--accent-glow);
+    }
 
+    input[type="range"]:active::-webkit-slider-thumb {
+      background: var(--white);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.45), 0 0 0 6px var(--accent-glow);
+    }
 
-    /* filled "scrubber" track: accent up to the thumb, dark beyond */
-    .slider-container input[type="range"] {
-      background: linear-gradient(to right, var(--accent) var(--fill, 0%), var(--bg-dark) var(--fill, 0%));
+    input[type="range"]:active::-moz-range-thumb {
+      background: var(--white);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.45), 0 0 0 6px var(--accent-glow);
     }
 
     /* Label and readout share the first line, the track spans the row below. */
@@ -1281,7 +1304,7 @@
       display: grid;
       grid-template-columns: 1fr auto;
       align-items: center;
-      row-gap: 7px;
+      row-gap: 1px;
       column-gap: 10px;
     }
 
@@ -1289,7 +1312,7 @@
     .widget-row:has(.slider-container)::before {
       content: '';
       grid-area: 2 / 1 / 2 / 3;
-      height: 4px;
+      height: 5px;
       border-radius: 3px;
       background: var(--bg-dark);
     }
@@ -1326,7 +1349,7 @@
 
     .widget-row:has(.slider-container) input[type="range"] {
       grid-area: 2 / 1 / 2 / 3;
-      background: linear-gradient(to right, var(--accent) var(--fill, 0%), transparent var(--fill, 0%));
+      --track-rest: transparent;
       filter: drop-shadow(0 0 calc(var(--glow) / 2) var(--accent-glow));
     }
 
@@ -2459,7 +2482,7 @@
 
       min-width: 50px;
 
-      background: linear-gradient(to right, var(--accent) var(--fill, 0%), var(--bg-dark) var(--fill, 0%));
+      --track-rest: var(--bg-dark);
 
       filter: none;
 
@@ -4058,7 +4081,7 @@
 
               input.value = val;
 
-              input.style.setProperty('--fill', Math.max(0, Math.min(100, ((val - mn) / ((mx - mn) || 1)) * 100)) + '%');
+              input.style.setProperty('--fill', Math.max(0, Math.min(1, (val - mn) / ((mx - mn) || 1))));
 
             }
 
@@ -4424,7 +4447,7 @@
 
           const step = el.meta.step ?? 0.01;
 
-          const fill = Math.max(0, Math.min(100, ((val - min) / ((max - min) || 1)) * 100));
+          const fill = Math.max(0, Math.min(1, (val - min) / ((max - min) || 1)));
 
           return `<div class="widget-row" data-id="${esc(el.id)}">
 
@@ -4432,7 +4455,7 @@
 
         <div class="widget-control slider-container">
 
-          <input type="range" min="${min}" max="${max}" step="${step}" value="${val}" style="--fill:${fill}%"
+          <input type="range" min="${min}" max="${max}" step="${step}" value="${val}" style="--fill:${fill}"
 
             oninput="wgui.onSlider('${escJs(el.id)}', this.value, this)">
 
@@ -5455,7 +5478,7 @@
           el.value.data = val;
 
           { const mn = el.meta.min ?? 0, mx = el.meta.max ?? 1;
-            inputEl.style.setProperty('--fill', Math.max(0, Math.min(100, ((val - mn) / ((mx - mn) || 1)) * 100)) + '%'); }
+            inputEl.style.setProperty('--fill', Math.max(0, Math.min(1, (val - mn) / ((mx - mn) || 1)))); }
 
           const display = inputEl.parentElement.querySelector('.slider-value');
 
@@ -5685,7 +5708,10 @@
 
                 const slider = row.querySelector('input[type="range"]');
 
-                if (slider) slider.value = el.value.data;
+                if (slider) {
+                  slider.value = el.value.data;
+                  slider.style.setProperty('--fill', Math.max(0, Math.min(1, (el.value.data - min) / ((max - min) || 1))));
+                }
 
               }
 

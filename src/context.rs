@@ -72,6 +72,7 @@ pub struct Context {
     incoming_edits: HashMap<ElementId, Value>,
     // Signals HTTP thread to shut down
     shutdown: Arc<AtomicBool>,
+    frame_clock: server::FrameClock,
 
     prev_frame: Vec<ElementDecl>,
     current_frame: Vec<ElementDecl>,
@@ -109,9 +110,16 @@ impl Context {
             let (ws_tx, ws_rx) = mpsc::sync_channel::<Vec<ServerMsg>>(2);
             let (edit_tx, edit_rx) = mpsc::channel::<(ElementId, Value)>();
             let shutdown = Arc::new(AtomicBool::new(false));
+            let frame_clock = server::FrameClock::new();
 
-            let http_handle =
-                server::spawn_http(shutdown.clone(), http_listener, &opts.title, opts.favicon, opts.glow);
+            let http_handle = server::spawn_http(
+                shutdown.clone(),
+                http_listener,
+                &opts.title,
+                opts.favicon,
+                opts.glow,
+                frame_clock.clone(),
+            );
             let ws_handle = server::spawn_ws(ws_rx, edit_tx, ws_listener, shutdown.clone());
 
             println!("wgui: UI available at http://{bind_addr}:{http_port}");
@@ -121,6 +129,7 @@ impl Context {
                 edit_rx: Mutex::new(Some(edit_rx)),
                 incoming_edits: HashMap::new(),
                 shutdown,
+                frame_clock,
                 prev_frame: Vec::new(),
                 current_frame: Vec::new(),
                 http_port,
@@ -135,6 +144,7 @@ impl Context {
                 edit_rx: Mutex::new(None),
                 incoming_edits: HashMap::new(),
                 shutdown: Arc::new(AtomicBool::new(false)),
+                frame_clock: server::FrameClock::new(),
                 prev_frame: Vec::new(),
                 current_frame: Vec::new(),
                 http_port: 0,
@@ -188,6 +198,7 @@ impl Context {
     /// Finish the current frame: reconcile with previous frame, send diffs over WS.
     /// In headless mode this is a no-op.
     pub fn end_frame(&mut self) {
+        self.frame_clock.mark_frame();
         let outgoing = reconcile(&self.prev_frame, &self.current_frame);
 
         if !outgoing.is_empty() {
@@ -222,7 +233,7 @@ impl Drop for Context {
         // released before any replacement Context tries to bind. Without this,
         // a quick in-process restart can drift to the next port pair while an
         // already-open browser tab keeps pointing at the old port and never
-        // reconnects. Threads observe `shutdown` within ~200ms (HTTP poll).
+        // reconnects.
         if let Some(handle) = self._http_handle.take() {
             let _ = handle.join();
         }

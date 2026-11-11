@@ -1,9 +1,10 @@
-use std::net::{TcpListener, TcpStream};
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::io::{Read, Write};
+use std::net::{Shutdown, SocketAddr, TcpListener, TcpStream};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::Arc;
 use std::sync::mpsc;
 use std::thread;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use indexmap::IndexMap;
 
@@ -26,13 +27,15 @@ pub fn spawn_http(
     title: &str,
     favicon: Option<Vec<u8>>,
     glow: crate::context::Glow,
+    frame_clock: FrameClock,
 ) -> thread::JoinHandle<()> {
     let html = HTML_TEMPLATE
         .replace("__WGUI_TITLE__", &html_escape(title))
         .replace("__WGUI_GLOW__", glow.as_str());
+    let site = Arc::new(Site { html, favicon, frame_clock });
     thread::Builder::new()
         .name("wgui-http".into())
-        .spawn(move || run_http(shutdown, listener, html, favicon))
+        .spawn(move || run_http(shutdown, listener, site))
         .expect("failed to spawn wgui HTTP thread")
 }
 
@@ -49,70 +52,122 @@ pub fn spawn_ws(
         .expect("failed to spawn wgui WS thread")
 }
 
-fn run_http(shutdown: Arc<AtomicBool>, listener: TcpListener, html: String, favicon: Option<Vec<u8>>) {
+/// Time of the owning `Context`'s last `end_frame`.
+#[derive(Clone)]
+pub struct FrameClock {
+    start: Instant,
+    last_frame_ms: Arc<AtomicU64>,
+}
+
+impl FrameClock {
+    pub fn new() -> Self {
+        Self {
+            start: Instant::now(),
+            last_frame_ms: Arc::new(AtomicU64::new(0)),
+        }
+    }
+
+    pub fn mark_frame(&self) {
+        self.last_frame_ms
+            .store(self.start.elapsed().as_millis() as u64, Ordering::Relaxed);
+    }
+
+    fn idle_ms(&self) -> u64 {
+        (self.start.elapsed().as_millis() as u64)
+            .saturating_sub(self.last_frame_ms.load(Ordering::Relaxed))
+    }
+}
+
+/// What the HTTP thread serves.
+struct Site {
+    html: String,
+    favicon: Option<Vec<u8>>,
+    frame_clock: FrameClock,
+}
+
+fn run_http(shutdown: Arc<AtomicBool>, listener: TcpListener, site: Arc<Site>) {
     let addr = listener.local_addr().expect("wgui: HTTP listener has no local addr");
-    let server = tiny_http::Server::from_listener(listener, None)
-        .expect("wgui: failed to create HTTP server from listener");
+
+    listener
+        .set_nonblocking(true)
+        .expect("failed to set HTTP listener non-blocking");
 
     log::info!("wgui: serving UI at http://{addr}");
 
-    loop {
-        if shutdown.load(Ordering::Acquire) {
-            break;
-        }
-
-        // Use a timeout so we can check shutdown periodically
-        match server.recv_timeout(Duration::from_millis(200)) {
-            Ok(Some(request)) => {
-                match request.url() {
-                    // Liveness probe: the frontend polls this while
-                    // disconnected and only opens a WebSocket once it
-                    // answers, so connection attempts never hit a dead
-                    // server and never feed the browser's per-endpoint
-                    // reconnect backoff (RFC 6455 §7.2.3).
-                    "/ping" => {
-                        let _ = request.respond(tiny_http::Response::from_string("ok"));
-                    }
-                    "/" | "/index.html" => {
-                        let response = tiny_http::Response::from_string(&html)
-                            .with_header(
-                                "Content-Type: text/html; charset=utf-8"
-                                    .parse::<tiny_http::Header>()
-                                    .unwrap(),
-                            );
-                        let _ = request.respond(response);
-                    }
-                    "/favicon.png" => {
-                        if let Some(ref icon) = favicon {
-                            let response = tiny_http::Response::from_data(icon.clone())
-                                .with_header(
-                                    "Content-Type: image/png"
-                                        .parse::<tiny_http::Header>()
-                                        .unwrap(),
-                                );
-                            let _ = request.respond(response);
-                        } else {
-                            let _ = request.respond(
-                                tiny_http::Response::from_string("404 Not Found")
-                                    .with_status_code(404),
-                            );
+    while !shutdown.load(Ordering::Acquire) {
+        match listener.accept() {
+            Ok((stream, _addr)) => {
+                // Each request gets its own short-lived thread, so a socket
+                // that connects but never speaks (browser preconnect) cannot
+                // stall the accept loop.
+                let site = site.clone();
+                let spawned = thread::Builder::new()
+                    .name("wgui-http-request".into())
+                    .spawn(move || {
+                        if let Err(e) = serve_request(stream, &site) {
+                            log::debug!("wgui: HTTP request failed: {e}");
                         }
-                    }
-                    _ => {
-                        let _ = request.respond(
-                            tiny_http::Response::from_string("404 Not Found")
-                                .with_status_code(404),
-                        );
-                    }
+                    });
+                if let Err(e) = spawned {
+                    log::error!("wgui: failed to spawn HTTP request thread: {e}");
                 }
             }
-            Ok(None) => {} // timeout, loop again
+            Err(ref e) if e.kind() == std::io::ErrorKind::WouldBlock => {
+                thread::sleep(Duration::from_millis(15));
+            }
             Err(e) => {
-                log::error!("wgui HTTP error: {e}");
-                break;
+                log::error!("wgui HTTP accept error: {e}");
+                thread::sleep(Duration::from_millis(15));
             }
         }
     }
+}
+
+fn serve_request(mut stream: TcpStream, site: &Site) -> std::io::Result<()> {
+    stream.set_nonblocking(false)?;
+    stream.set_nodelay(true).ok();
+    stream.set_read_timeout(Some(Duration::from_secs(5)))?;
+    stream.set_write_timeout(Some(Duration::from_secs(5)))?;
+
+    let mut head = Vec::new();
+    let mut chunk = [0u8; 1024];
+    while !head.windows(4).any(|w| w == b"\r\n\r\n") {
+        let read = stream.read(&mut chunk)?;
+        if read == 0 || head.len() > 16 * 1024 {
+            return Ok(());
+        }
+        head.extend_from_slice(&chunk[..read]);
+    }
+    let head = String::from_utf8_lossy(&head);
+    let target = head.split_whitespace().nth(1).unwrap_or("");
+    let path = target.split('?').next().unwrap_or("");
+
+    let ping;
+    let (status, content_type, body): (&str, &str, &[u8]) = match path {
+        // Liveness probe. The frontend polls it while disconnected and only
+        // opens a WebSocket once it answers, so connection attempts never
+        // hit a dead server and never feed the browser's per-endpoint
+        // reconnect backoff (RFC 6455 §7.2.3). The body carries the time
+        // since the last frame for `holder_stopped_running_frames`.
+        "/ping" => {
+            ping = format!("ok {}", site.frame_clock.idle_ms());
+            ("200 OK", "text/plain", ping.as_bytes())
+        }
+        "/" | "/index.html" => ("200 OK", "text/html; charset=utf-8", site.html.as_bytes()),
+        "/favicon.png" if site.favicon.is_some() => {
+            ("200 OK", "image/png", site.favicon.as_deref().unwrap_or_default())
+        }
+        _ => ("404 Not Found", "text/plain", b"404 Not Found"),
+    };
+
+    let mut response = format!(
+        "HTTP/1.1 {status}\r\nContent-Type: {content_type}\r\nContent-Length: {}\r\nCache-Control: no-store\r\nConnection: close\r\n\r\n",
+        body.len()
+    )
+    .into_bytes();
+    response.extend_from_slice(body);
+    stream.write_all(&response)?;
+    stream.shutdown(Shutdown::Write)
 }
 
 fn run_ws(
@@ -347,17 +402,65 @@ fn apply_messages_to_mirror(mirror: &mut IndexMap<String, ElementDecl>, msgs: &[
     }
 }
 
+/// How long a new instance waits for the start ports while their holder exits.
+const PREDECESSOR_EXIT_WAIT: Duration = Duration::from_secs(3);
+
+/// A holder whose last frame is older than this is treated as exiting.
+const FRAME_STALL_MS: u64 = 1000;
+
+fn bind_port_pair(base: u16, bind_addr: &str) -> Option<(TcpListener, TcpListener)> {
+    let http = TcpListener::bind(format!("{bind_addr}:{base}")).ok()?;
+    let ws = TcpListener::bind(format!("{bind_addr}:{}", base.checked_add(1)?)).ok()?;
+    Some((http, ws))
+}
+
+/// Whether `port` is served by a wgui instance that no longer runs frames:
+/// a crashed or closing process that has not let go of its ports yet.
+fn holder_stopped_running_frames(port: u16) -> bool {
+    let timeout = Duration::from_millis(300);
+    let addr = SocketAddr::from(([127, 0, 0, 1], port));
+    let Ok(mut stream) = TcpStream::connect_timeout(&addr, timeout) else {
+        return false;
+    };
+    stream.set_read_timeout(Some(timeout)).ok();
+    stream.set_write_timeout(Some(timeout)).ok();
+    if stream.write_all(b"GET /ping HTTP/1.1\r\nHost: localhost\r\n\r\n").is_err() {
+        return false;
+    }
+    let mut response = String::new();
+    let _ = stream.read_to_string(&mut response);
+    response
+        .split("\r\n\r\n")
+        .nth(1)
+        .and_then(|body| body.strip_prefix("ok "))
+        .and_then(|idle_ms| idle_ms.trim().parse::<u64>().ok())
+        .is_some_and(|idle_ms| idle_ms > FRAME_STALL_MS)
+}
+
 /// Find an available port pair (http, ws) starting from `start`.
 /// HTTP gets the even port, WS gets the odd port.
 /// Returns the two bound listeners so there is no race condition between
 /// scanning and serving.
 /// Returns `None` if no free pair is found after scanning 1000 ports.
 pub fn find_port_pair(start: u16, bind_addr: &str) -> Option<(TcpListener, TcpListener)> {
-    for base in (start..start.saturating_add(1000)).step_by(2) {
-        let http_ok = TcpListener::bind(format!("{bind_addr}:{base}"));
-        let ws_ok = TcpListener::bind(format!("{bind_addr}:{}", base + 1));
-        if let (Ok(http), Ok(ws)) = (http_ok, ws_ok) {
-            return Some((http, ws));
+    if let Some(pair) = bind_port_pair(start, bind_addr) {
+        return Some(pair);
+    }
+    // A previous run that is still shutting down frees the start ports
+    // shortly; an instance that is still running frames keeps them.
+    if holder_stopped_running_frames(start) {
+        log::info!("wgui: waiting for the previous instance to release port {start}");
+        let deadline = Instant::now() + PREDECESSOR_EXIT_WAIT;
+        while Instant::now() < deadline {
+            thread::sleep(Duration::from_millis(50));
+            if let Some(pair) = bind_port_pair(start, bind_addr) {
+                return Some(pair);
+            }
+        }
+    }
+    for base in (start..start.saturating_add(1000)).step_by(2).skip(1) {
+        if let Some(pair) = bind_port_pair(base, bind_addr) {
+            return Some(pair);
         }
     }
     log::warn!("wgui: could not find available port pair starting from {start}");
